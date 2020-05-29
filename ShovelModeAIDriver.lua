@@ -175,6 +175,9 @@ function ShovelModeAIDriver:drive(dt)
 		return
 	elseif self.shovelState == self.states.STATE_REVERSE_STRAIGHT_OUT_OF_SILO then
 		self.refSpeed = self.vehicle.cp.speeds.reverse
+		if not self:setShovelToPositionFinshed(3,dt) then
+			self:hold()
+		end
 		if self:getIsReversedOutOfSilo() then
 			local _,_,Zoffset = self.course:getWaypointLocalPosition(self.vehicle.cp.directionNode, self.shovelFillStartPoint)
 			local newPoint = self.course:getNextRevWaypointIxFromVehiclePosition(self.ppc:getCurrentWaypointIx(), self.vehicle.cp.directionNode,-Zoffset)
@@ -308,11 +311,11 @@ function ShovelModeAIDriver:setShovelToPositionFinshed(stage,dt)
 end
 
 function ShovelModeAIDriver:getIsShovelFull()
-	return self.vehicle.cp.shovel:getFillUnitFillLevel(1) >= self.vehicle.cp.shovel:getFillUnitCapacity(1)*0.99
+	return self.vehicle.cp.shovel:getFillUnitFillLevel(1) >= self.vehicle.cp.shovel:getFillUnitCapacity(1)*0.98
 end
 
 function ShovelModeAIDriver:getIsShovelEmpty()
-	return self.vehicle.cp.shovel:getFillUnitFillLevel(1) == 0
+	return self.vehicle.cp.shovel:getFillUnitFillLevel(1) <= self.vehicle.cp.shovel:getFillUnitCapacity(1)*0.01
 end
 
 function ShovelModeAIDriver:getFillLevelDoesChange()
@@ -451,4 +454,8 @@ function ShovelModeAIDriver:getIsReversedOutOfSilo()
 	local x,z = self.vehicle.cp.BunkerSiloMap[1][self.bestTarget.column].cx,self.vehicle.cp.BunkerSiloMap[1][self.bestTarget.column].cz
 	local px,py,pz = worldToLocal(self.vehicle.cp.directionNode,x,0,z)
 	return pz > 4
+end
+
+function ShovelModeAIDriver:setLightsMask(vehicle)
+	vehicle:setLightsTypesMask(courseplay.lights.HEADLIGHT_FULL)
 end

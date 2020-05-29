@@ -301,6 +301,7 @@ function FieldworkAIDriver:stop(msgReference)
 end
 
 function FieldworkAIDriver:drive(dt)
+	-- TODO: this is also called in UnloadableFieldworkAIDriver
 	courseplay:updateFillLevelsAndCapacities(self.vehicle)
 	if self.state == self.states.ON_FIELDWORK_COURSE then
 		if self:driveFieldwork(dt) then
@@ -452,9 +453,9 @@ end
 function FieldworkAIDriver:changeToFieldworkUnloadOrRefill()
 	self.fieldworkState = self.states.UNLOAD_OR_REFILL_ON_FIELD
 	if self.stopImplementsWhileUnloadOrRefillOnField then
-		self.fieldWorkUnloadOrRefillState = self.states.WAITING_FOR_STOP
+		self.fieldworkUnloadOrRefillState = self.states.WAITING_FOR_STOP
 	else
-		self.fieldWorkUnloadOrRefillState = self.states.WAITING_FOR_UNLOAD_OR_REFILL
+		self.fieldworkUnloadOrRefillState = self.states.WAITING_FOR_UNLOAD_OR_REFILL
 	end
 end
 
@@ -462,14 +463,14 @@ end
 function FieldworkAIDriver:driveFieldworkUnloadOrRefill()
 	-- don't move while empty
 	self:setSpeed(0)
-	if self.fieldWorkUnloadOrRefillState == self.states.WAITING_FOR_STOP then
+	if self.fieldworkUnloadOrRefillState == self.states.WAITING_FOR_STOP then
 		-- wait until we stopped before raising the implements
 		if self:isStopped() then
 			self:debug('implements raised, stop')
 			self:stopWork()
-			self.fieldWorkUnloadOrRefillState = self.states.WAITING_FOR_UNLOAD_OR_REFILL
+			self.fieldworkUnloadOrRefillState = self.states.WAITING_FOR_UNLOAD_OR_REFILL
 		end
-	elseif self.fieldWorkUnloadOrRefillState == self.states.WAITING_FOR_UNLOAD_OR_REFILL then
+	elseif self.fieldworkUnloadOrRefillState == self.states.WAITING_FOR_UNLOAD_OR_REFILL then
 		if self:allFillLevelsOk() and not self.heldForUnloadRefill then
 			self:debug('unloaded, continue working')
 			-- not full/empty anymore, maybe because Refilling to a trailer, go back to work
@@ -546,8 +547,10 @@ function FieldworkAIDriver:onWaypointPassed(ix)
 	self:debug('onWaypointPassed %d', ix)
 	if self.state == self.states.ON_FIELDWORK_COURSE then
 		if self.fieldworkState == self.states.WORKING then
-			-- check for transition to connecting track
-			if self.course:isOnConnectingTrack(ix) then
+			-- check for transition to connecting track, make sure we've been on it for a few waypoints already
+			-- to avoid raising the implements too soon, this can be a problem with long implements not yet reached
+			-- the end of the headland track while the tractor is already on the connecting track
+			if self.course:isOnConnectingTrack(ix) and self.course:isOnConnectingTrack(ix - 2) then
 				-- reached a connecting track (done with the headland, move to the up/down row or vice versa),
 				-- raise all implements while moving
 				self:debug('on a connecting track now, raising implements.')
@@ -630,18 +633,6 @@ function FieldworkAIDriver:shouldReturnToFirstPoint()
 		self:debug('Not returning to first point.')
 		return false
 	end
-end
-
---- Speed on the field when not working
-function FieldworkAIDriver:getFieldSpeed()
-	return self.vehicle.cp.speeds.field
-end
-
--- Speed on the field when working
-function FieldworkAIDriver:getWorkSpeed()
-	-- use the speed limit supplied by Giants for fieldwork
-	local speedLimit = self.vehicle:getSpeedLimit() or math.huge
-	return math.min(self.vehicle.cp.speeds.field, speedLimit)
 end
 
 --- Pass on self.speed set elsewhere to the AIDriver.
@@ -1403,4 +1394,8 @@ end
 
 function FieldworkAIDriver:setOffsetX()
 	-- implement in derived classes if needed
+end
+
+function FieldworkAIDriver:setLightsMask(vehicle)
+	vehicle:setLightsTypesMask(courseplay.lights.HEADLIGHT_FULL)
 end

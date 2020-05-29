@@ -82,6 +82,7 @@ function Waypoint:set(cpWp, cpIndex)
 	-- just like in the original turn code, don't ask me why there are two different values if we only use one...)
 	self.x = cpWp.x or cpWp.cx or cpWp.revPosX or cpWp.posX or 0
 	self.z = cpWp.z or cpWp.cz or cpWp.revPosZ or cpWp.posZ or 0
+	self.y = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, self.x, 0, self.z)
 	self.angle = cpWp.angle or nil
 	self.radius = cpWp.radius or nil
 	self.rev = cpWp.rev or cpWp.turnReverse or cpWp.reverse or false
@@ -106,6 +107,7 @@ function Waypoint.initFromGeneratedWp(wp, ix)
 	local waypoint = Waypoint({})
 	waypoint.x = wp.x
 	waypoint.z = -wp.y
+	waypoint.y = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, waypoint.x, 0, waypoint.z)
 	waypoint.cpIndex = ix or 0
 	waypoint.turnStart = wp.turnStart
 	waypoint.turnEnd = wp.turnEnd
@@ -118,8 +120,7 @@ end
 --- Get the (original, non-offset) position of a waypoint
 ---@return number, number, number x, y, z
 function Waypoint:getPosition()
-	local y = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, self.x, 0, self.z)
-	return self.x, y, self.z
+	return self.x, self.y, self.z
 end
 
 --- Get the offset position of a waypoint
@@ -291,7 +292,7 @@ end
 
 --- Current offset to apply. getWaypointPosition() will always return the position adjusted by the
 -- offset. The x and z offset are in the waypoint's coordinate system, waypoints are directed towards
--- the next waypoint, so a z = 1 offset will move the waypoint 1m forward, x = 1 1 m to the left (when
+-- the next waypoint, so a z = 1 offset will move the waypoint 1m forward, x = 1 1 m to the right (when
 -- looking in the drive direction)
 --- IMPORTANT: the offset for multitool (laneOffset) must not be part of this as it is already part of the
 --- course,
@@ -304,7 +305,7 @@ function Course:getOffset()
 	return self.offsetX, self.offsetZ
 end
 
-function Course:setWorkWidth(w)
+	function Course:setWorkWidth(w)
 	self.workWidth = w
 end
 
@@ -345,11 +346,14 @@ function Course:enrichWaypointData()
 		self.waypoints[i].dToHere = self.length
 		self.waypoints[i].turnsToHere = self.totalTurns
 		self.waypoints[i].dx, _, self.waypoints[i].dz, _ = courseplay:getWorldDirection(cx, 0, cz, nx, 0, nz)
-		-- TODO: fix this weird coordinate system transformation from x/z to x/y
-		local dx, dz = nx - cx, -nz - (-cz)
-		local angle = toPolar(dx, dz)
-		-- and now back to x/z
-		self.waypoints[i].angle = courseGenerator.toCpAngleDeg(angle)
+		local dx, dz = MathUtil.vector2Normalize(nx - cx, nz - cz)
+		-- check for NaN
+		if dx == dx or dz == dz then
+			self.waypoints[i].yRot = MathUtil.getYRotationFromDirection(dx, dz)
+		else
+			self.waypoints[i].yRot = 0
+		end
+		self.waypoints[i].angle = math.deg(self.waypoints[i].yRot)
 		self.waypoints[i].calculatedRadius = self:calculateRadius(i)
 		if (self:isReverseAt(i) and not self:switchingToForwardAt(i)) or self:switchingToReverseAt(i) then
 			-- X offset must be reversed at waypoints where we are driving in reverse
@@ -363,6 +367,7 @@ function Course:enrichWaypointData()
 	-- turn towards the first when ending the course. (the course generator points the last
 	-- one to the first, should probably be changed there)
 	self.waypoints[#self.waypoints].angle = self.waypoints[#self.waypoints - 1].angle
+	self.waypoints[#self.waypoints].yRot = self.waypoints[#self.waypoints - 1].yRot
 	self.waypoints[#self.waypoints].dx = self.waypoints[#self.waypoints - 1].dx
 	self.waypoints[#self.waypoints].dz = self.waypoints[#self.waypoints - 1].dz
 	self.waypoints[#self.waypoints].dToNext = 0
@@ -456,6 +461,14 @@ end
 
 function Course:isTurnEndAtIx(ix)
 	return self.waypoints[ix].turnEnd
+end
+
+function Course:skipOverTurnStart(ix)
+	if self:isTurnStartAtIx(ix) then
+		return ix + 1
+	else
+		return ix
+	end
 end
 
 --- Is this waypoint on a connecting track, that is, a transfer path between
@@ -660,13 +673,19 @@ end
 function Course:print()
 	for i = 1, #self.waypoints do
 		local p = self.waypoints[i]
-		print(string.format('%d: x=%.1f z=%.1f a=%.1f ts=%s te=%s r=%s i=%s d=%.1f t=%d l=%s', i, p.x, p.z, p.angle or -1,
-			tostring(p.turnStart), tostring(p.turnEnd), tostring(p.rev), tostring(p.interact), p.dToHere or -1, p.turnsToHere or -1, tostring(p.lane)))
+		print(string.format('%d: x=%.1f z=%.1f a=%.1f yRot=%.1f ts=%s te=%s r=%s i=%s d=%.1f t=%d l=%s p=%s',
+				i, p.x, p.z, p.angle or -1, math.deg(p.yRot or 0),
+				tostring(p.turnStart), tostring(p.turnEnd), tostring(p.rev), tostring(p.interact),
+				p.dToHere or -1, p.turnsToHere or -1, tostring(p.lane), tostring(p.pipeInFruit)))
 	end
 end
 
 function Course:getDistanceToNextWaypoint(ix)
 	return self.waypoints[math.min(#self.waypoints, ix)].dToNext
+end
+
+function Course:getDistanceBetweenWaypoints(a, b)
+	return math.abs(self.waypoints[a].dToHere - self.waypoints[b].dToHere)
 end
 
 function Course:getDistanceFromFirstWaypoint(ix)
@@ -709,7 +728,7 @@ function Course:getDistanceToFirstUpDownRowWaypoint(ix)
 		if self.waypoints[i].lane and not self.waypoints[i + 1].lane and isConnectingTrack then
 			return d, i + 1
 		end
-		if d > 100 then
+		if d > 1000 then
 			return math.huge, nil
 		end
 	end
@@ -782,7 +801,6 @@ function Course:hasTurnWithinDistance(ix, distance)
 	return self:hasWaypointWithPropertyWithinDistance(ix, distance, function(p) return p.turnStart or p.turnEnd end)
 end
 
-
 function Course:hasWaypointWithPropertyWithinDistance(ix, distance, hasProperty)
 	-- search backwards first
 	local d = 0
@@ -828,6 +846,11 @@ end
 
 function Course:getLength()
 	return self.length
+end
+
+--- Is there a turn between the two waypoints?
+function Course:isTurnBetween(ix1, ix2)
+	return self.waypoints[ix1].turnsToHere ~= self.waypoints[ix2].turnsToHere
 end
 
 function Course:getRemainingDistanceAndTurnsFrom(ix)
@@ -971,6 +994,15 @@ function Course:getDistanceToNextTurn(ix)
 	return self.waypoints[ix].dToNextTurn
 end
 
+function Course:getRowLength(ix)
+	for i = ix, 1, -1 do
+		if self:isTurnEndAtIx(i) then
+			return self:getDistanceToNextTurn(i), i
+		end
+	end
+	return 0, nil
+end
+
 function Course:getNextRowLength(ix)
 	return self.waypoints[ix].lNextRow
 end
@@ -1058,7 +1090,7 @@ function Course:setUseTightTurnOffsetForLastWaypoints(d)
 	self:executeFunctionForLastWaypoints(d, function(wp) wp.useTightTurnOffset = true end)
 end
 
---- Get then next contigous headland section of a course, starting at startIx
+--- Get then next contiguous headland section of a course, starting at startIx
 ---@param headland number of headland, starting at 1 on the outermost headland, any headland if nil
 ---@param startIx number start at this waypoint index
 ---@return Course, number headland section as a Course object, next wp index after the section
@@ -1077,7 +1109,7 @@ function Course:getNextNonHeadlandSection(startIx)
 	end)
 end
 
---- Get a list contigous of waypoints with a property, starting at startIx
+--- Get a list contiguous of waypoints with a property, starting at startIx
 --- @param startIx number start at this waypoint index
 --- @param hasProperty function(wp) returns true if waypoint ix has the property
 --- @return Course, number section as a Course object, next wp index after the section
@@ -1197,11 +1229,11 @@ function Course:calculateOffsetCourse(nVehicles, position, width, useSameTurnWid
 	return offsetCourse
 end
 
---- @param node table the node around we are looking for waypoints
+--- @param node number the node around we are looking for waypoints
 --- @return number, number, number, number the waypoint closest to node, its distance, the waypoint closest to the node
 --- pointing approximately (+-45) in the same direction as the node and its distance
 function Course:getNearestWaypoints(node)
-	local x, _, z = getWorldTranslation(node)
+	local nx, _, nz = getWorldTranslation(node)
 	local lx, _, lz = localDirectionToWorld(node, 0, 0, 1)
 	local nodeAngle = math.atan2(lx, lz)
 	local maxDeltaAngle = math.pi / 2
@@ -1209,7 +1241,8 @@ function Course:getNearestWaypoints(node)
 	local ixClosest, ixClosestRightDirection = 1, 1
 
 	for i, p in ipairs(self.waypoints) do
-		local d = p:getDistanceFromPoint(x, z)
+		local x, _, z = self:getWaypointPosition(i)
+		local d = courseplay:distance(x, z, nx, nz)
 		if d < dClosest then
 			dClosest = d
 			ixClosest = i
@@ -1239,4 +1272,80 @@ function Course:getStartingWaypointIx(node, startingPoint)
 		return ixClosestRightDirection
 	end
 	return self:getCurrentWaypointIx()
+end
+
+function Course:isPipeInFruitAt(ix)
+	return self.waypoints[ix].pipeInFruit
+end
+
+--- For each non-headland waypoint of the course determine if the pipe will be
+--- in the fruit at that waypoint, assuming that the course is driven continuously from the
+--- start to the end waypoint
+---@return number, number the total number of non-headland waypoints, the total number waypoint where
+--- the pipe will be in the fruit
+function Course:setPipeInFruitMap(pipeOffsetX, workWidth)
+	local pipeInFruitMapHelperWpNode = WaypointNode('pipeInFruitMapHelperWpNode')
+	---@param rowStartIx number index of the first waypoint of the row
+	local function createRowRectangle(rowStartIx)
+		-- find the end of the row
+		local rowEndIx = #self.waypoints
+		for i = rowStartIx, #self.waypoints do
+			if self:isTurnStartAtIx(i) then
+				rowEndIx = i
+				break
+			end
+		end
+		pipeInFruitMapHelperWpNode:setToWaypoint(self, rowStartIx, true)
+		local x, y, z = self:getWaypointPosition(rowEndIx)
+		local _, _, rowLength = worldToLocal(pipeInFruitMapHelperWpNode.node, x, y, z)
+		local row = {
+			startIx = rowStartIx,
+			length = rowLength
+		}
+		return row
+	end
+
+	local function setPipeInFruit(ix, pipeOffsetX, rows)
+		local halfWorkWidth = workWidth / 2
+		pipeInFruitMapHelperWpNode:setToWaypoint(self, ix, true)
+		local x, y, z = localToWorld(pipeInFruitMapHelperWpNode.node, pipeOffsetX, 0, 0)
+		for _, row in ipairs(rows) do
+			pipeInFruitMapHelperWpNode:setToWaypoint(self, row.startIx)
+			-- pipe's local position in the row start wp's system
+			local lx, _, lz = worldToLocal(pipeInFruitMapHelperWpNode.node, x, y, z)
+			-- add 10 cm buffer to make sure turn end/start waypoints have correct data
+			if math.abs(lx) <= halfWorkWidth and lz >= 0.1 and lz <= row.length + 0.1 then
+				-- pipe is in the fruit at ix
+				return true
+			end
+		end
+		return false
+	end
+
+	-- The idea here is that we walk backwards on the course, remembering each row and adding them
+	-- to the list of unworked rows. This way, at any waypoint we have a list of rows the vehicle
+	-- wouldn't have finished if it was driving the course the right way (start to end).
+	-- Now check if the pipe would be in any of these unworked rows
+	local rowsNotDone = {}
+	local totalNonHeadlandWps = 0
+	local pipeInFruitWps = 0
+	-- start at the end of the course
+	local i = #self.waypoints
+	while i > 1 do
+		-- skip over the headland, we assume the headland is worked first and will always be harvested before
+		-- we get to the middle of the field. If not, your problem...
+		if not self:isOnHeadland(i) then
+			totalNonHeadlandWps = totalNonHeadlandWps + 1
+			-- check if the pipe is in an unworked row
+			self.waypoints[i].pipeInFruit = setPipeInFruit(i, pipeOffsetX, rowsNotDone)
+			pipeInFruitWps = pipeInFruitWps + (self.waypoints[i].pipeInFruit and 1 or 0)
+			if self:isTurnEndAtIx(i) then
+				-- we are at the start of a row (where the turn ends)
+				table.insert(rowsNotDone, createRowRectangle(i))
+			end
+		end
+		i = i - 1
+	end
+	pipeInFruitMapHelperWpNode:destroy()
+	return totalNonHeadlandWps, pipeInFruitWps
 end

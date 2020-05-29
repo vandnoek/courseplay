@@ -1533,22 +1533,6 @@ function courseplay:setEngineState(vehicle, on)
 		return;
 	end;
 
-	-- driveControl engine start/stop
-	if vehicle.cp.hasDriveControl and vehicle.cp.driveControl.hasManualMotorStart then
-		local changed = false;
-		if on and not vehicle.driveControl.manMotorStart.isMotorStarted then
-			vehicle.driveControl.manMotorStart.isMotorStarted = true; -- TODO: timer (800 ms) instead of immediate starting
-			changed = true;
-		elseif not on and vehicle.driveControl.manMotorStart.isMotorStarted and not vehicle.cp.driveControl.hasMotorKeepTurnedOn then
-			vehicle.driveControl.manMotorStart.isMotorStarted = false;
-			changed = true;
-		end;
-		if changed and driveControlInputEvent ~= nil then
-			driveControlInputEvent.sendEvent(vehicle);
-		end;
-		return;
-	end;
-
 	-- default
 	if vehicle.startMotor and vehicle.stopMotor then
 		if on then
@@ -2397,12 +2381,14 @@ function CenterModeSetting:init()
 		{
 			courseGenerator.CENTER_MODE_UP_DOWN,
 			courseGenerator.CENTER_MODE_CIRCULAR,
-			courseGenerator.CENTER_MODE_SPIRAL
+			courseGenerator.CENTER_MODE_SPIRAL,
+			courseGenerator.CENTER_MODE_LANDS
 		},
 		{
 			'COURSEPLAY_CENTER_MODE_UP_DOWN',
 			'COURSEPLAY_CENTER_MODE_CIRCULAR',
-			'COURSEPLAY_CENTER_MODE_SPIRAL'
+			'COURSEPLAY_CENTER_MODE_SPIRAL',
+			'COURSEPLAY_CENTER_MODE_LANDS'
 		})
 end
 
@@ -2619,7 +2605,7 @@ function StrawOnHeadland:init()
 	BooleanSetting.init(self, 'strawOnHeadland', 'COURSEPLAY_STRAW_ON_HEADLAND',
 				'COURSEPLAY_YES_NO_STRAW_ON_HEADLAND', nil)
 	-- set default while we are transitioning from the the old setting to this new one
-	self:set(false)
+	self:set(true)
 end
 
 ---@class RidgeMarkersAutomatic : BooleanSetting

@@ -127,7 +127,7 @@ function UnloadableFieldworkAIDriver:driveUnloadOrRefill(dt)
 	end
 		
 	-- done tipping?
-	if self:hasTipTrigger() and self.vehicle.cp.totalFillLevel == 0 then
+	if self:hasTipTrigger() and self.vehicle.cp.totalFillLevel <= 10 then
 		courseplay:resetTipTrigger(self.vehicle, true);
 	end
 		
@@ -139,7 +139,7 @@ end
 function UnloadableFieldworkAIDriver:isWaitingForUnload()
 	return self.state == self.states.ON_FIELDWORK_COURSE and
 		self.fieldworkState == self.states.UNLOAD_OR_REFILL_ON_FIELD and
-		self.fieldWorkUnloadOrRefillState == self.states.WAITING_FOR_UNLOAD_OR_REFILL
+		self.fieldworkUnloadOrRefillState == self.states.WAITING_FOR_UNLOAD_OR_REFILL
 end
 
 
@@ -228,4 +228,13 @@ end
 
 function UnloadableFieldworkAIDriver:getFillLevelInfoText()
 	return 'NEEDS_UNLOADING'
+end
+
+function UnloadableFieldworkAIDriver:setLightsMask(vehicle)
+	local x,y,z = getWorldTranslation(vehicle.rootNode);
+	if not courseplay:isField(x, z) and self.state == self.states.ON_UNLOAD_OR_REFILL_COURSE then
+		vehicle:setLightsTypesMask(courseplay.lights.HEADLIGHT_STREET)
+	else
+		vehicle:setLightsTypesMask(courseplay.lights.HEADLIGHT_FULL)
+	end
 end

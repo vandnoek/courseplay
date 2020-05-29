@@ -134,7 +134,6 @@ function CpManager:loadMap(name)
 
 	-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	-- MISCELLANEOUS
-	self.lightsNeeded = false;
 end;
 
 function CpManager:deleteMap()
@@ -653,6 +652,7 @@ function CpManager:loadAIDriver()
 	if g_currentMission.controlledVehicle then
 		-- re-instantiate the AIDriver after loaded
 		courseplay:setAIDriver(g_currentMission.controlledVehicle, g_currentMission.controlledVehicle.cp.mode)
+		g_combineUnloadManager:addNewCombines()
 	end
 end
 
@@ -836,11 +836,7 @@ function CpManager:severCombineTractorConnection(vehicle, callDelete)
 end;
 BaseMission.removeVehicle = Utils.prependedFunction(BaseMission.removeVehicle, CpManager.severCombineTractorConnection);
 
-local nightStart, dayStart = 19 * 3600000, 7.5 * 3600000; -- from 7pm until 7:30am
 function CpManager:minuteChanged()
-	-- WEATHER
-	local env = g_currentMission.environment;
-	self.lightsNeeded = true --Tommi env.needsLights or (env.dayTime >= nightStart or env.dayTime <= dayStart) or env.currentRain ~= nil or env.curRain ~= nil or (env.lastRainScale > 0.1 and env.timeSinceLastRain < 30);
 end;
 
 function CpManager:showYesNoDialogue(title, text, callbackFn)

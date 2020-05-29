@@ -674,6 +674,18 @@ function AIDriver:setSpeed(speed)
 	self.speed = math.min(self.speed, speed)
 end
 
+--- Speed on the field when not working
+function AIDriver:getFieldSpeed()
+	return self.vehicle.cp.speeds.field
+end
+
+--- Speed on the field when working
+function AIDriver:getWorkSpeed()
+	-- use the speed limit supplied by Giants for fieldwork
+	local speedLimit = self.vehicle:getSpeedLimit() or math.huge
+	return math.min(self.vehicle.cp.speeds.field, speedLimit)
+end
+
 function AIDriver:resetLastMoveCommandTime()
 	self.lastMoveCommandTime = self.vehicle.timer
 end
@@ -904,6 +916,41 @@ function AIDriver:updateLights()
 		self.vehicle:setBeaconLightsVisibility(true)
 	else
 		self.vehicle:setBeaconLightsVisibility(false)
+	end
+end
+
+function AIDriver:updateAILights(superFunc)
+	if self.cp and self.cp.driver and self:getIsCourseplayDriving() and self.spec_lights then
+		if self.cp.driver:shouldLightsBeUsedForEnvironment() then --fall back to base class AIDriver for this
+			self.cp.driver:setLightsMask(self)
+		elseif superFunc ~= nil then
+			superFunc(self)
+		end
+	elseif superFunc ~= nil then
+		superFunc(self)
+	end
+end
+Lights.updateAILights = Utils.overwrittenFunction(Lights.updateAILights , AIDriver.updateAILights)
+
+function AIDriver:shouldLightsBeUsedForEnvironment()
+	-- How Giants decides lights in Lights:updateAILights
+	local dayMinutes = g_currentMission.environment.dayTime / (1000 * 60)
+	local nightTime = (dayMinutes > g_currentMission.environment.nightStartMinutes or dayMinutes < g_currentMission.environment.nightEndMinutes)
+	local rainScale = g_currentMission.environment.weather:getRainFallScale()
+	local timeSinceRain = g_currentMission.environment.weather:getTimeSinceLastRain()
+	local raining = rainScale > 0
+
+	local shouldLightsBeUsed = (nightTime or raining)
+
+	return shouldLightsBeUsed
+end
+
+function AIDriver:setLightsMask(vehicle)
+	local x,y,z = getWorldTranslation(vehicle.rootNode);
+	if not courseplay:isField(x, z) then
+		vehicle:setLightsTypesMask(courseplay.lights.HEADLIGHT_STREET)
+	else
+		vehicle:setLightsTypesMask(courseplay.lights.HEADLIGHT_FULL)
 	end
 end
 
@@ -1311,7 +1358,7 @@ end
 ---@return boolean true when a pathfinding successfully started or an alignment course was added
 function AIDriver:startCourseWithPathfinding(course, ix, zOffset, fieldNum, alwaysUsePathfinding)
 	-- make sure we have at least a direct course until we figure out a better path. This can happen
-	-- when we don't have a course set yet when starting the pathfinding, for example when starting the course.`
+	-- when we don't have a course set yet when starting the pathfinding, for example when starting the course.
 	self:resetTrafficControl()
 	self.course = course
 	self.ppc:setCourse(course)
@@ -1381,10 +1428,15 @@ function AIDriver:driveToPointWithPathfinding(waypoint, zOffset, course, ix, fie
 	return false
 end
 
+--- Override this if you for example want to completely stop (speed 0 will keep rolling for a while)
+function AIDriver:stopForPathfinding()
+	self:setSpeed(0)
+end
+
 function AIDriver:updatePathfinding()
 	if self.pathfinder and self.pathfinder:isActive() then
 		-- stop while pathfinding is running
-		self:setSpeed(0)
+		self:stopForPathfinding()
 		local done, path = self.pathfinder:resume()
 		if done then
 			self.pathfindingDoneCallbackFunc(self.pathfindingDoneObject, path)
@@ -1707,12 +1759,12 @@ function AIDriver:checkProximitySensor(maxSpeed, allowedToDrive, moveForwards)
 	local d, range = math.huge, 10
 	if moveForwards then
 		if self.forwardLookingProximitySensorPack and self.forwardLookingProximitySensorPack:isSpeedControlEnabled() then
-			d = self.forwardLookingProximitySensorPack:getClosestObjectDistance()
+			d = self.forwardLookingProximitySensorPack:getClosestObjectDistanceAndRootVehicle()
 			range = self.forwardLookingProximitySensorPack:getRange()
 		end
 	else
 		if self.backwardLookingProximitySensorPack and self.backwardLookingProximitySensorPack:isSpeedControlEnabled() then
-			d = self.backwardLookingProximitySensorPack:getClosestObjectDistance()
+			d = self.backwardLookingProximitySensorPack:getClosestObjectDistanceAndRootVehicle()
 			range = self.backwardLookingProximitySensorPack:getRange()
 		end
 	end
