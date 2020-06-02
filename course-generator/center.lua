@@ -533,7 +533,7 @@ function linkParallelTracks(parallelTracks, bottomToTop, leftToRight, centerSett
 		parallelTracks = reorderTracksForCircularFieldwork(parallelTracks)
 		start = leftToRight and 2 or 1
 	elseif centerSettings.mode == courseGenerator.CENTER_MODE_LANDS then
-		parallelTracks = reorderTracksForLandsFieldwork(parallelTracks, leftToRight, bottomToTop)
+		parallelTracks = reorderTracksForLandsFieldwork(parallelTracks, leftToRight, bottomToTop, centerSettings.nRowsPerLand)
 		start = leftToRight and 2 or 1
 	end
 	-- now make sure that the we work on the tracks in alternating directions
@@ -713,17 +713,28 @@ function reorderTracksForCircularFieldwork(parallelTracks)
 	return reorderedTracks
 end
 
-function reorderTracksForLandsFieldwork(parallelTracks, leftToRight, bottomToTop)
+function reorderTracksForLandsFieldwork(parallelTracks, leftToRight, bottomToTop, nRowsInLands)
 	local reorderedTracks = {}
-	print(leftToRight, bottomToTop)
+	-- TODO: add logic for pipe on the left side, as it is now only works for pipe on the right side
+	-- I know this could be generated but it is more readable and easy to visualize this way.
 	local rowOrderInLands = ((leftToRight and bottomToTop) or (not leftToRight and not bottomToTop))  and
 			{
 				{1},
 				{2, 1},
 				{2, 3, 1},
 				{2, 3, 1, 4},
-				{2, 3, 1, 4, 5},
-				{3, 4, 2, 5, 1, 6}
+				{3, 4, 2, 5, 1},
+				{3, 4, 2, 5, 1, 6},
+				{4, 5, 3, 6, 2, 7, 1},
+				{4, 5, 3, 6, 2, 7, 1, 8},
+				{5, 6, 4, 7, 3, 8, 2, 9, 1},
+				{5, 6, 4, 7, 3, 8, 2, 9, 1, 10},
+				{6, 7, 5, 8, 4, 9, 3, 10, 2, 11, 1},
+				{6, 7, 5, 8, 4, 9, 3, 10, 2, 11, 1, 12},
+				{7, 8, 6, 9, 5, 10, 4, 11, 3, 12, 2, 13, 1},
+				{7, 8, 6, 9, 5, 10, 4, 11, 3, 12, 2, 13, 1, 14},
+				{8, 9, 7, 10, 6, 11, 5, 12, 4, 13, 3, 14, 2, 15, 1},
+				{8, 9, 7, 10, 6, 11, 5, 12, 4, 13, 3, 14, 2, 15, 1, 16}	
 			} or
 			{
 				{1},
@@ -731,10 +742,18 @@ function reorderTracksForLandsFieldwork(parallelTracks, leftToRight, bottomToTop
 				{2, 1, 3},
 				{3, 2, 4, 1},
 				{3, 2, 4, 1, 5},
-				{4, 3, 5, 2, 6, 1}
+				{4, 3, 5, 2, 6, 1},
+				{4, 3, 5, 2, 6, 1, 7},
+				{5, 4, 6, 3, 7, 2, 8, 1},
+				{5, 4, 6, 3, 7, 2, 8, 1, 9},
+				{6, 5, 7, 4, 8, 3, 9, 2, 10, 1},
+				{6, 5, 7, 4, 8, 3, 9, 2, 10, 1, 11},
+				{7, 6, 8, 5, 9, 4, 10, 3, 11, 2, 12, 1},
+				{7, 6, 8, 5, 9, 4, 10, 3, 11, 2, 12, 1, 13},
+				{8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1},
+				{8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15},
+				{9, 8, 10, 7, 11, 6, 12, 5, 13, 4, 14, 3, 15, 2, 16, 1}
 			}
-
-	local nRowsInLands = 6
 
 	for i = 0, math.floor(#parallelTracks / nRowsInLands) - 1 do
 		for _, j in ipairs(rowOrderInLands[nRowsInLands]) do
