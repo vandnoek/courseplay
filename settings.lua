@@ -2347,6 +2347,13 @@ function NumberOfRowsPerLandSetting:init()
 			{4, 6, 8, 10, 12, 14, 16})
 end
 
+function HeadlandOverlapPercent:init()
+	SettingList.init(self, 'headlandOverlapPercent', 'COURSEPLAY_HEADLAN_DOVERLAP_PERCENT',
+			'COURSEPLAY_HEADLAN_DOVERLAP_PERCENT_TOOLTIP', nil,
+			{4, 6, 8, 10, 12, 14, 16},
+			{4, 6, 8, 10, 12, 14, 16})
+end
+
 --- Implement raise/lower  setting
 ---@class ImplementRaiseLowerTimeSetting : SettingList
 ImplementRaiseLowerTimeSetting = CpObject(SettingList)
@@ -2569,7 +2576,16 @@ function RidgeMarkersAutomatic:init()
 	BooleanSetting.init(self, 'ridgeMarkersAutomatic', 'COURSEPLAY_RIDGEMARKERS',
 			'COURSEPLAY_YES_NO_RIDGEMARKERS', nil)
 	self:set(false)
-end 
+end
+
+---@class EnableVisualWaypointsTemporary : BooleanSetting
+EnableVisualWaypointsTemporary = CpObject(BooleanSetting)
+function EnableVisualWaypointsTemporary:init()
+	BooleanSetting.init(self, 'enableVisualWaypointsTemporary', 'COURSEPLAY_ENABLE_VISUAL_WAYPOINTS_TEMPORARY',
+				'COURSEPLAY_YES_NO_ENABLE_VISUAL_WAYPOINTS_TEMPORAR', nil)
+	-- set default while we are transitioning from the the old setting to this new one
+	self:set(false)
+end
 
 ---@class ShowMiniHud : BooleanSetting
 ShowMiniHud = CpObject(BooleanSetting)

@@ -448,6 +448,10 @@
 	<text name="COURSEPLAY_YES_NO_ENABLE_OPEN_HUD_WITH_MOUSE_GLOBAL"	text="Permet l'ouverture du HUD avec un clique droit. Ce paramètre s'applique à TOUS les véhicules" />
 	<text name="COURSEPLAY_ENABLE_OPEN_HUD_WITH_MOUSE_VEHICLE"			text="Clique droit pour ouvrir le HUD" />
 	<text name="COURSEPLAY_YES_NO_ENABLE_OPEN_HUD_WITH_MOUSE_VEHICLE"	text="Permet l'ouverture du HUD avec un clique droit. Ce paramètre ne s'applique qu'au véhicule actuel" />
+  <text name="COURSEPLAY_ENABLE_VISUAL_WAYPOINTS_TEMPORARY"			text="Pathfinder Waypoints" />
+		<text name="COURSEPLAY_YES_NO_ENABLE_VISUAL_WAYPOINTS_TEMPORARY"	text="Shows Pathfinder Lines" />
+		<text name="COURSEPLAY_HEADLAN_DOVERLAP_PERCENT"					text="Headland Overlap" />
+		<text name="COURSEPLAY_HEADLAN_DOVERLAP_PERCENT_TOOLTIP"			text="Headland Overlap in percent" />
 	
 	<text name="COURSEPLAY_SHOW_MINI_HUD"								text="Afficher Mini-HUD" />
 	<text name="COURSEPLAY_YES_NO_SHOW_MINI_HUD"						text="Permet l'affichage du Mini-HUD" />

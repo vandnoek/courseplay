@@ -449,6 +449,10 @@
 		<text name="COURSEPLAY_ENABLE_OPEN_HUD_WITH_MOUSE_VEHICLE"			text="Clique botão direito para HUD" />
 		<text name="COURSEPLAY_YES_NO_ENABLE_OPEN_HUD_WITH_MOUSE_VEHICLE"	text="Ativar/Desativar HUD (Veículo atual) Clique no botão direito do mous)" />
 
+		<text name="COURSEPLAY_ENABLE_VISUAL_WAYPOINTS_TEMPORARY"			text="Pathfinder Waypoints" />
+		<text name="COURSEPLAY_YES_NO_ENABLE_VISUAL_WAYPOINTS_TEMPORARY"	text="Shows Pathfinder Lines" />
+		<text name="COURSEPLAY_HEADLAN_DOVERLAP_PERCENT"					text="Headland Overlap" />
+		<text name="COURSEPLAY_HEADLAN_DOVERLAP_PERCENT_TOOLTIP"			text="Headland Overlap in percent" />
 
 		<text name="COURSEPLAY_IMPLEMENT_RAISE_LOWER_EARLY"				   	text="Primeiro" />
 		<text name="COURSEPLAY_IMPLEMENT_RAISE_LOWER_LATE"				   	text="Último" />
