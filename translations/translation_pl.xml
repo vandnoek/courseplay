@@ -447,6 +447,11 @@
 		<text name="COURSEPLAY_ENABLE_OPEN_HUD_WITH_MOUSE_VEHICLE"			text="HUD na PPM" />
 		<text name="COURSEPLAY_YES_NO_ENABLE_OPEN_HUD_WITH_MOUSE_VEHICLE"	text="Włącz/Wyłącz otwieranie HUDa prawym przyciskiem myszy (obecny pojazd)" />
 
+		<text name="COURSEPLAY_ENABLE_VISUAL_WAYPOINTS_TEMPORARY"			text="Pathfinder Waypoints" />
+		<text name="COURSEPLAY_YES_NO_ENABLE_VISUAL_WAYPOINTS_TEMPORARY"	text="Shows Pathfinder Lines" />
+		<text name="COURSEPLAY_HEADLAN_DOVERLAP_PERCENT"					text="Headland Overlap" />
+		<text name="COURSEPLAY_HEADLAN_DOVERLAP_PERCENT_TOOLTIP"			text="Headland Overlap in percent" />
+
 		<text name="COURSEPLAY_STRAW_ON_HEADLAND"							text="Wyładunek słomy na uwrociach" />
 		<text name="COURSEPLAY_YES_NO_STRAW_ON_HEADLAND"					text="Włącza/Wyłącza wyładunek słomy na uwrociach" />
 		<text name="COURSEPLAY_FERTILIZE_OPTION"                            text="Nawożenie w siewniku" />

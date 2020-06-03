@@ -450,6 +450,11 @@
 		<text name="COURSEPLAY_ENABLE_OPEN_HUD_WITH_MOUSE_VEHICLE"			text="HUD по правому клику" />
 		<text name="COURSEPLAY_YES_NO_ENABLE_OPEN_HUD_WITH_MOUSE_VEHICLE"	text="Вкл/Выкл клик правой кнопкой для открытия HUD (на текущей технике). В противном случае используйте Right Ctrl+Del." />
 
+		<text name="COURSEPLAY_ENABLE_VISUAL_WAYPOINTS_TEMPORARY"			text="Pathfinder Waypoints" />
+		<text name="COURSEPLAY_YES_NO_ENABLE_VISUAL_WAYPOINTS_TEMPORARY"	text="Shows Pathfinder Lines" />
+		<text name="COURSEPLAY_HEADLAN_DOVERLAP_PERCENT"					text="Headland Overlap" />
+		<text name="COURSEPLAY_HEADLAN_DOVERLAP_PERCENT_TOOLTIP"			text="Headland Overlap in percent" />
+
 		<text name="COURSEPLAY_STRAW_ON_HEADLAND"							text="Выгрузка соломы" />
 		<text name="COURSEPLAY_YES_NO_STRAW_ON_HEADLAND"					text="Вкл/Выкл выгрузку соломы на разворотной полосе." />
 		<text name="COURSEPLAY_FERTILIZE_OPTION"							text="Удобрение сеялкой" />
