@@ -2347,6 +2347,10 @@ function NumberOfRowsPerLandSetting:init()
 			{4, 6, 8, 10, 12, 14, 16})
 end
 
+--- Percentage of Overlap for Headland
+---@class HeadlandOverlapPercent
+HeadlandOverlapPercent = CpObject(SettingList)
+
 function HeadlandOverlapPercent:init()
 	SettingList.init(self, 'headlandOverlapPercent', 'COURSEPLAY_HEADLAN_DOVERLAP_PERCENT',
 			'COURSEPLAY_HEADLAN_DOVERLAP_PERCENT_TOOLTIP', nil,
