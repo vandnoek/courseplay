@@ -180,6 +180,7 @@ function CombineUnloadAIDriver:drive(dt)
 			self:hold()
 		end
 		if not giveUpControl then
+			self:trafficControlOK()
 			AIDriver.drive(self, dt)
 		end
 	elseif self.state == self.states.ON_FIELD then
@@ -462,8 +463,8 @@ function CombineUnloadAIDriver:driveOnField(dt)
 		-- try not crashing into our combine on the way to the unload course
 		if self.combineJustUnloaded and self:isWithinSafeManeuveringDistance(self.combineJustUnloaded)
 				 and self.combineJustUnloaded.cp.driver:isManeuvering() then
-			self:debugSparse('holding combine %s while leaving for the unload course', self.combineJustUnloaded:getName())
-			self.combineJustUnloaded.cp.driver:hold()
+			self:debugSparse('not holding combine %s while leaving for the unload course', self.combineJustUnloaded:getName())
+			--self.combineJustUnloaded.cp.driver:hold()
 		end
 
 	elseif self.onFieldState == self.states.DRIVE_BACK_FULL then

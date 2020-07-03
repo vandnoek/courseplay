@@ -1594,9 +1594,14 @@ function AIDriver:onUnBlocked()
 	self:debug('Unblocked...')
 end
 
+-- Get width used for traffic control.
+function AIDriver:getVehicleWidth()
+	return 4
+end
+
 function AIDriver:trafficControlOK()
 	-- TODO: why the root node? Why not the vehicle itself?
-	return g_trafficController:reserve(self.vehicle.rootNode, self.course, self.ppc:getCurrentWaypointIx())
+	return g_trafficController:reserve(self.vehicle.rootNode, self.course, self.ppc:getCurrentWaypointIx(), self:getVehicleWidth())
 end
 
 function AIDriver:resetTrafficControl()

@@ -81,7 +81,7 @@ function TrafficController:init()
 	-- this is our window of traffic awareness, we only plan for the next 30 seconds
 	self.lookaheadTimeSeconds = 15
 	-- the reservation table grid size in meters. This should be less than the maximum waypoint distance
-	self.gridSpacing = 1.33
+	self.gridSpacing = 1
 	-- every so often we clean up stale reservations
 	self.cleanUpIntervalSeconds = 20
 	self.staleReservationTimeoutSeconds = 3 * self.lookaheadTimeSeconds
@@ -112,14 +112,15 @@ end
 
 --- Make a reservation for the next lookaheadTimeSeconds interval
 -- @param vehicleId unique ID of the reserving vehicle
--- @param course vehicle course
+---@param course Course vehicle course
 -- @param fromIx index of the course waypoint where we start the reservation
+---@param width number vehicle width
 -- @param speed expected speed of the vehicle in km/h. If not given will use the speed in the course.
 -- @return true if successfully reserved _all_ tiles. When returning false it may
 -- reserve some of the tiles though.
-function TrafficController:reserve(vehicleId, course, fromIx, speed)
-	self:freePreviousTiles(vehicleId, course, fromIx, speed)
-	local ok = self:reserveNextTiles(vehicleId, course, fromIx, speed)
+function TrafficController:reserve(vehicleId, course, fromIx, width, speed)
+	self:freePreviousTiles(vehicleId, course, fromIx, width, speed)
+	local ok = self:reserveNextTiles(vehicleId, course, fromIx, width, speed)
 	if ok then
 		self.blockingVehicleId[vehicleId] = nil
 	end
@@ -136,23 +137,6 @@ function TrafficController:reserveOwnPosition(vehicle)
 		local gridPoint = Point(gx,gz)
 		self:reserveGridPoint(gridPoint, OwnReservation(vehicle.rootNode, self.clock))
 	end
-end
-
-function TrafficController:reserveWithWorkwidth(vehicleId, course, fromIx, speed,workWidth)
-	self:freePreviousTilesWithWorWidth(vehicleId, course, fromIx, speed,workWidth)
-	local ok = true
-	local gridPoints = self:getGridPointsUnderCourseWithWorkWidth(course, self:forwardIterator(fromIx, course:getNumberOfWaypoints() - 1), speed,workWidth)
-	--reserve new gridPoints
-	for i = 1, #gridPoints do
-		if not self:reserveGridPoint(gridPoints[i], Reservation(vehicleId, self.clock)) then
-			ok = false
-		end
-	end
-	--reset  blockingVehicleId table for this vehicleId
-	if ok then
-		self.blockingVehicleId[vehicleId] = nil
-	end
-	return ok
 end
 
 function TrafficController:cancelOwnPosition(vehicleId)
@@ -185,33 +169,24 @@ function TrafficController:getHasSolver(vehicleId)
 end
 
 
-
-
 function TrafficController:getBlockingVehicleId(vehicleId)
 	return self.blockingVehicleId[vehicleId]
 end
 
 --- Free waypoints already passed
 -- use the link to the previous tile to walk back until the oldest one is reached.
-function TrafficController:freePreviousTiles(vehicleId, course, fromIx, speed)
-	local tiles = self:getGridPointsUnderCourse(course, self:backwardIterator(fromIx-2), speed)
+function TrafficController:freePreviousTiles(vehicleId, course, fromIx, width, speed)
+	local tiles = self:getGridPointsUnderCourse(course, fromIx - 2, width, speed, true)
 	for i = 1, #tiles do
-		self:freeGridPoint(tiles[i], vehicleId)
+		self:freeTile(tiles[i], vehicleId)
 	end
 end
 
-function TrafficController:freePreviousTilesWithWorWidth(vehicleId, course, fromIx, speed,workWidth)
-	local tiles = self:getGridPointsUnderCourseWithWorkWidth(course, self:backwardIterator(fromIx-3), speed,workWidth)
-	for i = 1, #tiles do
-		self:freeGridPoint(tiles[i], vehicleId)
-	end
-end
-
-function TrafficController:reserveNextTiles(vehicleId, course, fromIx, speed)
+function TrafficController:reserveNextTiles(vehicleId, course, fromIx, width, speed)
 	local ok = true
-	local gridPoints = self:getGridPointsUnderCourse(course, self:forwardIterator(fromIx, course:getNumberOfWaypoints() - 1), speed)
+	local gridPoints = self:getGridPointsUnderCourse(course, fromIx, width, speed, false)
 	for i = 1, #gridPoints do
-		if not self:reserveGridPoint(gridPoints[i], Reservation(vehicleId, self.clock)) then
+		if not self:reserveTile(gridPoints[i], Reservation(vehicleId, self.clock)) then
 			return false
 		end
 	end
@@ -219,83 +194,69 @@ function TrafficController:reserveNextTiles(vehicleId, course, fromIx, speed)
 end
 
 
+
+local function plotLine(pixels, x0, y0, x1, y1)
+	x0, y0, x1, y1 = math.floor(x0), math.floor(y0), math.floor(x1), math.floor(y1)
+	local dx, sx = math.abs(x1 - x0), x0 < x1 and 1 or -1
+	local dy, sy = -math.abs(y1 - y0), y0 < y1 and 1 or -1
+	local err, e2 = dx + dy
+
+	while true do
+		table.insert(pixels, Point(x0, -y0))
+		e2 = 2 * err
+		if e2 >= dy then
+			if x0 == x1 then break end
+			err = err + dy
+			x0 = x0 + sx
+		end
+		if e2 <= dx then
+			if y0 == y1 then break end
+			err = err + dx
+			y0 = y0 + sy
+		end
+	end
+end
+
+---@return table
+local function plotThickLine(pixels, x0, y0, x1, y1, w)
+	w = math.max(2, math.floor(w + 0.5))
+	local halfWidth = math.floor(w / 2 + 0.5)
+	local dx, dy = x1 - x0, y1 - y0
+	local s = Vector(x0, y0)
+	---@type Vector
+	local v = Vector(dx, dy):rotate(math.rad(-90))
+	plotLine(pixels, x0, y0, x1, y1)
+	for w1 = 1, halfWidth do
+		v:setLength(w1)
+		local s1 = s + v
+		plotLine(pixels, s1.x, s1.y, s1.x + dx, s1.y + dy)
+	end
+	v = Vector(dx, dy):rotate(math.rad(90))
+	for w1 = 1, halfWidth do
+		v:setLength(w1)
+		local s1 = s + v
+		plotLine(pixels, s1.x, s1.y, s1.x + dx, s1.y + dy)
+	end
+	return pixels
+end
+
+
 --- Get the list of tiles the segment of the course defined by the iterator is passing through, using the
 -- speed in the course or the one supplied here. Will find the tiles reached in lookaheadTimeSeconds only
 -- (based on the speed and the waypoint distance)
-function TrafficController:getGridPointsUnderCourse(course, iterator, speed)
+---@param course Course
+function TrafficController:getGridPointsUnderCourse(course, fromIx, width, speed, backwards)
 	local tiles = {}
-	local travelTimeSeconds = 0
-	for i in iterator() do
-		local v = speed or course.waypoints[i].speed or 10
-		local s = course:getDistanceToNextWaypoint(i)
-		local x, z = self:getGridCoordinatesFromCourse(course,i)
-		table.insert(tiles, Point(x, z))
-		-- if waypoints are further apart than our grid spacing then we need to add points
-		-- in between to not miss a tile
-		if s > self.gridSpacing then
-			local ips = self:getIntermediatePoints(course,i,i + 1)
-			for _, wp in ipairs(ips) do
-				x, z = self:getGridCoordinates(wp)
-				table.insert(tiles, Point(x, z))
-			end
-		end
-		travelTimeSeconds = travelTimeSeconds + s / (v / 3.6)
-		if travelTimeSeconds > self.lookaheadTimeSeconds then
-			return tiles
-		end
+	local vMetersPerSecond = (speed or course:getAverageSpeed(fromIx, 3) or 10) / 3.6
+	local toIx = course:getNextWaypointIxWithinDistance(fromIx, vMetersPerSecond * self.lookaheadTimeSeconds, backwards)
+	if not toIx then return tiles end
+	for i = fromIx, toIx - 1, backwards and -1 or 1 do
+		local x0, _, z0 = course:getWaypointPosition(i)
+		local x1, _, z1 = course:getWaypointPosition(i + 1)
+		tiles = plotThickLine(tiles, x0, -z0, x1, -z1, width)
 	end
-	-- if we ended up here then we went all the way to the waypoint before the last, so
-	-- add the last one here
-	local x, z = self:getGridCoordinatesFromCourse(course,course:getNumberOfWaypoints())
-	table.insert(tiles, Point(x, z))
 	return tiles
 end
-
---same as getGridPointsUnderCourse() but alos concerning the workwidth of the tool
-function TrafficController:getGridPointsUnderCourseWithWorkWidth(course, iterator, speed,workWidth)
-	local tiles = {}
-	local travelTimeSeconds = 0
-	for i in iterator() do
-		local v = speed or course.waypoints[i].speed or 10
-		local s = course:getDistanceToNextWaypoint(i)
-		local x, z = self:getGridCoordinatesFromCourse(course,i)
-		table.insert(tiles, Point(x, z))
-		if s > self.gridSpacing then
-			for offset=0,s,self.gridSpacing do
-				local pointXleft,_,pointZleft = course:waypointLocalToWorld(i, (-workWidth/2)+self.gridSpacing, 0, offset)
-				local pointXright,_,pointZright = course:waypointLocalToWorld(i, (workWidth/2)-self.gridSpacing, 0, offset)
-				table.insert(tiles, Point(self:getGridCoordinates(Point(pointXleft,pointZleft))))
-				table.insert(tiles, Point(self:getGridCoordinates(Point(pointXright,pointZright))))
-			end
-		else
-			local pointXleft,_,pointZleft = course:waypointLocalToWorld(i, (-workWidth/2)+self.gridSpacing, 0, 0)
-			local pointXright,_,pointZright = course:waypointLocalToWorld(i, (workWidth/2)-self.gridSpacing, 0, 0)
-			table.insert(tiles, Point(self:getGridCoordinates(Point(pointXleft,pointZleft))))
-			table.insert(tiles, Point(self:getGridCoordinates(Point(pointXright,pointZright))))
-		end
-		-- if waypoints are further apart than our grid spacing then we need to add points
-		-- in between to not miss a tile
-		if s > self.gridSpacing then
-			local ips = self:getIntermediatePoints(course,i,i + 1)
-			for _, wp in ipairs(ips) do
-				x, z = self:getGridCoordinates(wp)
-				table.insert(tiles, Point(x, z))
-			end
-		end
-		travelTimeSeconds = travelTimeSeconds + s / (v / 3.6)
-		if travelTimeSeconds > self.lookaheadTimeSeconds then
-			return tiles
-		end
-	end
-	-- if we ended up here then we went all the way to the waypoint before the last, so
-	-- add the last one here
-	local x, z = self:getGridCoordinatesFromCourse(course,course:getNumberOfWaypoints())
-	table.insert(tiles, Point(x, z))
-	return tiles
-
-
-end
-
 
 --- If waypoint a and b a farther apart than the grid spacing then we need to
 -- add points in between so wo don't miss a tile
@@ -471,8 +432,8 @@ end
 function TrafficController:drawDebugInfo()
 	if not courseplay.debugChannels[self.debugChannel] then return end
 		--self.reservations[point.x][point.z].vehicleId
-	for pointX,list in pairs (self.reservations) do
-		for pointZ,data in pairs(list) do
+	for pointX, list in pairs (self.reservations) do
+		for pointZ, _ in pairs(list) do
 			local y = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode,pointX*self.gridSpacing,1,pointZ*self.gridSpacing)
 			--cpDebug:drawPoint(pointX*self.gridSpacing+1.5, y+0.2, pointZ*self.gridSpacing+1.5, 0, 0, 100)
 			--cpDebug:drawPoint(pointX*self.gridSpacing+-1.5, y+0.2, pointZ*self.gridSpacing-1.5, 100, 0, 0)
