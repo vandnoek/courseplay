@@ -190,13 +190,6 @@ end
 function CombineAIDriver:drive(dt)
 	-- handle the pipe in any state
 	self:handlePipe()
-	if self.isChopperWaitingForTrailer then
-		-- Give up all reservations while not moving (and do not reserve anything)
-		self:resetTrafficControl()
-	elseif not self:trafficControlOK() then
-		self:debugSparse('would be holding due to traffic')
-		--self:hold()
-	end
 	-- the rest is the same as the parent class
 	UnloadableFieldworkAIDriver.drive(self, dt)
 end

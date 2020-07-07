@@ -849,6 +849,7 @@ end
 
 --- Get the index of the first waypoint from ix which is at least distance meters away
 ---@param backward boolean search backward if true
+---@return numer, number index and exact distance
 function Course:getNextWaypointIxWithinDistance(ix, distance, backward)
 	local d = 0
 	local from, to, step = ix, #self.waypoints - 1, 1
@@ -857,10 +858,10 @@ function Course:getNextWaypointIxWithinDistance(ix, distance, backward)
 	end
 	for i = from, to, step do
 		d = d + self.waypoints[i].dToNext
-		if d > distance then return i end
+		if d > distance then return i + 1, d end
 	end
 	-- at the end/start of course return last/first wp
-	return to
+	return to + 1, d
 end
 
 --- Get the index of the first waypoint from ix which is at least distance meters away (search backwards)
@@ -871,6 +872,41 @@ function Course:getPreviousWaypointIxWithinDistance(ix, distance)
 		if d > distance then return i end
 	end
 	return nil
+end
+
+--- Collect a nSteps number of positions on the course, starting at startIx, one position every dStep meters
+---@param startIx number start at this waypoint
+---@param dStep number step in meters
+---@param nSteps number number of positions to collect
+function Course:getPositionsOnCourse(startIx, dStep, nSteps)
+	local positions = {}
+	local d = 0
+	local ix = startIx
+	while #positions < nSteps do
+		local x, y, z = self:getWaypointPosition(ix)
+		if dStep < self.waypoints[ix].dToNext then
+			while d < self.waypoints[ix].dToNext and #positions < nSteps do
+				table.insert(positions, {x = x + d * self.waypoints[ix].dx,
+										 y = y,
+										 z = z + d * self.waypoints[ix].dz,
+										 yRot = self.waypoints[ix].yRot})
+				d = d + dStep
+			end
+			d = d - self.waypoints[ix].dToNext
+            ix = ix + 1
+		else
+			while d < dStep do
+				d = d + self.waypoints[ix].dToNext
+				ix = ix + 1
+			end
+			d = d - dStep
+			table.insert(positions, {x = x + d * self.waypoints[ix].dx,
+									 y = y,
+									 z = z + d * self.waypoints[ix].dz,
+									 yRot = self.waypoints[ix].yRot})
+		end
+	end
+	return positions
 end
 
 function Course:getLength()

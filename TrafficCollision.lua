@@ -19,13 +19,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---@class CollisionDetector
 CollisionDetector = CpObject()
 
+CollisionDetector.numTrafficCollisionTriggers = 4
+
 function CollisionDetector:init(vehicle, course)
-	-- channel 12 until the legacy code is spamming channel 3
 	self.debugChannel = 3
 	self.debugTicks = 100 -- show sparse debug information only at every debugTicks update
 	self.vehicle = vehicle
-	self:debug('creating CollisionDetector')
+	self:debug('CollisionDetector:init()')
 	self.course = course
+
 	self.collidingObjects = {}
 	self.nCollidingObjects = 0
 	self.ignoredNodes = {}
@@ -65,18 +67,14 @@ end
 function CollisionDetector:createTriggers()
 
 	if not courseplay:findAiCollisionTrigger(self.vehicle) then return end	-- create triggers only for enterable vehicles
-	-- self.aiTrafficCollisionTrigger = courseplay:findAiCollisionTrigger(self.vehicle)
-	-- if not self.aiTrafficCollisionTrigger then return end
+
 	if not self.trafficCollisionTriggers then
 		self.trafficCollisionTriggers = {}
 	end
-	self.vehicle.cp.trafficCollisionTriggerToTriggerIndex = {}
-	-- self.vehicle.aiTrafficCollisionTrigger = self.aiTrafficCollisionTrigger
 	if self.trafficCollisionTriggers[1] == nil then
-		for i = 1, self.vehicle.cp.numTrafficCollisionTriggers do
+		for i = 1, self.numTrafficCollisionTriggers do
 			local newTrigger = clone(self.vehicle.aiTrafficCollisionTrigger, true)
 			self.trafficCollisionTriggers[i] = newTrigger
-			self.vehicle.cp.trafficCollisionTriggerToTriggerIndex[newTrigger] = i;
 			setName(newTrigger, 'cpAiCollisionTrigger ' .. tostring(i))
 			if i > 1 then
 				unlink(newTrigger)
@@ -90,7 +88,7 @@ end
 
 
 function CollisionDetector:deleteTriggers()
-	for i = self.vehicle.cp.numTrafficCollisionTriggers, 1, -1 do
+	for i = self.numTrafficCollisionTriggers, 1, -1 do
 		local node = self.trafficCollisionTriggers[i]
 		if node then
 			removeTrigger(node)
@@ -113,7 +111,6 @@ function CollisionDetector:addToIgnoreList(object)
 	self:debug('will ignore collisions with %q (%q)', nameNum(object), tostring(object.cp.xmlFileName))
 	self.ignoredNodes[object.rootNode] = true;
 	-- add the vehicle or implement's own collision trigger to the ignore list
-	-- local aiCollisionTrigger = courseplay:findAiCollisionTrigger(object)
 	courseplay:findAiCollisionTrigger(object)		-- get aiTrafficCollisionTrigger for vehicles
 	if object.aiTrafficCollisionTrigger then
 		self:debug('-- %q', getName(object.aiTrafficCollisionTrigger))
@@ -220,22 +217,11 @@ function CollisionDetector:findTheValidCollisionVehicle()
 
 			else
 				self:isItATrafficVehicle(targetId)
---[[
-				if self:isItATrafficVehicle(targetId) then
-					distance = courseplay:nodeToNodeDistance(self.vehicle.cp.directionNode or self.vehicle.rootNode, targetId)
-					if distanceToCollisionVehicle > distance then
-						--print(string.format("   %d is closer (%.2f m)",targetId,distance));
-						distanceToCollisionVehicle = distance
-						currentCollisionVehicleId = targetId;
-					end
-				end
-]]
 			end
 		else
 			--delete NodeID e.g. StrawBales will be deleted and don't get onLeave
 		end
 	end 
-	--print("findTheValidCollisionVehicle: return:"..tostring(currentCollisionVehicleId))
 	return currentCollisionVehicleId
 end
 
@@ -281,7 +267,7 @@ function CollisionDetector:update(course, ix, lx, lz, disableLongCheck)
 	if self.trafficCollisionTriggers[1] ~= nil then
 		self:setCollisionDirection(self.vehicle.cp.directionNode, self.trafficCollisionTriggers[1], colDirX, colDirZ)
 		local recordNumber = ix
-		for i = 2, self.vehicle.cp.numTrafficCollisionTriggers do
+		for i = 2, self.numTrafficCollisionTriggers do
 			-- if disableLongCheck or recordNumber + i >= course:getNumberOfWaypoints() or recordNumber < 2 then
 			if disableLongCheck or recordNumber + i >= course:getNumberOfWaypoints() then		-- enable the snake on the way to the start point of a course
 				self:setCollisionDirection(self.trafficCollisionTriggers[i-1], self.trafficCollisionTriggers[i], 0, -1)
@@ -407,5 +393,101 @@ function CollisionDetector:adaptCollisHeight()
 		local trigger = self.trafficCollisionTriggers[1];
 		local Tx,Ty,Tz = getTranslation(trigger,vehicle.rootNode);
 		setTranslation(trigger, Tx,Ty+difference,Tz);
+	end
+end
+
+TrafficConflictDetector = CpObject(CollisionDetector)
+TrafficConflictDetector.minBoxDistance = 4
+TrafficConflictDetector.numTrafficCollisionTriggers = 20
+TrafficConflictDetector.timeScale = 2
+
+function TrafficConflictDetector:init(vehicle, course)
+
+	self.baseHeight = 6
+	CollisionDetector.init(self, vehicle, course)
+	self:debug('TrafficConflictDetector:init()')
+end
+
+function TrafficConflictDetector:createTriggers()
+	if not courseplay:findAiCollisionTrigger(self.vehicle) then return end
+
+	if not self.trafficCollisionTriggers then
+		self.trafficCollisionTriggers = {}
+	end
+	for i = 1, self.numTrafficCollisionTriggers do
+		local newTrigger = clone(self.vehicle.aiTrafficCollisionTrigger, false)
+		link(g_currentMission.terrainRootNode, newTrigger)
+		self.trafficCollisionTriggers[i] = newTrigger
+		setName(newTrigger, 'TrafficConflictDetector ' .. tostring(i))
+		local x, y, z = getWorldTranslation(self.vehicle.rootNode)
+		local _, yRot, _ = getWorldRotation(self.vehicle.rootNode)
+		setTranslation(newTrigger, x, i + y + self.baseHeight, z)
+		setRotation(newTrigger, 0, yRot, 0)
+		setUserAttribute(newTrigger, 'vehicleRootNode', 'Integer', self.vehicle.rootNode)
+		addTrigger(newTrigger, 'onCollision', self)
+	end
+end
+
+function TrafficConflictDetector:adaptCollisHeight()
+	return
+end
+
+--- Update the position of each collision trigger box.
+---
+--- For the next TrafficConflictDetector.numTrafficCollisionTriggers seconds calculate the position the vehicle
+--- will be on its course, one position for every second, based on the vehicle's speed.
+--- Now place a collision box on each position but at different heights: instead of a snake on the ground (like
+--- with the CollisionDetector) this is going to be a stairway to heaven :).
+---
+--- The height of each box is proportional (TrafficConflictDetector.timeScale * seconds) to the estimated time
+--- of arrival (ETA) of the vehicle to that x/z position.
+---
+--- This way a conflict will only be triggered (by a collision with another vehicle's TrafficConflictDetector
+--- boxes) when the vehicles are forecast to be a the same position at the same time.
+---
+---@param course Course
+---@param ix number
+function TrafficConflictDetector:update(course, ix)
+	local metersPerSec = self.vehicle:getLastSpeed() / 3.6
+	local positions = course:getPositionsOnCourse(ix, metersPerSec, 20)
+	for eta, position in ipairs(positions) do
+	local d = eta * metersPerSec
+		setTranslation(self.trafficCollisionTriggers[eta], position.x,
+				position.y + eta * TrafficConflictDetector.timeScale, position.z)
+		setRotation(self.trafficCollisionTriggers[eta], 0, position.yRot, 0)
+		setUserAttribute(self.trafficCollisionTriggers[eta], 'distance', 'Integer', d)
+		setUserAttribute(self.trafficCollisionTriggers[eta], 'eta', 'Integer', eta)
+	end
+end
+
+
+function TrafficConflictDetector:isIgnored(otherId)
+	for i = 1, self.numTrafficCollisionTriggers do
+		if otherId == self.trafficCollisionTriggers[i] then
+			return true
+		end
+	end
+end
+
+function TrafficConflictDetector:onCollision(triggerId, otherId, onEnter, onLeave, onStay, otherShapeId)
+	local otherVehicleRootNode = getUserAttribute(otherId, 'vehicleRootNode')
+	if otherVehicleRootNode and otherVehicleRootNode ~= self.vehicle.rootNode then
+		local otherVehicle = g_currentMission.nodeToObject[otherVehicleRootNode]
+		if onEnter then
+			if not self.collidingObjects[otherVehicle] then
+				self.collidingObjects[otherVehicle] = otherVehicle
+				self.nCollidingObjects = self.nCollidingObjects + 1
+				self:debug('collision trigger %s entered: %s, %d colliding objects.', getName(triggerId), otherVehicle:getName(), self.nCollidingObjects)
+			end
+			-- call every time, even if we already have a conflict with this vehicle to update d and ETA
+			g_trafficController:onConflictDetected(self.vehicle, otherVehicle,
+					getUserAttribute(otherId, 'd'), getUserAttribute(otherId, 'eta'))
+		end
+		if onLeave and self.collidingObjects[otherVehicle] then
+			self.nCollidingObjects = self.nCollidingObjects - 1
+			self:debug('collision trigger %s left: %s, %d colliding objects.', getName(triggerId), otherVehicle:getName(), self.nCollidingObjects)
+			self.collidingObjects[otherVehicle] = nil
+			g_trafficController:onConflictCleared(self.vehicle, otherVehicle)
+		end
 	end
 end

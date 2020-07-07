@@ -287,10 +287,12 @@ end
 
 function FieldworkAIDriver:stop(msgReference)
 	self:stopWork()
-	
-	-- persist last fieldwork waypoint data (for 'start at current waypoint')
-	self.aiDriverData.lastFieldworkCourseHash = self.fieldworkCourse:getHash()
-	self.aiDriverData.lastFieldworkWaypointIx = self.fieldworkCourse:getCurrentWaypointIx()
+
+	if self.fieldworkCourse then
+		-- persist last fieldwork waypoint data (for 'start at current waypoint')
+		self.aiDriverData.lastFieldworkCourseHash = self.fieldworkCourse:getHash()
+		self.aiDriverData.lastFieldworkWaypointIx = self.fieldworkCourse:getCurrentWaypointIx()
+	end
 
 	AIDriver.stop(self, msgReference)
 	-- Restore alignment settings. TODO: remove this setting from the HUD and always enable it
@@ -647,6 +649,7 @@ function FieldworkAIDriver:onWaypointChange(ix)
 			self:startTurn(ix)
 		end
 	end
+	if self.trafficConflictDetector then self.trafficConflictDetector:update(self.course, self.course:getCurrentWaypointIx()) end
 	-- update the legacy waypoint counter on the HUD
 	if self.state == self.states.ON_FIELDWORK_COURSE or self.states.ON_UNLOAD_OR_REFILL_COURSE then
 		courseplay:setWaypointIndex(self.vehicle, self.ppc:getCurrentOriginalWaypointIx())
