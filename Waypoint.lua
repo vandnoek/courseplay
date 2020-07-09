@@ -895,7 +895,7 @@ function Course:getPositionsOnCourse(startIx, dStep, nSteps)
 			d = d - self.waypoints[ix].dToNext
             ix = ix + 1
 		else
-			while d < dStep do
+			while d < dStep and ix < #self.waypoints do
 				d = d + self.waypoints[ix].dToNext
 				ix = ix + 1
 			end

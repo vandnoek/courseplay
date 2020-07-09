@@ -449,7 +449,7 @@ end
 ---@param ix number
 function TrafficConflictDetector:update(course, ix)
 	local metersPerSec = self.vehicle:getLastSpeed() / 3.6
-	local positions = course:getPositionsOnCourse(ix, metersPerSec, 20)
+	local positions = course:getPositionsOnCourse(ix, metersPerSec, TrafficConflictDetector.numTrafficCollisionTriggers)
 	for eta, position in ipairs(positions) do
 	local d = eta * metersPerSec
 		setTranslation(self.trafficCollisionTriggers[eta], position.x,
@@ -474,20 +474,13 @@ function TrafficConflictDetector:onCollision(triggerId, otherId, onEnter, onLeav
 	if otherVehicleRootNode and otherVehicleRootNode ~= self.vehicle.rootNode then
 		local otherVehicle = g_currentMission.nodeToObject[otherVehicleRootNode]
 		if onEnter then
-			if not self.collidingObjects[otherVehicle] then
-				self.collidingObjects[otherVehicle] = otherVehicle
-				self.nCollidingObjects = self.nCollidingObjects + 1
-				self:debug('collision trigger %s entered: %s, %d colliding objects.', getName(triggerId), otherVehicle:getName(), self.nCollidingObjects)
-			end
 			-- call every time, even if we already have a conflict with this vehicle to update d and ETA
-			g_trafficController:onConflictDetected(self.vehicle, otherVehicle,
+			g_trafficController:onConflictDetected(self.vehicle, otherVehicle, triggerId,
 					getUserAttribute(otherId, 'd'), getUserAttribute(otherId, 'eta'))
 		end
-		if onLeave and self.collidingObjects[otherVehicle] then
-			self.nCollidingObjects = self.nCollidingObjects - 1
-			self:debug('collision trigger %s left: %s, %d colliding objects.', getName(triggerId), otherVehicle:getName(), self.nCollidingObjects)
-			self.collidingObjects[otherVehicle] = nil
-			g_trafficController:onConflictCleared(self.vehicle, otherVehicle)
+		if onLeave then
+			g_trafficController:onConflictCleared(self.vehicle, otherVehicle, triggerId,
+					getUserAttribute(otherId, 'd'), getUserAttribute(otherId, 'eta'))
 		end
 	end
 end

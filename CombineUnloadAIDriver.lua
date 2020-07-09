@@ -626,14 +626,11 @@ function CombineUnloadAIDriver:onLastWaypoint()
 			self:enableCollisionDetection()
 			courseplay:openCloseCover(self.vehicle, courseplay.CLOSE_COVERS)
 			AIDriver.onLastWaypoint(self)
-			g_trafficController:cancel(self.vehicle.rootNode)
 			return
 		elseif self.onFieldState == self.states.ALIGN_TO_TRACTOR then
 			self:setNewOnFieldState(self.states.FOLLOW_TRACTOR)
-			g_trafficController:cancel(self.vehicle.rootNode)
 		elseif self.onFieldState == self.states.DRIVE_TO_COMBINE or
 			self.onFieldState == self.states.DRIVE_TO_MOVING_COMBINE then
-			g_trafficController:cancel(self.vehicle.rootNode)
 			self:startWorking()
 		elseif self.onFieldState == self.states.MOVING_OUT_OF_WAY then
 			self:setNewOnFieldState(self.stateAfterMovedOutOfWay)
@@ -1274,7 +1271,6 @@ end
 -- Start to unload the combine (driving to the pipe/closer to combine)
 ------------------------------------------------------------------------------------------------------------------------
 function CombineUnloadAIDriver:startUnloadingCombine()
-	g_trafficController:cancel(self.vehicle.rootNode)
 	if self.combineToUnload.cp.driver:willWaitForUnloadToFinish() then
 		self:debug('Close enough to a stopped combine, drive to pipe')
 		self:startUnloadingStoppedCombine()
