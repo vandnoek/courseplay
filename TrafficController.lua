@@ -22,6 +22,7 @@ Conflict = CpObject()
 function Conflict:init(vehicle1, vehicle2, triggerId, d, eta)
 	self.vehicle1 = vehicle1
 	self.vehicle2 = vehicle2
+    self.triggers = {}
 	self:update(triggerId, d, eta)
 end
 
@@ -52,9 +53,9 @@ function Conflict:update(triggerId, d, eta)
 end
 
 function Conflict:__tostring()
-	local result = string.format('%s <-> %s %d triggers', self.vehicle1:getName(), self.vehicle2:getName(), #self.triggers)
+	local result = string.format('Traffic conflict: %s <-> %s %d triggers', self.vehicle1:getName(), self.vehicle2:getName(), #self.triggers)
 	if self.closestTrigger then
-		result = string.format('%s, closest %.1f m %d sec', result, self.closestTrigger.d, self.closestTrigger.eta)
+		result = string.format('%s, closest %.1f m %d sec', result, self.closestTrigger.d or -1, self.closestTrigger.eta or -1)
 	end
 	return result
 end
@@ -89,7 +90,7 @@ function TrafficController:drawDebugInfo()
 end
 
 function TrafficController:onConflictDetected(vehicle, otherVehicle, triggerId, d, eta)
-	for conflict in ipairs(self.conflicts) do
+	for _, conflict in ipairs(self.conflicts) do
 		if conflict:isBetween(vehicle, otherVehicle) then
 			conflict:update(triggerId, d, eta)
 			return

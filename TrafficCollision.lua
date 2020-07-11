@@ -476,11 +476,11 @@ function TrafficConflictDetector:onCollision(triggerId, otherId, onEnter, onLeav
 		if onEnter then
 			-- call every time, even if we already have a conflict with this vehicle to update d and ETA
 			g_trafficController:onConflictDetected(self.vehicle, otherVehicle, triggerId,
-					getUserAttribute(otherId, 'd'), getUserAttribute(otherId, 'eta'))
+					getUserAttribute(otherId, 'distance'), getUserAttribute(otherId, 'eta'))
 		end
 		if onLeave then
 			g_trafficController:onConflictCleared(self.vehicle, otherVehicle, triggerId,
-					getUserAttribute(otherId, 'd'), getUserAttribute(otherId, 'eta'))
+					getUserAttribute(otherId, 'distance'), getUserAttribute(otherId, 'eta'))
 		end
 	end
 end
