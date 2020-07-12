@@ -267,7 +267,7 @@ function AIDriver:beforeStart()
 		self.vehicle.spec_aiVehicle.aiTrafficCollisionTranslation[2] = -1000
 	end
 	self.triggerHandler:onStart()
-	self.trafficConflictDetector = TrafficConflictDetector(self.vehicle, self.course)
+	self:createTrafficConflictDetector()
 end
 
 --- Start driving
@@ -1666,6 +1666,10 @@ end
 
 function AIDriver:onUnBlocked()
 	self:debug('Unblocked...')
+end
+
+function AIDriver:createTrafficConflictDetector()
+	self.trafficConflictDetector = TrafficConflictDetector(self.vehicle, self.course)
 end
 
 function AIDriver:updateTrafficConflictDetector()

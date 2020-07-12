@@ -882,10 +882,10 @@ function Course:getPositionsOnCourse(startIx, dStep, nSteps)
 	local positions = {}
 	local d = 0
 	local ix = startIx
-	while #positions < nSteps do
+	while #positions < nSteps and ix < #self.waypoints do
 		local x, y, z = self:getWaypointPosition(ix)
 		if dStep < self.waypoints[ix].dToNext then
-			while d < self.waypoints[ix].dToNext and #positions < nSteps do
+			while d < self.waypoints[ix].dToNext and #positions < nSteps and ix < #self.waypoints do
 				table.insert(positions, {x = x + d * self.waypoints[ix].dx,
 										 y = y,
 										 z = z + d * self.waypoints[ix].dz,

@@ -1557,3 +1557,13 @@ function CombineAIDriver:onDraw()
 
 	UnloadableFieldworkAIDriver.onDraw(self)
 end
+
+-- For combines, we use the collision trigger of the header to cover the whole vehicle width
+function CombineAIDriver:createTrafficConflictDetector()
+	for cutter, _ in pairs(self.combine.attachedCutters) do
+		-- attachedCutters is indexed by the cutter, not an integer
+		self.trafficConflictDetector = TrafficConflictDetector(self.vehicle, self.course, cutter)
+		return
+	end
+	self.trafficConflictDetector = TrafficConflictDetector(self.vehicle, self.course)
+end

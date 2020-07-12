@@ -401,21 +401,25 @@ TrafficConflictDetector.minBoxDistance = 4
 TrafficConflictDetector.numTrafficCollisionTriggers = 20
 TrafficConflictDetector.timeScale = 2
 
-function TrafficConflictDetector:init(vehicle, course)
-
+--- @param vehicle table
+--- @param course Course
+--- @param collisionTriggerObject table object to use to find a collision trigger, by default the vehicle
+function TrafficConflictDetector:init(vehicle, course, collisionTriggerObject)
 	self.baseHeight = 6
+	self.collisionTriggerObject = collisionTriggerObject or vehicle
 	CollisionDetector.init(self, vehicle, course)
 	self:debug('TrafficConflictDetector:init()')
 end
 
 function TrafficConflictDetector:createTriggers()
-	if not courseplay:findAiCollisionTrigger(self.vehicle) then return end
+	print(self.collisionTriggerObject:getName())
+	if not courseplay:findAiCollisionTrigger(self.collisionTriggerObject) then return end
 
 	if not self.trafficCollisionTriggers then
 		self.trafficCollisionTriggers = {}
 	end
 	for i = 1, self.numTrafficCollisionTriggers do
-		local newTrigger = clone(self.vehicle.aiTrafficCollisionTrigger, false)
+		local newTrigger = clone(self.collisionTriggerObject.aiTrafficCollisionTrigger, false)
 		link(g_currentMission.terrainRootNode, newTrigger)
 		self.trafficCollisionTriggers[i] = newTrigger
 		setName(newTrigger, 'TrafficConflictDetector ' .. tostring(i))
@@ -450,13 +454,20 @@ end
 function TrafficConflictDetector:update(course, ix)
 	local metersPerSec = self.vehicle:getLastSpeed() / 3.6
 	local positions = course:getPositionsOnCourse(ix, metersPerSec, TrafficConflictDetector.numTrafficCollisionTriggers)
-	for eta, position in ipairs(positions) do
-	local d = eta * metersPerSec
-		setTranslation(self.trafficCollisionTriggers[eta], position.x,
-				position.y + eta * TrafficConflictDetector.timeScale, position.z)
-		setRotation(self.trafficCollisionTriggers[eta], 0, position.yRot, 0)
-		setUserAttribute(self.trafficCollisionTriggers[eta], 'distance', 'Integer', d)
-		setUserAttribute(self.trafficCollisionTriggers[eta], 'eta', 'Integer', eta)
+	local posIx = 1
+    if #positions > 0 then
+        for eta, trigger in ipairs(self.trafficCollisionTriggers) do
+            local d = eta * metersPerSec
+            setTranslation(trigger, positions[posIx].x,
+                    positions[posIx].y + eta * TrafficConflictDetector.timeScale, positions[posIx].z)
+            setRotation(trigger, 0, positions[posIx].yRot, 0)
+            setUserAttribute(trigger, 'distance', 'Integer', d)
+            setUserAttribute(trigger, 'eta', 'Integer', eta)
+            if posIx < #positions then
+                -- if we have less positions than triggers, just use the last position for the rest of the triggers
+                posIx = posIx + 1
+            end
+        end
 	end
 end
 
