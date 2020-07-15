@@ -254,8 +254,7 @@ function CombineAIDriver:onWaypointPassed(ix)
 		self:debug('Waiting for unload in the pocket')
 		self:setInfoText(self:getFillLevelInfoText())
 		self.fieldworkUnloadOrRefillState = self.states.WAITING_FOR_UNLOAD_IN_POCKET
-		-- reset offset to return to the original up/down row after we unloaded in the pocket
-		self.aiDriverOffsetX = 0
+
 	end
 	if self.returnedFromPocketIx and self.returnedFromPocketIx == ix then
 		-- back to normal look ahead distance for PPC, no tight turns are needed anymore
@@ -359,6 +358,8 @@ function CombineAIDriver:driveFieldworkUnloadOrRefill()
 	elseif self.fieldworkUnloadOrRefillState == self.states.WAITING_FOR_UNLOAD_IN_POCKET or
 			self.fieldworkUnloadOrRefillState == self.states.WAITING_FOR_UNLOAD_AFTER_PULLED_BACK then
 		if self:unloadFinished() then
+			-- reset offset to return to the original up/down row after we unloaded in the pocket
+			self.aiDriverOffsetX = 0
 			self:clearInfoText(self:getFillLevelInfoText())
 			-- wait a bit after the unload finished to give a chance to the unloader to move away
 			self.stateBeforeWaitingForUnloaderToLeave = self.fieldworkUnloadOrRefillState

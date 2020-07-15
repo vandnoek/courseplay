@@ -826,11 +826,8 @@ function CombineUnloadAIDriver:getDrivingCoordsBesideTractor(tractorToFollow)
 	return tx,ty,tz
 end
 
-function CombineUnloadAIDriver:getZOffsetToCoordsBehind()
-	local colliNode = self.vehicle.cp.driver.collisionDetector.trafficCollisionTriggers[1]
-	local sx,sy,sz = getWorldTranslation(colliNode)
-	local _,_,z = worldToLocal(self.combineToUnload.cp.directionNode,sx,sy,sz)
-	return -(z + self:getCombinesMeasuredBackDistance())
+function CombineUnloadAIDriver:getZOffsetToBehindCombine()
+	return -self:getCombinesMeasuredBackDistance() - 2
 end
 
 function CombineUnloadAIDriver:getSpeedBesideChopper(targetNode)
@@ -1389,7 +1386,7 @@ end
 function CombineUnloadAIDriver:startDrivingToCombine()
 	if self.combineToUnload.cp.driver:isWaitingForUnload() then
 		self:debug('Combine is waiting for unload, start finding path to combine')
-		self:startPathfindingToCombine(self.onPathfindingDoneToCombine, nil, -8)
+		self:startPathfindingToCombine(self.onPathfindingDoneToCombine, nil, self:getZOffsetToBehindCombine())
 	else
 		-- combine is moving, agree on a rendezvous
 		-- for now, just use the Eucledian distance. This should rather be the length of a pathfinder generated
@@ -1398,13 +1395,18 @@ function CombineUnloadAIDriver:startDrivingToCombine()
 		local estimatedSecondsEnroute = d / (self:getFieldSpeed() / 3.6) + 3 -- add a few seconds to allow for starting the engine/accelerating
 		local rendezvousWaypoint, rendezvousWaypointIx = self.combineToUnload.cp.driver:getUnloaderRendezvousWaypoint(estimatedSecondsEnroute)
 		local xOffset = self:getPipeOffset(self.combineToUnload)
-		local zOffset = -15
-		if rendezvousWaypoint and self:isPathfindingNeeded(self.vehicle, rendezvousWaypoint, xOffset, zOffset) then
-			self:setNewOnFieldState(self.states.WAITING_FOR_PATHFINDER)
-			self:debug('Start pathfinding to moving combine, %d m, ETE: %d s, meet combine at waypoint %d, xOffset = %.1f, zOffset = %.1f',
-					d, estimatedSecondsEnroute, rendezvousWaypointIx, xOffset, zOffset)
-			self:startPathfinding(rendezvousWaypoint, xOffset, zOffset, 0,
-					self.combineToUnload, self.onPathfindingDoneToMovingCombine)
+		local zOffset = self:getZOffsetToBehindCombine()
+		if rendezvousWaypoint then
+			if self:isPathfindingNeeded(self.vehicle, rendezvousWaypoint, xOffset, zOffset, 25) then
+				self:setNewOnFieldState(self.states.WAITING_FOR_PATHFINDER)
+				self:debug('Start pathfinding to moving combine, %d m, ETE: %d s, meet combine at waypoint %d, xOffset = %.1f, zOffset = %.1f',
+						d, estimatedSecondsEnroute, rendezvousWaypointIx, xOffset, zOffset)
+				self:startPathfinding(rendezvousWaypoint, xOffset, zOffset, 0,
+						self.combineToUnload, self.onPathfindingDoneToMovingCombine)
+			else
+				self:debug('Rendezvous waypoint %d to moving combine too close, wait a bit', rendezvousWaypointIx)
+				self:setNewOnFieldState(self.states.WAITING_FOR_COMBINE_TO_CALL)
+			end
 		else
 			self:debug('can\'t find rendezvous waypoint to combine, waiting')
 			self:setNewOnFieldState(self.states.WAITING_FOR_COMBINE_TO_CALL)
@@ -1514,16 +1516,16 @@ end
 
 ------------------------------------------------------------------------------------------------------------------------
 -- Check if it makes sense to start pathfinding to the target
--- This should avoid generating a big circle path to a point a few meters ahead
+-- This should avoid generating a big circle path to a point a few meters ahead or behind
 ------------------------------------------------------------------------------------------------------------------------
-function CombineUnloadAIDriver:isPathfindingNeeded(vehicle, target, xOffset, zOffset)
+function CombineUnloadAIDriver:isPathfindingNeeded(vehicle, target, xOffset, zOffset, range)
 	local targetNode = self:getTargetNode(target)
 	if not targetNode then return false end
 	local startNode = AIDriverUtil.getDirectionNode(vehicle)
 	local dx, _, dz = localToLocal(targetNode, startNode, xOffset, 0, zOffset)
 	local d = MathUtil.vector2Length(dx, dz)
 	local sameDirection = TurnContext.isSameDirection(startNode, targetNode, 30)
-	if d < self.pathfindingRange and sameDirection then
+	if d < (range or self.pathfindingRange) and sameDirection then
 		self:debug('No pathfinding needed, d = %.1f, same direction %s', d, tostring(sameDirection))
 		return false
 	else

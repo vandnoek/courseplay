@@ -1674,7 +1674,7 @@ end
 
 function AIDriver:updateTrafficConflictDetector()
 	if self.trafficConflictDetector and self.course and g_updateLoopIndex % 2 == 0 then 
-		self.trafficConflictDetector:update(self.course, self.course:getCurrentWaypointIx()) 
+		self.trafficConflictDetector:update(self.course, self.ppc:getRelevantWaypointIx())
 	end
 end
 

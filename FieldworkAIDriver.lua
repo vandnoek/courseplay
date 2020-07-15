@@ -649,7 +649,9 @@ function FieldworkAIDriver:onWaypointChange(ix)
 			self:startTurn(ix)
 		end
 	end
-	if self.trafficConflictDetector then self.trafficConflictDetector:update(self.course, self.course:getCurrentWaypointIx()) end
+
+	self:updateTrafficConflictDetector()
+
 	-- update the legacy waypoint counter on the HUD
 	if self.state == self.states.ON_FIELDWORK_COURSE or self.states.ON_UNLOAD_OR_REFILL_COURSE then
 		courseplay:setWaypointIndex(self.vehicle, self.ppc:getCurrentOriginalWaypointIx())

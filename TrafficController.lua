@@ -23,7 +23,9 @@ function Conflict:init(vehicle1, vehicle2, triggerId, d, eta)
 	self.vehicle1 = vehicle1
 	self.vehicle2 = vehicle2
     self.triggers = {}
-	self:update(triggerId, d, eta)
+	-- need to count them ourselves as it triggers is a hash, not an array
+	self.nTriggers = 0
+	self:onDetected(triggerId, d, eta)
 end
 
 function Conflict:isBetween(vehicle1, vehicle2)
@@ -37,23 +39,33 @@ function Conflict:isBetween(vehicle1, vehicle2)
 end
 
 function Conflict:isCleared()
-	return #self.triggers < 1
+	return self.nTriggers < 1
 end
 
-function Conflict:update(triggerId, d, eta)
+function Conflict:onDetected(triggerId, d, eta)
 	self.triggers[triggerId] = {d = d, eta = eta}
-	self.closestTrigger = self.triggers[triggerId]
+	self:update(triggerId, d, eta)
+end
+
+function Conflict:onCleared(triggerId, d, eta)
+	self.triggers[triggerId] = nil
+	self:update(triggerId, d, eta)
+end
+
+function Conflict:update()
 	local minD = math.huge
-	for _, trigger in ipairs(self.triggers) do
+	self.nTriggers = 0
+	for _, trigger in pairs(self.triggers) do
 		if trigger.d < minD then
 			self.closestTrigger = trigger
-			minD = d
+			minD = self.closestTrigger.d
 		end
+		self.nTriggers = self.nTriggers + 1
 	end
 end
 
 function Conflict:__tostring()
-	local result = string.format('Traffic conflict: %s <-> %s %d triggers', self.vehicle1:getName(), self.vehicle2:getName(), #self.triggers)
+	local result = string.format('Traffic conflict: %s <-> %s %d triggers', self.vehicle1:getName(), self.vehicle2:getName(), self.nTriggers)
 	if self.closestTrigger then
 		result = string.format('%s, closest %.1f m %d sec', result, self.closestTrigger.d or -1, self.closestTrigger.eta or -1)
 	end
@@ -92,18 +104,18 @@ end
 function TrafficController:onConflictDetected(vehicle, otherVehicle, triggerId, d, eta)
 	for _, conflict in ipairs(self.conflicts) do
 		if conflict:isBetween(vehicle, otherVehicle) then
-			conflict:update(triggerId, d, eta)
+			conflict:onDetected(triggerId, d, eta)
 			return
 		end
 	end
-	-- no conflict yet for this vehicle pair
+	-- first conflict for this vehicle pair
 	table.insert(self.conflicts, Conflict(vehicle, otherVehicle, triggerId, d, eta))
 end
 
 function TrafficController:onConflictCleared(vehicle, otherVehicle, triggerId, d, eta)
 	for i, conflict in ipairs(self.conflicts) do
 		if conflict:isBetween(vehicle, otherVehicle) then
-			conflict:update(triggerId, d, eta)
+			conflict:onCleared(triggerId, d, eta)
 			if conflict:isCleared() then
 				table.remove(self.conflicts, i)
 			end
