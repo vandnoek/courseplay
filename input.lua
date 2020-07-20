@@ -452,7 +452,6 @@ function courseplay.inputActionCallback(vehicle, actionName, keyStatus)
 	--print(string.format("inputActionCallback:(vehicle(%s), actionName(%s), keyStatus(%s))",tostring(vehicle:getName()),tostring(actionName),tostring(keyStatus)))
 	
 	if keyStatus == 1 and vehicle:getIsActive() and vehicle:getIsEntered() then
-
 		--Shovel:
 		if actionName == 'COURSEPLAY_SHOVEL_MOVE_TO_LOADING_POSITION' then
 				vehicle:setCpVar('shovelPositionFromKey', true, courseplay.isClient);
@@ -493,6 +492,11 @@ function courseplay.inputActionCallback(vehicle, actionName, keyStatus)
 		--HUD open/close:
 		elseif actionName == 'COURSEPLAY_HUD' then
 			vehicle:setCourseplayFunc('openCloseHud', not vehicle.cp.hud.show, true);
+
+		elseif actionName == 'COURSEPLAY_MOUSEACTION_SECONDARY' then -- open new hud (right mouse button)
+			courseplay.guiManager:handleInputMainGui(true)
+		elseif actionName == 'COURSEPLAY_HUD_OPEN' then -- open new hud (lctrl and entf)
+			courseplay.guiManager:handleInputMainGui(false)
 
 		--Driver Actions:		
 		elseif actionName == 'COURSEPLAY_CANCELWAIT' and

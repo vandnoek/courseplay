@@ -96,22 +96,23 @@ Courseplay non sostituisce il sistema di gioco in gioco, ma crea un nuovo lavora
 		<action name="COURSEPLAY_MOUSEACTION_PRIMARY" axisType="HALF"  />
 		<action name="COURSEPLAY_MOUSEACTION_SECONDARY" axisType="HALF"  />
 		<action name="COURSEPLAY_DEBUG_MARKER" axisType="HALF"  />
-    <action name="COURSEPLAY_SHOVEL_MOVE_TO_LOADING_POSITION" axisType="HALF"  />
+    	<action name="COURSEPLAY_SHOVEL_MOVE_TO_LOADING_POSITION" axisType="HALF"  />
 		<action name="COURSEPLAY_SHOVEL_MOVE_TO_TRANSPORT_POSITION" axisType="HALF"  />
 		<action name="COURSEPLAY_SHOVEL_MOVE_TO_PRE_UNLOADING_POSITION" axisType="HALF"  />
 		<action name="COURSEPLAY_SHOVEL_MOVE_TO_UNLOADING_POSITION" axisType="HALF"  />
 		<action name="COURSEPLAY_TOGGLE_FERTILIZER" axisType="HALF" />
-    <action name="COURSEPLAY_EDITOR_TOGGLE" axisType="HALF"  />
-    <action name="COURSEPLAY_EDITOR_UNDO" axisType="HALF"  />
-    <action name="COURSEPLAY_EDITOR_SAVE" axisType="HALF"  />
-    <action name="COURSEPLAY_EDITOR_SPEED_INCREASE" axisType="HALF"  />
-    <action name="COURSEPLAY_EDITOR_SPEED_DECREASE" axisType="HALF"  />
-    <action name="COURSEPLAY_EDITOR_DELETE_WAYPOINT" axisType="HALF"  />
-    <action name="COURSEPLAY_EDITOR_DELETE_NEXT_WAYPOINT" axisType="HALF"  />    
-    <action name="COURSEPLAY_EDITOR_DELETE_TO_START" axisType="HALF"  />
-    <action name="COURSEPLAY_EDITOR_DELETE_TO_END" axisType="HALF"  />
-    <action name="COURSEPLAY_EDITOR_INSERT_WAYPOINT" axisType="HALF"  />
-    <action name="COURSEPLAY_EDITOR_CYCLE_WAYPOINT_TYPE" axisType="HALF"  /> 
+		<action name="COURSEPLAY_EDITOR_TOGGLE" axisType="HALF"  />
+		<action name="COURSEPLAY_EDITOR_UNDO" axisType="HALF"  />
+		<action name="COURSEPLAY_EDITOR_SAVE" axisType="HALF"  />
+		<action name="COURSEPLAY_EDITOR_SPEED_INCREASE" axisType="HALF"  />
+		<action name="COURSEPLAY_EDITOR_SPEED_DECREASE" axisType="HALF"  />
+		<action name="COURSEPLAY_EDITOR_DELETE_WAYPOINT" axisType="HALF"  />
+		<action name="COURSEPLAY_EDITOR_DELETE_NEXT_WAYPOINT" axisType="HALF"  />    
+		<action name="COURSEPLAY_EDITOR_DELETE_TO_START" axisType="HALF"  />
+		<action name="COURSEPLAY_EDITOR_DELETE_TO_END" axisType="HALF"  />
+		<action name="COURSEPLAY_EDITOR_INSERT_WAYPOINT" axisType="HALF"  />
+		<action name="COURSEPLAY_EDITOR_CYCLE_WAYPOINT_TYPE" axisType="HALF"  /> 
+		<action name="COURSEPLAY_HUD_OPEN" axisType="HALF"  /> 
     </actions>
 
 	<inputBinding>
@@ -142,28 +143,28 @@ Courseplay non sostituisce il sistema di gioco in gioco, ma crea un nuovo lavora
 		<actionBinding action="COURSEPLAY_EDITOR_SAVE">
             <binding device="KB_MOUSE_DEFAULT" input="KEY_f6" />
         </actionBinding>
-  <actionBinding action="COURSEPLAY_EDITOR_SPEED_INCREASE">
-            <binding device="KB_MOUSE_DEFAULT" input="KEY_lctrl KEY_2" />
-        </actionBinding>
- 	<actionBinding action="COURSEPLAY_EDITOR_SPEED_DECREASE">
-            <binding device="KB_MOUSE_DEFAULT" input="KEY_lctrl KEY_1" />
-        </actionBinding>
-  <actionBinding action="COURSEPLAY_EDITOR_DELETE_WAYPOINT">
-            <binding device="KB_MOUSE_DEFAULT" input="KEY_lctrl KEY_5" />
-        </actionBinding>
-  <actionBinding action="COURSEPLAY_EDITOR_DELETE_NEXT_WAYPOINT">
-            <binding device="KB_MOUSE_DEFAULT" input="KEY_lctrl KEY_6" />
-        </actionBinding>
-  <actionBinding action="COURSEPLAY_EDITOR_DELETE_TO_START">
-            <binding device="KB_MOUSE_DEFAULT" input="KEY_lctrl KEY_leftbracket" />
-        </actionBinding>
-  <actionBinding action="COURSEPLAY_EDITOR_DELETE_TO_END">
-            <binding device="KB_MOUSE_DEFAULT" input="KEY_lctrl KEY_rightbracket" />
-        </actionBinding>
- 	<actionBinding action="COURSEPLAY_EDITOR_INSERT_WAYPOINT">
-            <binding device="KB_MOUSE_DEFAULT" input="KEY_lctrl KEY_7" />
-        </actionBinding>
-  <actionBinding action="COURSEPLAY_EDITOR_CYCLE_WAYPOINT_TYPE">
+		<actionBinding action="COURSEPLAY_EDITOR_SPEED_INCREASE">
+			<binding device="KB_MOUSE_DEFAULT" input="KEY_lctrl KEY_2" />
+		</actionBinding>
+		<actionBinding action="COURSEPLAY_EDITOR_SPEED_DECREASE">
+			<binding device="KB_MOUSE_DEFAULT" input="KEY_lctrl KEY_1" />
+		</actionBinding>
+		<actionBinding action="COURSEPLAY_EDITOR_DELETE_WAYPOINT">
+			<binding device="KB_MOUSE_DEFAULT" input="KEY_lctrl KEY_5" />
+		</actionBinding>
+		<actionBinding action="COURSEPLAY_EDITOR_DELETE_NEXT_WAYPOINT">
+			<binding device="KB_MOUSE_DEFAULT" input="KEY_lctrl KEY_6" />
+		</actionBinding>
+		<actionBinding action="COURSEPLAY_EDITOR_DELETE_TO_START">
+			<binding device="KB_MOUSE_DEFAULT" input="KEY_lctrl KEY_leftbracket" />
+		</actionBinding>
+		<actionBinding action="COURSEPLAY_EDITOR_DELETE_TO_END">
+			<binding device="KB_MOUSE_DEFAULT" input="KEY_lctrl KEY_rightbracket" />
+		</actionBinding>
+			<actionBinding action="COURSEPLAY_EDITOR_INSERT_WAYPOINT">
+			<binding device="KB_MOUSE_DEFAULT" input="KEY_lctrl KEY_7" />
+		</actionBinding>
+		<actionBinding action="COURSEPLAY_EDITOR_CYCLE_WAYPOINT_TYPE">
             <binding device="KB_MOUSE_DEFAULT" input="KEY_lctrl KEY_8" />
         </actionBinding>
 		<!-- Possible to delete blank input bindings -->
@@ -200,6 +201,11 @@ Courseplay non sostituisce il sistema di gioco in gioco, ma crea un nuovo lavora
 		<actionBinding action="COURSEPLAY_TOGGLE_FERTILIZER">
             <binding device="KB_MOUSE_DEFAULT" input="" />
         </actionBinding>
+		
+		<actionBinding action="COURSEPLAY_HUD_OPEN">
+			<binding device="KB_MOUSE_DEFAULT" input="KEY_lctrl KEY_delete" />
+		</actionBinding>
+
     </inputBinding>
 	<credits><![CDATA[
 ## Contributors
