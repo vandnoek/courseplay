@@ -131,11 +131,11 @@ local function initialize()
 
 		'gui_new/GuiManager',
 		'gui_new/FakeGui',
+		'gui_new/elements/Gui',
+		'gui_new/elements/GuiElement',
 		'gui_new/elements/Borders',
 		'gui_new/elements/Button',
 		'gui_new/elements/FlowLayout',
-		'gui_new/elements/Gui',
-		'gui_new/elements/GuiElement',
 		'gui_new/elements/GuiScreen',
 		'gui_new/elements/IngameMap',
 		'gui_new/elements/Input',
@@ -146,6 +146,7 @@ local function initialize()
 		'gui_new/elements/Table',
 		'gui_new/elements/TableSort',
 		'gui_new/elements/Text',
+		'gui_new/screens/Main',
 	};
 
 	local numFiles, numFilesLoaded = #(fileList) + 2, 2; -- + 2 as 'register.lua', 'courseplay.lua' have already been loaded
