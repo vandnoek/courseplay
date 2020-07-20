@@ -358,6 +358,7 @@
 		<text name="input_COURSEPLAY_SHOVEL_MOVE_TO_TRANSPORT_POSITION" 	text='CP: Schaufel auf Position Transport setzen' />
 		<text name="input_COURSEPLAY_SHOVEL_MOVE_TO_PRE_UNLOADING_POSITION"	text='CP: Schaufel auf Position vor Abladen setzen' />
 		<text name="input_COURSEPLAY_SHOVEL_MOVE_TO_UNLOADING_POSITION" 	text='CP: Schaufel auf Position Abladen setzen' />
+		<text name="input_COURSEPLAY_HUD_OPEN" 								text="Courseplay HUD öffnen" />
 		
 		<text name="input_COURSEPLAY_EDITOR_TOGGLE"							text="CP Editor: Ein Aus" />
 		<text name="input_COURSEPLAY_EDITOR_UNDO"							text="CP Editor: Rueckgaengig" />
