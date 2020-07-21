@@ -397,15 +397,19 @@ function CollisionDetector:adaptCollisHeight()
 end
 
 TrafficConflictDetector = CpObject(CollisionDetector)
-TrafficConflictDetector.minBoxDistance = 4
+TrafficConflictDetector.boxDistance = 4
 TrafficConflictDetector.numTrafficCollisionTriggers = 20
 TrafficConflictDetector.timeScale = 2
+TrafficConflictDetector.speedAverageCycles = 20
 
 --- @param vehicle table
 --- @param course Course
 --- @param collisionTriggerObject table object to use to find a collision trigger, by default the vehicle
 function TrafficConflictDetector:init(vehicle, course, collisionTriggerObject)
 	self.baseHeight = 6
+    -- array for the speed rolling average
+    self.speeds = {}
+    self.lastWaypointIx = 0
 	self.collisionTriggerObject = collisionTriggerObject or vehicle
 	CollisionDetector.init(self, vehicle, course)
 	self:debug('TrafficConflictDetector:init()')
@@ -436,6 +440,16 @@ function TrafficConflictDetector:adaptCollisHeight()
 	return
 end
 
+function TrafficConflictDetector:calculateAverageSpeed()
+    self.speeds[g_updateLoopIndex % self.speedAverageCycles] = self.vehicle:getLastSpeed() / 3.6
+    local total, i = 0, 0
+    for _, s in pairs(self.speeds) do
+        i = i + 1
+        total = total + s
+    end
+    return (i > 0 and total > 0.5) and total / i or 0
+end
+
 --- Update the position of each collision trigger box.
 ---
 --- For the next TrafficConflictDetector.numTrafficCollisionTriggers seconds calculate the position the vehicle
@@ -452,17 +466,23 @@ end
 ---@param course Course
 ---@param ix number
 function TrafficConflictDetector:update(course, ix)
-	local metersPerSec = self.vehicle:getLastSpeed() / 3.6
-	local positions = course:getPositionsOnCourse(ix, metersPerSec, TrafficConflictDetector.numTrafficCollisionTriggers)
+	local metersPerSec = self:calculateAverageSpeed()
+    renderText(0.2, 0.3, 0.04, string.format("%.1f", metersPerSec * 3.6))
+
+    if ix == self.lastWaypointIx then return end
+
+	local positions = course:getPositionsOnCourse(ix, TrafficConflictDetector.boxDistance, TrafficConflictDetector.numTrafficCollisionTriggers)
 	local posIx = 1
     if #positions > 0 then
-        for eta, trigger in ipairs(self.trafficCollisionTriggers) do
-            local d = eta * metersPerSec
-            setTranslation(trigger, positions[posIx].x,
-                    positions[posIx].y + eta * TrafficConflictDetector.timeScale, positions[posIx].z)
+        for i, trigger in ipairs(self.trafficCollisionTriggers) do
+            local d = i * TrafficConflictDetector.boxDistance
+            local eta = metersPerSec > 0 and d / metersPerSec or i
+            setTranslation(trigger, positions[posIx].x, positions[posIx].y + eta * TrafficConflictDetector.timeScale, positions[posIx].z)
             setRotation(trigger, 0, positions[posIx].yRot, 0)
+            DebugUtil.drawDebugNode(trigger, i)
             setUserAttribute(trigger, 'distance', 'Integer', d)
             setUserAttribute(trigger, 'eta', 'Integer', eta)
+            setUserAttribute(trigger, 'yRot', 'Float', positions[posIx].yRot)
             if posIx < #positions then
                 -- if we have less positions than triggers, just use the last position for the rest of the triggers
                 posIx = posIx + 1
@@ -483,15 +503,17 @@ end
 function TrafficConflictDetector:onCollision(triggerId, otherId, onEnter, onLeave, onStay, otherShapeId)
 	local otherVehicleRootNode = getUserAttribute(otherId, 'vehicleRootNode')
 	if otherVehicleRootNode and otherVehicleRootNode ~= self.vehicle.rootNode then
+		local otherYRot = getUserAttribute(otherId, 'yRot')
+		local myYRot = getUserAttribute(triggerId, 'yRot')
+		local yRotDiff = otherYRot and myYRot and MathUtil.getAngleDifference(myYRot, otherYRot)
 		local otherVehicle = g_currentMission.nodeToObject[otherVehicleRootNode]
 		if onEnter then
 			-- call every time, even if we already have a conflict with this vehicle to update d and ETA
 			g_trafficController:onConflictDetected(self.vehicle, otherVehicle, triggerId,
-					getUserAttribute(otherId, 'distance'), getUserAttribute(otherId, 'eta'))
+					getUserAttribute(otherId, 'distance'), getUserAttribute(otherId, 'eta'), yRotDiff)
 		end
 		if onLeave then
-			g_trafficController:onConflictCleared(self.vehicle, otherVehicle, triggerId,
-					getUserAttribute(otherId, 'distance'), getUserAttribute(otherId, 'eta'))
+			g_trafficController:onConflictCleared(self.vehicle, otherVehicle, triggerId)
 		end
 	end
 end

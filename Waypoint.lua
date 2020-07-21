@@ -880,30 +880,45 @@ end
 ---@param nSteps number number of positions to collect
 function Course:getPositionsOnCourse(startIx, dStep, nSteps)
 	local positions = {}
-	local d = 0
+	local d = 0 -- distance from the last step
+	local dFromLastWp = 0
 	local ix = startIx
 	while #positions < nSteps and ix < #self.waypoints do
 		local x, y, z = self:getWaypointPosition(ix)
-		if dStep < self.waypoints[ix].dToNext then
-			while d < self.waypoints[ix].dToNext and #positions < nSteps and ix < #self.waypoints do
-				table.insert(positions, {x = x + d * self.waypoints[ix].dx,
-										 y = y,
-										 z = z + d * self.waypoints[ix].dz,
-										 yRot = self.waypoints[ix].yRot})
+		if dFromLastWp + dStep < self.waypoints[ix].dToNext then
+			while dFromLastWp + dStep < self.waypoints[ix].dToNext and #positions < nSteps and ix < #self.waypoints do
 				d = d + dStep
+				dFromLastWp = dFromLastWp + dStep
+				table.insert(positions, {x = x + dFromLastWp * self.waypoints[ix].dx,
+										 y = y,
+										 z = z + dFromLastWp * self.waypoints[ix].dz,
+										 yRot = self.waypoints[ix].yRot,
+                                         dToNext = self.waypoints[ix].dToNext,
+                                         dFromLastWp = dFromLastWp,
+                                         ix = ix})
 			end
-			d = d - self.waypoints[ix].dToNext
+			-- this is before wp ix, so negative
+			dFromLastWp = - (self.waypoints[ix].dToNext - dFromLastWp)
+			d = 0
             ix = ix + 1
 		else
+            d = - dFromLastWp
+			-- would step over the waypoint
 			while d < dStep and ix < #self.waypoints do
 				d = d + self.waypoints[ix].dToNext
 				ix = ix + 1
 			end
-			d = d - dStep
-			table.insert(positions, {x = x + d * self.waypoints[ix].dx,
+			-- this is before wp ix, so negative
+			dFromLastWp = - (d - dStep)
+			d = 0
+            x, y, z = self:getWaypointPosition(ix)
+			table.insert(positions, {x = x + dFromLastWp * self.waypoints[ix].dx,
 									 y = y,
-									 z = z + d * self.waypoints[ix].dz,
-									 yRot = self.waypoints[ix].yRot})
+									 z = z + dFromLastWp * self.waypoints[ix].dz,
+									 yRot = self.waypoints[ix].yRot,
+                                     dToNext = self.waypoints[ix].dToNext,
+                                     dFromLastWp = dFromLastWp,
+                                     ix = ix})
 		end
 	end
 	return positions

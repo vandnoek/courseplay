@@ -1673,8 +1673,17 @@ function AIDriver:createTrafficConflictDetector()
 end
 
 function AIDriver:updateTrafficConflictDetector()
-	if self.trafficConflictDetector and self.course and g_updateLoopIndex % 2 == 0 then 
+	if self.trafficConflictDetector and self.course then
 		self.trafficConflictDetector:update(self.course, self.ppc:getRelevantWaypointIx())
+	end
+end
+
+function AIDriver:onConflict(vehicle2, d, eta, yRotDiff, hold)
+	if hold then
+		if eta < 10 then
+			self:debug('onConflict with %s, %.1f, %d, %.1f, holding', vehicle2:getName(), d, eta, math.deg(yRotDiff))
+			self:hold()
+		end
 	end
 end
 
