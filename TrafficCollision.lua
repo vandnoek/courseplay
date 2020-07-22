@@ -465,21 +465,22 @@ end
 ---
 ---@param course Course
 ---@param ix number
-function TrafficConflictDetector:update(course, ix)
-	local metersPerSec = self:calculateAverageSpeed()
-    renderText(0.2, 0.3, 0.04, string.format("%.1f", metersPerSec * 3.6))
+function TrafficConflictDetector:update(course, ix, nominalSpeed)
 
     if ix == self.lastWaypointIx then return end
 
 	local positions = course:getPositionsOnCourse(ix, TrafficConflictDetector.boxDistance, TrafficConflictDetector.numTrafficCollisionTriggers)
 	local posIx = 1
+	local eta = 0
     if #positions > 0 then
         for i, trigger in ipairs(self.trafficCollisionTriggers) do
             local d = i * TrafficConflictDetector.boxDistance
-            local eta = metersPerSec > 0 and d / metersPerSec or i
+			local speed = positions[posIx].speed or nominalSpeed
+            local metersPerSec = speed / 3.6
+            eta = eta + (metersPerSec > 0 and TrafficConflictDetector.boxDistance / metersPerSec or 0)
             setTranslation(trigger, positions[posIx].x, positions[posIx].y + eta * TrafficConflictDetector.timeScale, positions[posIx].z)
             setRotation(trigger, 0, positions[posIx].yRot, 0)
-            DebugUtil.drawDebugNode(trigger, i)
+            DebugUtil.drawDebugNode(trigger, string.format('%.1f\n%.1f s', metersPerSec * 3.6, eta))
             setUserAttribute(trigger, 'distance', 'Integer', d)
             setUserAttribute(trigger, 'eta', 'Integer', eta)
             setUserAttribute(trigger, 'yRot', 'Float', positions[posIx].yRot)

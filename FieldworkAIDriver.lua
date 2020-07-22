@@ -272,19 +272,6 @@ function FieldworkAIDriver:startCourseWithPathfinding(course, ix)
 	return AIDriver.startCourseWithPathfinding(self, course, ix, zOffset,0)
 end
 
-function FieldworkAIDriver:xonPathfindingDone(path)
-	if path and #path > 2 then
-		self:debug('(FieldworkAIDriver) Pathfinding finished with %d waypoints (%d ms)', #path, self.vehicle.timer - (self.pathfindingStartedAt or 0))
-		local tempCourse = Course(self.vehicle, courseGenerator.pointsToXzInPlace(path), true)
-		self:startCourse(tempCourse, 1, self.courseAfterPathfinding, self.waypointIxAfterPathfinding)
-		return true
-	else
-		self:debug('(FieldworkAIDriver) Pathfinding was not able to find a path in %d ms', self.vehicle.timer - (self.pathfindingStartedAt or 0))
-		self:startCourse(self.courseAfterPathfinding, self.waypointIxAfterPathfinding)
-		return false
-	end
-end
-
 function FieldworkAIDriver:stop(msgReference)
 	self:stopWork()
 
@@ -394,6 +381,14 @@ function FieldworkAIDriver:driveFieldwork(dt)
 		iAmDriving = self.aiTurn:drive(dt)
 	end
 	return iAmDriving
+end
+
+function FieldworkAIDriver:getNominalSpeed()
+	if self.state == self.states.ON_FIELDWORK_COURSE then
+		return self:getWorkSpeed()
+	else
+		return self:getRecordedSpeed()
+	end
 end
 
 function FieldworkAIDriver:checkFillLevels()

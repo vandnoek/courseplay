@@ -879,6 +879,23 @@ end
 ---@param dStep number step in meters
 ---@param nSteps number number of positions to collect
 function Course:getPositionsOnCourse(startIx, dStep, nSteps)
+
+	local function addPosition(positions, ix, x, y, z, dFromLastWp)
+		local speed
+		if self.waypoints[ix].speed then
+			speed = (self.waypoints[ix].speed > 0) and self.waypoints[ix].speed or nil
+		end
+		table.insert(positions, {x = x + dFromLastWp * self.waypoints[ix].dx,
+								 y = y,
+								 z = z + dFromLastWp * self.waypoints[ix].dz,
+								 yRot = self.waypoints[ix].yRot,
+								 speed = speed,
+								 -- for debugging only
+								 dToNext = self.waypoints[ix].dToNext,
+								 dFromLastWp = dFromLastWp,
+								 ix = ix})
+	end
+
 	local positions = {}
 	local d = 0 -- distance from the last step
 	local dFromLastWp = 0
@@ -889,13 +906,7 @@ function Course:getPositionsOnCourse(startIx, dStep, nSteps)
 			while dFromLastWp + dStep < self.waypoints[ix].dToNext and #positions < nSteps and ix < #self.waypoints do
 				d = d + dStep
 				dFromLastWp = dFromLastWp + dStep
-				table.insert(positions, {x = x + dFromLastWp * self.waypoints[ix].dx,
-										 y = y,
-										 z = z + dFromLastWp * self.waypoints[ix].dz,
-										 yRot = self.waypoints[ix].yRot,
-                                         dToNext = self.waypoints[ix].dToNext,
-                                         dFromLastWp = dFromLastWp,
-                                         ix = ix})
+				addPosition(positions, ix, x, y, z, dFromLastWp)
 			end
 			-- this is before wp ix, so negative
 			dFromLastWp = - (self.waypoints[ix].dToNext - dFromLastWp)
@@ -912,13 +923,7 @@ function Course:getPositionsOnCourse(startIx, dStep, nSteps)
 			dFromLastWp = - (d - dStep)
 			d = 0
             x, y, z = self:getWaypointPosition(ix)
-			table.insert(positions, {x = x + dFromLastWp * self.waypoints[ix].dx,
-									 y = y,
-									 z = z + dFromLastWp * self.waypoints[ix].dz,
-									 yRot = self.waypoints[ix].yRot,
-                                     dToNext = self.waypoints[ix].dToNext,
-                                     dFromLastWp = dFromLastWp,
-                                     ix = ix})
+			addPosition(positions, ix, x, y, z, dFromLastWp)
 		end
 	end
 	return positions

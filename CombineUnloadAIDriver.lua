@@ -523,21 +523,11 @@ function CombineUnloadAIDriver:holdCombine()
 	--self.combineToUnload.cp.driver:hold()
 end
 
-function CombineUnloadAIDriver:getRecordedSpeed()
-	-- default is the street speed (reduced in corners)
-	if self.state == self.states.ON_UNLOAD_COURSE then
-		local speed = self:getDefaultStreetSpeed(self.ppc:getCurrentWaypointIx()) or self.vehicle.cp.speeds.street
-		if self.vehicle.cp.settings.useRecordingSpeed:is(true) then
-			-- use default street speed if there's no recorded speed.
-			speed = math.min(self.course:getAverageSpeed(self.ppc:getCurrentWaypointIx(), 4) or speed, speed)
-		end
-		--course end
-		if self.ppc:getCurrentWaypointIx()+3 >= self.course:getNumberOfWaypoints() then
-			speed= self.vehicle.cp.speeds.approach
-		end
-		return speed
+function CombineUnloadAIDriver:getNominalSpeed()
+	if self.state == self.states.ON_STREET then
+		return self:getRecordedSpeed()
 	else
-		return self.vehicle.cp.speeds.field
+		return self:getFieldSpeed()
 	end
 end
 
@@ -564,7 +554,6 @@ function CombineUnloadAIDriver:driveBesideCombine()
 	end
 	self:setSpeed(math.max(0, speed))
 end
-
 
 function CombineUnloadAIDriver:driveBesideChopper()
 	local targetNode = self:getTrailersTargetNode()

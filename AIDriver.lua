@@ -1668,19 +1668,24 @@ function AIDriver:onUnBlocked()
 	self:debug('Unblocked...')
 end
 
+--- Speed we think we'd be driving normally, used by the conflict detection to predict the vehicle's location
+function AIDriver:getNominalSpeed()
+	return self:getRecordedSpeed()
+end
+
 function AIDriver:createTrafficConflictDetector()
 	self.trafficConflictDetector = TrafficConflictDetector(self.vehicle, self.course)
 end
 
 function AIDriver:updateTrafficConflictDetector()
 	if self.trafficConflictDetector and self.course then
-		self.trafficConflictDetector:update(self.course, self.ppc:getRelevantWaypointIx())
+		self.trafficConflictDetector:update(self.course, self.ppc:getRelevantWaypointIx(), self:getNominalSpeed())
 	end
 end
 
 function AIDriver:onConflict(vehicle2, d, eta, yRotDiff, hold)
 	if hold then
-		if eta < 10 then
+		if eta < 6 then
 			self:debug('onConflict with %s, %.1f, %d, %.1f, holding', vehicle2:getName(), d, eta, math.deg(yRotDiff))
 			self:hold()
 		end
