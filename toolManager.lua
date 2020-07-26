@@ -1939,9 +1939,9 @@ end
 function courseplay:getIsToolValidForCpMode(workTool, cpModeToCheck)
 	local modeValid = false
 	--Made Mode1 and Mode2 separate check to have a cleaner check for Liquid Trailer.
-	if cpModeToCheck == courseplay.MODE_GRAIN_TRANSPORT and (SpecializationUtil.hasSpecialization(Dischargeable ,workTool.specializations) and SpecializationUtil.hasSpecialization(Trailer, workTool.specializations) and workTool.cp.capacity and workTool.cp.capacity > 0.1 or SpecializationUtil.hasSpecialization(FillTriggerVehicle, workTool.specializations)) then
+	if cpModeToCheck == courseplay.MODE_GRAIN_TRANSPORT and (SpecializationUtil.hasSpecialization(Dischargeable ,workTool.specializations) and SpecializationUtil.hasSpecialization(Trailer, workTool.specializations) and not SpecializationUtil.hasSpecialization(Pipe, workTool.specializations) and workTool.cp.capacity and workTool.cp.capacity > 0.1 or SpecializationUtil.hasSpecialization(FillTriggerVehicle, workTool.specializations)) then
 		modeValid = true;
-	elseif cpModeToCheck == courseplay.MODE_COMBI and SpecializationUtil.hasSpecialization(Dischargeable ,workTool.specializations) and SpecializationUtil.hasSpecialization(Trailer, workTool.specializations) and workTool.cp.capacity and workTool.cp.capacity > 0.1 and not SpecializationUtil.hasSpecialization(FillTriggerVehicle, workTool.specializations) then
+	elseif cpModeToCheck == courseplay.MODE_COMBI and SpecializationUtil.hasSpecialization(Dischargeable ,workTool.specializations) and SpecializationUtil.hasSpecialization(Trailer, workTool.specializations) and not SpecializationUtil.hasSpecialization(Pipe, workTool.specializations) and workTool.cp.capacity and workTool.cp.capacity > 0.1 and not SpecializationUtil.hasSpecialization(FillTriggerVehicle, workTool.specializations) then
 		modeValid = true;
 	elseif cpModeToCheck == courseplay.MODE_OVERLOADER and SpecializationUtil.hasSpecialization(Trailer, workTool.specializations) and SpecializationUtil.hasSpecialization(Pipe, workTool.specializations) then
 		modeValid = true
