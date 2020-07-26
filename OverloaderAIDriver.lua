@@ -52,6 +52,7 @@ function OverloaderAIDriver:start(startingPoint)
     --- with no pipe after game start. So make another attempt to find it when missing
     --- TODO: this should be fixed properly, just like the other hack in start_stop.lua for the bale loader
     if not self.pipe or not self.trailer then self:findPipeAndTrailer() end
+    self.unloadCourseState = self.states.ENROUTE
     CombineUnloadAIDriver.start(self, startingPoint)
 end
 
