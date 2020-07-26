@@ -1550,6 +1550,11 @@ end
 -- courseplay int this
 AIDriverUtil = {}
 
+-- chopper: 0= pipe folded (really? isn't this 1?), 2,= autoaiming;  combine: 1 = closed  2= open
+AIDriverUtil.PIPE_STATE_MOVING = 0
+AIDriverUtil.PIPE_STATE_CLOSED = 1
+AIDriverUtil.PIPE_STATE_OPEN = 2
+
 function AIDriverUtil.isReverseDriving(vehicle)
 	if not vehicle then
 		printCallstack()
@@ -1757,4 +1762,27 @@ function AIDriverUtil.getLastAttachedImplement(vehicle)
 		end
 	end
 	return lastImplement, -backOffset
+end
+
+
+function AIDriverUtil.hasAIImplementWithSpecialization(vehicle, specialization)
+	return AIDriverUtil.getAIImplementWithSpecialization(vehicle, specialization) ~= nil
+end
+
+function AIDriverUtil.getAIImplementWithSpecialization(vehicle, specialization)
+	local aiImplements = vehicle:getAttachedAIImplements()
+	return AIDriverUtil.getImplementWithSpecializationFromList(specialization, aiImplements)
+end
+
+function AIDriverUtil.getImplementWithSpecialization(vehicle, specialization)
+	local implements = vehicle:getAttachedImplements()
+	return AIDriverUtil.getImplementWithSpecializationFromList(specialization, implements)
+end
+
+function AIDriverUtil.getImplementWithSpecializationFromList(specialization, implements)
+	for _, implement in ipairs(implements) do
+		if SpecializationUtil.hasSpecialization(specialization, implement.object.specializations) then
+			return implement.object
+		end
+	end
 end
