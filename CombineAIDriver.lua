@@ -637,11 +637,9 @@ function CombineAIDriver:checkBlockingUnloader()
 	if not self.backwardLookingProximitySensorPack then return end
 	local d, blockingVehicle = self.backwardLookingProximitySensorPack:getClosestObjectDistanceAndRootVehicle()
 	if d < 1000 and blockingVehicle and self:isStopped() and self:isReversing() and not self:isWaitingForUnload() then
-		if g_updateLoopIndex % 250 == 0 then
-			self:debug('Can\'t reverse, %s at %.1f m is blocking', blockingVehicle:getName(), d)
-			if blockingVehicle.cp.driver and blockingVehicle.cp.driver.onBlockingOtherVehicle then
-				blockingVehicle.cp.driver:onBlockingOtherVehicle(self.vehicle)
-			end
+		self:debugSparse('Can\'t reverse, %s at %.1f m is blocking', blockingVehicle:getName(), d)
+		if blockingVehicle.cp.driver and blockingVehicle.cp.driver.onBlockingOtherVehicle then
+			blockingVehicle.cp.driver:onBlockingOtherVehicle(self.vehicle)
 		end
 	end
 end

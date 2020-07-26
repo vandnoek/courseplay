@@ -2059,7 +2059,7 @@ end
 -- We are blocking another vehicle who wants us to move out of way
 ------------------------------------------------------------------------------------------------------------------------
 function CombineUnloadAIDriver:onBlockingOtherVehicle(blockedVehicle)
-	self:debug('%s wants me to move out of way', blockedVehicle:getName())
+	self:debugSparse('%s wants me to move out of way', blockedVehicle:getName())
 	if blockedVehicle.cp.driver:isChopper() then
 		-- TODO: think about how to best handle choppers, since they always stop when no trailer
 		-- is in range they always send these blocking events.
@@ -2077,9 +2077,10 @@ function CombineUnloadAIDriver:onBlockingOtherVehicle(blockedVehicle)
 		local reverseCourse = self:getStraightReverseCourse(10)
 		self:startCourse(reverseCourse, 1, self.course, self.course:getCurrentWaypointIx())
 		self.stateAfterMovedOutOfWay = self.onFieldState
+		self:debug('Moving out of the way for %s', blockedVehicle:getName())
 		self:setNewOnFieldState(self.states.MOVING_OUT_OF_WAY)
 	else
-		self:debug('Already busy moving out of the way')
+		self:debugSparse('Already busy moving out of the way')
 	end
 end
 
