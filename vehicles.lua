@@ -855,17 +855,6 @@ function courseplay:getToolTurnRadius(workTool)
 
 		for i, attachedImplement in pairs(attacherVehicle:getAttachedImplements()) do
 			if attachedImplement.object == workTool then
-				-- Check if AIVehicleUtil can calculate it for us
-				--local AIMaxToolRadius = AIVehicleUtil.getMaxToolRadius(attachedImplement) * 0.5;
-				--if AIMaxToolRadius > 0 then
-				--	if workToolDistances.attacherJointOrPivotToTurningNode > AIMaxToolRadius then
-				--		AIMaxToolRadius = workToolDistances.attacherJointOrPivotToTurningNode;
-				--	end;
-				--	courseplay:debug(('%s -> TurnRadius: AIVehicleUtil.getMaxToolRadius=%.2fm'):format(nameNum(workTool), AIMaxToolRadius), 6);
-				--	return AIMaxToolRadius;
-				--end;
-
-				-- AIVehicleUtil could not calculate it, so we do it our self.
 				rotMax = attachedImplement.upperRotLimit[2];
 				break;
 			end;
@@ -1690,7 +1679,7 @@ end
 
 -- Get the turning radius of the vehicle and its implements (copied from AIDriveStrategyStraight.updateTurnData())
 function AIDriverUtil.getTurningRadius(vehicle)
-	-- determine turning radius
+	courseplay.debugVehicle(6, vehicle, 'Finding turn radius')
 	local radius = vehicle.maxTurningRadius * 1.1                     -- needs ackermann steering
 	if vehicle:getAIMinTurningRadius() ~= nil then
 		radius = math.max(radius, vehicle:getAIMinTurningRadius())
@@ -1699,8 +1688,14 @@ function AIDriverUtil.getTurningRadius(vehicle)
 
 	local attachedAIImplements = vehicle:getAttachedImplements()
 
-	for _,implement in pairs(attachedAIImplements) do
-		maxToolRadius = math.max(maxToolRadius, AIVehicleUtil.getMaxToolRadius(implement))
+	for _, implement in pairs(attachedAIImplements) do
+		local turnRadius = AIVehicleUtil.getMaxToolRadius(implement)
+		if turnRadius == 0 then
+			turnRadius = courseplay:getToolTurnRadius(implement.object)
+			courseplay.debugVehicle(6, vehicle, '%s: no Giants turn radius, we calculated %.1f', implement.object:getName(), turnRadius)
+		end
+		maxToolRadius = math.max(maxToolRadius, turnRadius)
+		courseplay.debugVehicle(6, vehicle, '%s: max tool radius %.1f', implement.object:getName(), maxToolRadius)
 	end
 	radius = math.max(radius, maxToolRadius)
 	courseplay.debugVehicle(6, vehicle, 'getTurningRadius: %.1f m', radius)

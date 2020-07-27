@@ -29,7 +29,6 @@ OverloaderAIDriver.myStates = {
 function OverloaderAIDriver:init(vehicle)
     CombineUnloadAIDriver.init(self, vehicle)
     self:initStates(OverloaderAIDriver.myStates)
-    self.debugChannel = 15
     self:debug('OverloaderAIDriver:init()')
     self.mode = courseplay.MODE_OVERLOADER
     self.unloadCourseState = self.states.ENROUTE

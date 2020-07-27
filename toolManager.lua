@@ -725,7 +725,7 @@ function courseplay:setTipperCoverData(vehicle)
 		local workTool = vehicle.cp.workTools[i];
 
 		-- Default Giants trailers
-		if workTool.cp.hasSpecializationCover and not workTool.cp.isStrawBlower then
+		if workTool.cp.hasSpecializationCover and not workTool.cp.isStrawBlower and workTool.spec_cover.hasCovers then
 			courseplay:debug(string.format('Implement %q has a cover (hasSpecializationCover == true)', tostring(workTool.name)), 6);
 			local data = {
 				coverType = 'defaultGiants',
