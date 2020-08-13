@@ -72,12 +72,12 @@ function Conflict:update()
 		if trigger.timeCleared and g_time - trigger.timeCleared > Conflict.clearThresholdMilliSec then
 			-- been cleared long ago, mark for removal
 			table.insert(triggersToRemove, trigger)
+			self.nTriggers = self.nTriggers - 1
 		end
 	end
 	-- remove cleared triggers
 	for _, trigger in pairs(triggersToRemove) do
 		self.triggers[trigger] = nil
-		self.nTriggers = self.nTriggers - 1
 	end
 end
 
@@ -103,6 +103,9 @@ function Conflict:resolve()
 					self.vehicleWithRightOfWay = self.closestTrigger.otherVehicle
 				elseif self.closestTrigger.otherVehicle.cp.driver:is_a(CombineUnloadAIDriver) and
 						self.closestTrigger.detectedBy.cp.driver:is_a(CombineAIDriver) then
+					self.vehicleToHold = self.closestTrigger.otherVehicle
+					self.vehicleWithRightOfWay = self.closestTrigger.detectedBy
+				else
 					self.vehicleToHold = self.closestTrigger.otherVehicle
 					self.vehicleWithRightOfWay = self.closestTrigger.detectedBy
 				end

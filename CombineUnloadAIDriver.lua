@@ -121,8 +121,8 @@ function CombineUnloadAIDriver:setHudContent()
 end
 
 function CombineUnloadAIDriver:debug(...)
-	local combineName = self.combineToUnload and nameNum(self.combineToUnload) or 'N/A'
-	courseplay.debugVehicle(self.debugChannel, self.vehicle, ' -> ' .. combineName .. ': ' .. string.format( ... ))
+	local combineName = self.combineToUnload and (' -> ' .. nameNum(self.combineToUnload)) or '(unassigned)'
+	courseplay.debugVehicle(self.debugChannel, self.vehicle, combineName .. ': ' .. string.format( ... ))
 end
 
 function CombineUnloadAIDriver:start(startingPoint)
