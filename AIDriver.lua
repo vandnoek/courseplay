@@ -491,7 +491,7 @@ function AIDriver:driveVehicleToLocalPosition(dt, allowedToDrive, moveForwards, 
 		-- TODO: remove allowedToDrive parameter and only use self.allowedToDrive
 	if not self.allowedToDrive then allowedToDrive = false end
 
-	maxSpeed, allowedToDrive = self:checkProximitySensor(maxSpeed, allowedToDrive, moveForwards)
+	maxSpeed, allowedToDrive = self:checkSafetyConstraints(maxSpeed, allowedToDrive, moveForwards)
 
 	-- driveToPoint does not like speeds under 1.5 (will stop) so make sure we set at least 2
 	if maxSpeed > 0.01 and maxSpeed < 2 then
@@ -544,8 +544,8 @@ function AIDriver:driveVehicleBySteeringAngle(dt, moveForwards, steeringAngleNor
 	end
 	if self.vehicle.firstTimeRun then
 		local acc = self.acceleration;
-		
-		maxSpeed, self.allowedToDrive = self:checkProximitySensor(maxSpeed, self.allowedToDrive, moveForwards)
+
+		maxSpeed, self.allowedToDrive = self:checkSafetyConstraints(maxSpeed, self.allowedToDrive, moveForwards)
 
 		if maxSpeed ~= nil and maxSpeed ~= 0 then
 			if steeringAngleNormalized >= self.slowAngleLimit then
@@ -1683,13 +1683,52 @@ function AIDriver:updateTrafficConflictDetector()
 	end
 end
 
-function AIDriver:onConflict(vehicle2, d, eta, yRotDiff, hold)
+-- This is called by the traffic controller in every loop as long as there is an active conflict
+---@param otherVehicle table conflicting vehicle
+---@param d number how far the point of conflict is from our current location
+---@param eta number how many seconds until a collision with otherVehicle
+---@param yRotDiff number heading difference, can be used to determine if this is a head on collision or just driving
+--- behind the other vehicle
+---@param hold boolean if true, the traffic controller wants us to resolve this conflict by slowing down/holding
+function AIDriver:onConflict(otherVehicle, d, eta, yRotDiff, hold)
 	if hold then
-		if eta < 6 then
-			self:debug('onConflict with %s, %.1f, %d, %.1f, holding', vehicle2:getName(), d, eta, math.deg(yRotDiff))
-			self:hold()
+		if self.trafficConflictEta ~= eta or self.trafficConflictDistance ~= d or self.trafficConflictVehicle ~= otherVehicle then
+			self:debug('onConflict with %s, %.1f m, %d s, %.1f ', otherVehicle:getName(), d, eta, math.deg(yRotDiff))
 		end
+		self.trafficConflictEta = eta
+		self.trafficConflictDistance = d
+		self.trafficConflictVehicle = otherVehicle
+		self.trafficConflictActive = true
+	else
+		self.trafficConflictActive = false
 	end
+end
+
+function AIDriver:slowDownForTraffic(maxSpeed, allowedToDrive)
+	if maxSpeed == 0 or not allowedToDrive then
+		return maxSpeed, allowedToDrive
+	end
+	if self.trafficConflictActive then
+		if self.trafficConflictEta < 6 then
+			self:debugSparse('Traffic conflict in %.1f s (%.1f m), hold', self.trafficConflictEta, self.trafficConflictDistance)
+			self:clearInfoText('SLOW_DOWN_FOR_TRAFFIC')
+			self:setInfoText('TRAFFIC')
+			allowedToDrive = false
+		elseif self.trafficConflictEta < 12 then
+			self:debugSparse('Traffic conflict in %.1f s (%.1f m), half speed', self.trafficConflictEta, self.trafficConflictDistance)
+			self:clearInfoText('TRAFFIC')
+			self:setInfoText('SLOW_DOWN_FOR_TRAFFIC')
+			maxSpeed = maxSpeed / 2
+		else
+			self:clearInfoText('TRAFFIC')
+			self:clearInfoText('SLOW_DOWN_FOR_TRAFFIC')
+		end
+	else
+		self:clearInfoText('TRAFFIC')
+		self:clearInfoText('SLOW_DOWN_FOR_TRAFFIC')
+	end
+	self.trafficConflictActive = false
+	return maxSpeed, allowedToDrive
 end
 
 function AIDriver:detectSlipping()
@@ -1842,6 +1881,13 @@ function AIDriver:updateProximitySensors()
 	if self.backwardLookingProximitySensorPack then
 		self.backwardLookingProximitySensorPack:update()
 	end
+end
+
+function AIDriver:checkSafetyConstraints(maxSpeed, allowedToDrive, moveForwards)
+	local proximityLimitedSpeed, trafficLimitedSpeed
+	proximityLimitedSpeed, allowedToDrive = self:checkProximitySensor(maxSpeed, allowedToDrive, moveForwards)
+	trafficLimitedSpeed, allowedToDrive = self:slowDownForTraffic(maxSpeed, allowedToDrive)
+	return math.min(proximityLimitedSpeed, trafficLimitedSpeed), allowedToDrive
 end
 
 function AIDriver:checkProximitySensor(maxSpeed, allowedToDrive, moveForwards)

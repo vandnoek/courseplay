@@ -407,8 +407,7 @@ TrafficConflictDetector.speedAverageCycles = 20
 --- @param collisionTriggerObject table object to use to find a collision trigger, by default the vehicle
 function TrafficConflictDetector:init(vehicle, course, collisionTriggerObject)
 	self.baseHeight = 6
-    -- array for the speed rolling average
-    self.speeds = {}
+	self.conflicts = {}
     self.lastWaypointIx = 0
 	self.collisionTriggerObject = collisionTriggerObject or vehicle
 	CollisionDetector.init(self, vehicle, course)
@@ -416,7 +415,6 @@ function TrafficConflictDetector:init(vehicle, course, collisionTriggerObject)
 end
 
 function TrafficConflictDetector:createTriggers()
-	print(self.collisionTriggerObject:getName())
 	if not courseplay:findAiCollisionTrigger(self.collisionTriggerObject) then return end
 
 	if not self.trafficCollisionTriggers then
@@ -440,15 +438,6 @@ function TrafficConflictDetector:adaptCollisHeight()
 	return
 end
 
-function TrafficConflictDetector:calculateAverageSpeed()
-    self.speeds[g_updateLoopIndex % self.speedAverageCycles] = self.vehicle:getLastSpeed() / 3.6
-    local total, i = 0, 0
-    for _, s in pairs(self.speeds) do
-        i = i + 1
-        total = total + s
-    end
-    return (i > 0 and total > 0.5) and total / i or 0
-end
 
 --- Update the position of each collision trigger box.
 ---
@@ -490,8 +479,21 @@ function TrafficConflictDetector:update(course, ix, nominalSpeed)
             end
         end
 	end
+	self:updateConflicts()
 end
 
+function TrafficConflictDetector:updateConflicts()
+	-- iterate backwards as we'll remove table elements
+	for i = #self.conflicts, 1, -1 do
+		local conflict = self.conflicts[i]
+		conflict:update()
+		local otherVehicle, d, eta, otherD, otherEta, yRotDiff = conflict:getClosest()
+
+		if conflict:isCleared() then
+			table.remove(self.conflicts, i)
+		end
+	end
+end
 
 function TrafficConflictDetector:isIgnored(otherId)
 	for i = 1, self.numTrafficCollisionTriggers do
@@ -511,6 +513,7 @@ function TrafficConflictDetector:onCollision(triggerId, otherId, onEnter, onLeav
 		if onEnter then
 			-- call every time, even if we already have a conflict with this vehicle to update d and ETA
 			g_trafficController:onConflictDetected(self.vehicle, otherVehicle, triggerId,
+					getUserAttribute(triggerId, 'distance'), getUserAttribute(triggerId, 'eta'),
 					getUserAttribute(otherId, 'distance'), getUserAttribute(otherId, 'eta'), yRotDiff)
 		end
 		if onLeave then

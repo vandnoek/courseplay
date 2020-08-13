@@ -16,20 +16,21 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ]]
 
+---@class Conflict
 Conflict = CpObject()
 
 -- a collision trigger must be present for at least so many milliseconds before it is considered for a conflict
-Conflict.detectionThresholdMilliSec = 2000
+Conflict.detectionThresholdMilliSec = 1000
 -- a collision trigger must be cleared for at least so many milliseconds before it is removed from a conflict
-Conflict.clearThresholdMilliSec = 2000
+Conflict.clearThresholdMilliSec = 1000
 
-function Conflict:init(vehicle1, vehicle2, triggerId, d, eta, yRotDiff)
+function Conflict:init(vehicle1, vehicle2, triggerId, d, eta, otherD, otherEta, yRotDiff)
 	self.vehicle1 = vehicle1
 	self.vehicle2 = vehicle2
     self.triggers = {}
 	-- need to count them ourselves as it triggers is a hash, not an array
 	self.nTriggers = 0
-	self:onDetected(triggerId, d, eta, yRotDiff)
+	self:onDetected(triggerId, vehicle1, vehicle2, d, eta, otherD, otherEta, yRotDiff)
 end
 
 function Conflict:isBetween(vehicle1, vehicle2)
@@ -46,8 +47,10 @@ function Conflict:isCleared()
 	return self.nTriggers < 1
 end
 
-function Conflict:onDetected(triggerId, d, eta, yRotDiff)
-	self.triggers[triggerId] = {d = d, eta = eta, yRotDiff = yRotDiff, timeDetected = g_time}
+function Conflict:onDetected(triggerId, detectedBy, otherVehicle, d, eta, otherD, otherEta, yRotDiff)
+	self.triggers[triggerId] = {detectedBy = detectedBy, otherVehicle = otherVehicle,
+								d = d, eta = eta, otherD = otherD, otherEta = otherEta,
+								yRotDiff = yRotDiff, detectedAt = g_time}
 	self:update()
 end
 
@@ -57,13 +60,13 @@ function Conflict:onCleared(triggerId)
 end
 
 function Conflict:update()
-	local minD = math.huge
+	local minEta = math.huge
 	self.nTriggers = 0
 	local triggersToRemove = {}
 	for _, trigger in pairs(self.triggers) do
-		if trigger.d < minD and g_time - trigger.timeDetected > Conflict.detectionThresholdMilliSec then
+		if not trigger.timeCleared and trigger.eta < minEta and g_time - trigger.detectedAt > Conflict.detectionThresholdMilliSec then
 			self.closestTrigger = trigger
-			minD = self.closestTrigger.d
+			minEta = self.closestTrigger.eta
 		end
 		self.nTriggers = self.nTriggers + 1
 		if trigger.timeCleared and g_time - trigger.timeCleared > Conflict.clearThresholdMilliSec then
@@ -78,9 +81,46 @@ function Conflict:update()
 	end
 end
 
+function Conflict:resolve()
+	if self.closestTrigger then
+		-- if we are already holding someone, keep doing so until the conflict is resolved, otherwise:
+		if not self.vehicleToHold then
+			if math.abs(self.closestTrigger.yRotDiff) < math.rad(45) then
+				-- one vehicle is behind the other
+				if self.closestTrigger.d < self.closestTrigger.otherD then
+					-- detecting vehicle is closer to the conflict, so the other is behind it
+					self.vehicleToHold = self.closestTrigger.otherVehicle
+					self.vehicleWithRightOfWay = self.closestTrigger.detectedBy
+				else
+					self.vehicleToHold = self.closestTrigger.detectedBy
+					self.vehicleWithRightOfWay = self.closestTrigger.otherVehicle
+				end
+			else
+				-- vehicles crossing paths, decide on priority
+				if self.closestTrigger.detectedBy.cp.driver:is_a(CombineUnloadAIDriver) and
+						self.closestTrigger.otherVehicle.cp.driver:is_a(CombineAIDriver) then
+					self.vehicleToHold = self.closestTrigger.detectedBy
+					self.vehicleWithRightOfWay = self.closestTrigger.otherVehicle
+				elseif self.closestTrigger.otherVehicle.cp.driver:is_a(CombineUnloadAIDriver) and
+						self.closestTrigger.detectedBy.cp.driver:is_a(CombineAIDriver) then
+					self.vehicleToHold = self.closestTrigger.otherVehicle
+					self.vehicleWithRightOfWay = self.closestTrigger.detectedBy
+				end
+			end
+		end
+		if self.vehicleToHold.cp.driver then
+			self.vehicleToHold.cp.driver:onConflict(self.vehicleWithRightOfWay,
+					self.closestTrigger.d, self.closestTrigger.eta, self.closestTrigger.yRotDiff, true)
+		end
+	else
+		return nil
+	end
+end
+
 function Conflict:getClosest()
 	if self.closestTrigger then
-		return self.vehicle1, self.vehicle2, self.closestTrigger.d, self.closestTrigger.eta, self.closestTrigger.yRotDiff
+		return self.detectedBy, self.conflictingVehicle, self.closestTrigger.d, self.closestTrigger.eta,
+			self.closestTrigger.otherD, self.closestTrigger.otherEta, self.closestTrigger.yRotDiff
 	else
 		return nil
 	end
@@ -102,6 +142,7 @@ TrafficController = CpObject()
 TrafficController.debugChannel = 4
 
 function TrafficController:init()
+	---@type Conflict[]
 	self.conflicts = {}
 	self:debug('Traffic controller initialized')
 end
@@ -110,22 +151,10 @@ end
 function TrafficController:update()
 	-- iterate backwards as we'll remove table elements
 	for i = #self.conflicts, 1, -1 do
+		---@type Conflict
 		local conflict = self.conflicts[i]
 		conflict:update()
-		local vehicle1, vehicle2, d, eta, yRotDiff = conflict:getClosest()
-		if vehicle1 then
-			-- if the conflict is between a combine and an unloader, hold the unloader, otherwise hold the first vehicle
-			local holdVehicle1, holdVehicle2 = true, false
-			if vehicle1.cp.driver:is_a(CombineUnloadAIDriver) and vehicle2.cp.driver:is_a(CombineAIDriver) then
-				holdVehicle1 = true
-				holdVehicle2 = false
-			elseif vehicle2.cp.driver:is_a(CombineUnloadAIDriver) and vehicle1.cp.driver:is_a(CombineAIDriver) then
-				holdVehicle1 = false
-				holdVehicle2 = true
-			end
-			if vehicle1.cp.driver then vehicle1.cp.driver:onConflict(vehicle2, d, eta, yRotDiff, holdVehicle1) end
-			if vehicle2.cp.driver then vehicle2.cp.driver:onConflict(vehicle1, d, eta, yRotDiff, holdVehicle2) end
-		end
+		conflict:resolve()
 		if conflict:isCleared() then
 			table.remove(self.conflicts, i)
 		end
@@ -146,15 +175,15 @@ function TrafficController:drawDebugInfo()
 	end
 end
 
-function TrafficController:onConflictDetected(vehicle, otherVehicle, triggerId, d, eta, yRotDiff)
+function TrafficController:onConflictDetected(vehicle, otherVehicle, triggerId, d, eta, otherD, otherEta, yRotDiff)
 	for _, conflict in ipairs(self.conflicts) do
 		if conflict:isBetween(vehicle, otherVehicle) then
-			conflict:onDetected(triggerId, d, eta, yRotDiff)
+			conflict:onDetected(triggerId, vehicle, otherVehicle, d, eta, otherD, otherEta, yRotDiff)
 			return
 		end
 	end
 	-- first conflict for this vehicle pair
-	table.insert(self.conflicts, Conflict(vehicle, otherVehicle, triggerId, d, eta, yRotDiff))
+	table.insert(self.conflicts, Conflict(vehicle, otherVehicle, triggerId, d, eta, otherD, otherEta, yRotDiff))
 end
 
 function TrafficController:onConflictCleared(vehicle, otherVehicle, triggerId)
