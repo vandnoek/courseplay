@@ -63,7 +63,7 @@ function Conflict:update()
 	local minEta = math.huge
 	self.nTriggers = 0
 	local triggersToRemove = {}
-	for _, trigger in pairs(self.triggers) do
+	for id, trigger in pairs(self.triggers) do
 		if not trigger.timeCleared and trigger.eta < minEta and g_time - trigger.detectedAt > Conflict.detectionThresholdMilliSec then
 			self.closestTrigger = trigger
 			minEta = self.closestTrigger.eta
@@ -71,13 +71,13 @@ function Conflict:update()
 		self.nTriggers = self.nTriggers + 1
 		if trigger.timeCleared and g_time - trigger.timeCleared > Conflict.clearThresholdMilliSec then
 			-- been cleared long ago, mark for removal
-			table.insert(triggersToRemove, trigger)
+			table.insert(triggersToRemove, id)
 			self.nTriggers = self.nTriggers - 1
 		end
 	end
 	-- remove cleared triggers
-	for _, trigger in pairs(triggersToRemove) do
-		self.triggers[trigger] = nil
+	for _, id in pairs(triggersToRemove) do
+		self.triggers[id] = nil
 	end
 end
 
@@ -132,7 +132,7 @@ end
 function Conflict:__tostring()
 	local result = string.format('Traffic conflict: %s <-> %s %d triggers', self.vehicle1:getName(), self.vehicle2:getName(), self.nTriggers)
 	if self.closestTrigger then
-		result = string.format('%s, closest %.1f m %d sec %.1f°', result, self.closestTrigger.d or -1, self.closestTrigger.eta or -1,
+		result = string.format('%s, closest %.1f m %d sec %.1f° ', result, self.closestTrigger.d or -1, self.closestTrigger.eta or -1,
 				self.closestTrigger.yRotDiff and math.deg(self.closestTrigger.yRotDiff) or 0)
 	end
 	return result

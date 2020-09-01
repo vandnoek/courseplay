@@ -424,7 +424,7 @@ function TrafficConflictDetector:createTriggers()
 		local newTrigger = clone(self.collisionTriggerObject.aiTrafficCollisionTrigger, false)
 		link(g_currentMission.terrainRootNode, newTrigger)
 		self.trafficCollisionTriggers[i] = newTrigger
-		setName(newTrigger, 'TrafficConflictDetector ' .. tostring(i))
+		setName(newTrigger, self.vehicle:getName() .. ' trigger #' .. tostring(i))
 		local x, y, z = getWorldTranslation(self.vehicle.rootNode)
 		local _, yRot, _ = getWorldRotation(self.vehicle.rootNode)
 		setTranslation(newTrigger, x, i + y + self.baseHeight, z)
