@@ -373,7 +373,6 @@ end
 
 --- Update AI driver, everything that needs to run in every loop
 function AIDriver:update(dt)
-	self:updateTrafficConflictDetector()
 	self:updateProximitySensors()
 	self:updatePathfinding()
 	self:drive(dt)
@@ -420,6 +419,7 @@ end
 -- to reverse with trailer.
 function AIDriver:driveCourse(dt)
 	self:updateLights()
+	self:updateTrafficConflictDetector()
 	-- check if reversing
 	local lx, lz, moveForwards, isReverseActive = self:getReverseDrivingDirection()
 	-- stop for fuel if needed
@@ -511,7 +511,6 @@ function AIDriver:driveVehicleInDirection(dt, allowedToDrive, moveForwards, lx, 
 	-- construct an artificial goal point to drive to
 	local gx, gz = lx * self.ppc:getLookaheadDistance(), lz * self.ppc:getLookaheadDistance()
 	self:driveVehicleToLocalPosition(dt, allowedToDrive, moveForwards, gx, gz, maxSpeed)
-
 end
 
 --- Drive vehicle by using a steering angle. This is similar to the Giants AIVehicleUtil.driveInDirection() but
