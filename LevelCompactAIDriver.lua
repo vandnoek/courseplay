@@ -74,6 +74,8 @@ function LevelCompactAIDriver:start()
 	self.fillUpState = self.states.PUSH
 	self.alphaList = nil
 	self.lastDrivenColumn = nil
+	-- reset target silo in case we want to work on a different one...
+	self.targetSilo = nil
 	self:getWorkWidth()
 end
 
