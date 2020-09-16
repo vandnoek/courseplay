@@ -1733,6 +1733,10 @@ function IntSetting:set(value)
 	end
 end
 
+function IntSetting:changeByX(x)
+	self:set(self:get()+x)
+end
+
 ---@class SettingList
 SettingList = CpObject(Setting)
 
@@ -2265,6 +2269,51 @@ function HeadlandOverlapPercent:init(vehicle)
 	self:set(7)
 end
 
+--WIP
+---@class SeedCalculatorSetting : SettingList
+SeedCalculatorSetting = CpObject(SettingList)
+SeedCalculatorSetting.OFF = 0
+function SeedCalculatorSetting:init(vehicle)
+	local sprayTypes = g_sprayTypeManager:getSprayTypes()
+	local fruitTypes = g_fruitTypeManager:getFruitTypes()
+	local index = 2
+	local values = {}
+	local texts = {}
+	values[1] = SeedCalculatorSetting.OFF 
+	texts[1] = "COURSEPLAY_DEACTIVATED"
+	--litersPerSecond
+	for sprayTypeIndex,sprayType in ipairs(sprayTypes) do
+		local data = {}
+		data.sprayType = sprayType
+		values[index] = data
+		texts[index] = sprayType.title
+		index = index + 1 
+	end
+	--seedUsagePerSqm
+	for fruitTypeIndex,fruitType in ipairs(fruitTypes) do
+		 if fruitType.allowsSeeding then
+			local data = {}
+			data.fruitType = fruitType
+			values[index] = data
+			texts[index] = fruitType.title
+			index = index + 1
+		 end
+	end
+	SettingList.init(self, 'seedCalculator', 'COURSEGENERATOR_SEEDCALCULATOR',
+			'COURSEGENERATOR_SEEDCALCULATOR', vehicle,
+			values, texts)
+	self:set(1)
+end
+
+
+function SeedCalculatorSetting:loadFromXml(xml, parentKey)
+
+end
+
+function SeedCalculatorSetting:saveToXml(xml, parentKey)
+
+end
+
 --toggleHeadlandDirection
 --toggleHeadlandOrder
 
@@ -2488,16 +2537,20 @@ function SowingMachineFertilizerEnabled:init()
 	self:set(true)
 end
 
----@class StrawOnHeadland : BooleanSetting
-StrawOnHeadland = CpObject(BooleanSetting)
-function StrawOnHeadland:init(vehicle)
-	BooleanSetting.init(self, 'strawOnHeadland', 'COURSEPLAY_STRAW_ON_HEADLAND',
-				'COURSEPLAY_YES_NO_STRAW_ON_HEADLAND', vehicle)
+---@class StrawSwathSetting : SettingList
+StrawSwathSetting = CpObject(SettingList)
+StrawSwathSetting.OFF = 0
+StrawSwathSetting.ON = 1
+StrawSwathSetting.ONLY_CENTER = 2
+function StrawSwathSetting:init(vehicle)
+	SettingList.init(self, 'strawSwath', 'COURSEPLAY_STRAW_ON_HEADLAND','COURSEPLAY_YES_NO_STRAW_ON_HEADLAND', vehicle,
+		{StrawSwathSetting.OFF,StrawSwathSetting.ON,StrawSwathSetting.ONLY_CENTER},
+		{'COURSEPLAY_DEACTIVATED','COURSEPLAY_ACTIVATED','COURSEPLAY_STRAW_ON_ONLY_CENTER'})
 	-- set default while we are transitioning from the the old setting to this new one
-	self:set(true)
+	self:set(1)
 end
 
-function StrawOnHeadland:isDisabled()
+function StrawSwathSetting:isDisabled()
 	return self.vehicle.cp.driver and not self.vehicle.cp.driver:is_a(CombineAIDriver)
 end
 
@@ -3544,6 +3597,14 @@ function ConvoyActiveSetting:init(vehicle)
 	self:set(false)
 end
 
+--not sure if this one would still be needed ??
+---@class ConvoyMaxDistanceSetting : IntSetting
+ConvoyMaxDistanceSetting = CpObject(IntSetting)
+function ConvoyMaxDistanceSetting:init(vehicle)
+	IntSetting.init(self, 'convoyMaxDistance','COURSEPLAY_CONVOY_MAX_DISTANCE', 'COURSEPLAY_CONVOY_MAX_DISTANCE', vehicle,40,3000) 
+	self:set(300)
+end
+
 ---@class ConvoyMinDistanceSetting : IntSetting
 ConvoyMinDistanceSetting = CpObject(IntSetting)
 function ConvoyMinDistanceSetting:init(vehicle)
@@ -3555,13 +3616,7 @@ function ConvoyMinDistanceSetting:getText()
 	return string.format('%d%s', self:get(),courseplay:loc('COURSEPLAY_UNIT_METER'));
 end
 
---not sure if this one would still be needed ??
----@class ConvoyMaxDistanceSetting : IntSetting
-ConvoyMaxDistanceSetting = CpObject(IntSetting)
-function ConvoyMaxDistanceSetting:init(vehicle)
-	IntSetting.init(self, 'convoyMaxDistance','COURSEPLAY_CONVOY_MAX_DISTANCE', 'COURSEPLAY_CONVOY_MAX_DISTANCE', vehicle,40,3000) 
-	self:set(300)
-end
+
 
 function ConvoyMaxDistanceSetting:getText()
 	return string.format('%d%s', self:get(),courseplay:loc('COURSEPLAY_UNIT_METER'));
@@ -3636,16 +3691,16 @@ end
 
 
 ]]--
-
 ---@class LaneNumberOffsetSetting : IntSetting
 LaneNumberOffsetSetting = CpObject(IntSetting)
 function LaneNumberOffsetSetting:init(vehicle)
-	IntSetting.init(self, 'laneNumberOffset','COURSEPLAY_LANE_OFFSET', 'COURSEPLAY_LANE_OFFSET', vehicle) 
+	IntSetting.init(self, 'laneNumberOffset','COURSEPLAY_LANE_OFFSET', 'COURSEPLAY_LANE_OFFSET', vehicle,0,20) 
 	self:set(0)
+	self.test = "test"
 end
 
 function LaneNumberOffsetSetting:getText()
-	if self:is(0) then 
+	if self:get()==0 then 
 		return ('%s'):format(courseplay:loc('COURSEPLAY_CENTER'));
 	else 
 		return ('%d %s'):format(math.abs(self:get()), courseplay:loc(self:get() > 0 and 'COURSEPLAY_RIGHT' or 'COURSEPLAY_LEFT'))
@@ -3653,7 +3708,9 @@ function LaneNumberOffsetSetting:getText()
 end
 
 function LaneNumberOffsetSetting:changeByX(x)
-	local toolsIsEven = vehicle.cp.multiTools%2 == 0
+	local multiTools = self.vehicle.cp.multiTools
+	local workWidth = self.vehicle.cp.workWidth
+	local toolsIsEven = multiTools%2 == 0
 	if toolsIsEven then
 		if self:get() == -1 and x > 0 then
 			x = 2
@@ -3661,17 +3718,17 @@ function LaneNumberOffsetSetting:changeByX(x)
 			x = -2
 		end
 	end
-	local value = MathUtil.clamp(self:get() + x, math.floor(vehicle.cp.multiTools/2)*-1, math.floor(vehicle.cp.multiTools/2))
+	local value = MathUtil.clamp(self:get() + x, math.floor(multiTools/2)*-1, math.floor(multiTools/2))
 	self:set(value)
 	local newOffset = 0
 	if toolsIsEven then
 		if self:get() > 0 then
-			newOffset = vehicle.cp.workWidth/2 + (vehicle.cp.workWidth*(self:get()-1))
+			newOffset = workWidth/2 + (workWidth*(self:get()-1))
 		else
-			newOffset = -vehicle.cp.workWidth/2 + (vehicle.cp.workWidth*(self:get()+1))
+			newOffset = -workWidth/2 + (workWidth*(self:get()+1))
 		end
 	else
-		newOffset = vehicle.cp.workWidth*self:get()
+		newOffset = workWidth*self:get()
 	end
 	self.vehicle.cp.settings.laneOffset:set(newOffset)
 end
@@ -3684,15 +3741,16 @@ function LaneOffsetSetting:init(vehicle)
 end
 
 function LaneOffsetSetting:getText()
-	if not self:is(0) then 
+	if self:get()~=0 then 
 		return ('%.1f%s (%s)'):format(math.abs(self:get()), courseplay:loc('COURSEPLAY_UNIT_METER'), courseplay:loc(self:get() > 0 and 'COURSEPLAY_RIGHT' or 'COURSEPLAY_LEFT'));
 	else
 		return '---'
 	end
 end
 
-function LaneOffsetSetting:ChangeByX(x)
+function LaneOffsetSetting:changeByX(x)
 	 local value = self:get() + x*0.1
+	 if value <0.1 and value >-0.1 then value = 0 end
 	 self:set(value)
 end
 

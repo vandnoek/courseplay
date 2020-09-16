@@ -852,19 +852,19 @@ function courseplay.hud:updatePageContent(vehicle, page)
 				
 				elseif entry.functionToCall == 'laneNumberOffset:changeByX' then
 					vehicle.cp.hud.content.pages[page][line][1].text = vehicle.cp.settings.laneNumberOffset:getLabel()
-					if vehicle.cp.multiTools > 1 then
-						self:enableButtonWithFunction(vehicle,page, 'laneNumberOffset:changeByX')						
+					if vehicle.cp.multiTools > 1 then					
+						self:enableButtonWithFunction(vehicle,page, 'changeByX',vehicle.cp.settings.laneNumberOffset)
 						vehicle.cp.hud.content.pages[page][line][2].text = vehicle.cp.settings.laneNumberOffset:getText()
 					else
-						self:disableButtonWithFunction(vehicle,page, 'laneNumberOffset:changeByX')
+						self:disableButtonWithFunction(vehicle,page, 'changeByX',vehicle.cp.settings.laneNumberOffset)
 					end
 				elseif entry.functionToCall == 'laneOffset:changeByX' then
 					vehicle.cp.hud.content.pages[page][line][1].text = vehicle.cp.settings.laneOffset:getLabel()
 					if vehicle.cp.multiTools == 1 then
-						self:enableButtonWithFunction(vehicle,page, 'laneOffset:changeByX')
+						self:enableButtonWithFunction(vehicle,page, 'changeByX',vehicle.cp.settings.laneOffset)
 						vehicle.cp.hud.content.pages[page][line][2].text = vehicle.cp.settings.laneOffset:getText()
 					else
-						self:disableButtonWithFunction(vehicle,page, 'laneOffset:changeByX')	
+						self:disableButtonWithFunction(vehicle,page, 'changeByX',vehicle.cp.settings.laneOffset)	
 					end
 				elseif entry.functionToCall == 'turnOnField:toggle' then
 					--TurnOnFieldSetting
@@ -1119,10 +1119,10 @@ function courseplay.hud:updatePageContent(vehicle, page)
 					--Line 3: choose field for automatic search --only if automatic
 					if vehicle.cp.searchCombineAutomatically and courseplay.fields.numAvailableFields > 0 then
 						vehicle.cp.settings.searchCombineOnField:refresh()
-						self:enableButtonWithFunction(vehicle,page, 'searchCombineOnField:changeByX')
+						self:enableButtonWithFunction(vehicle,page, 'changeByX',vehicle.cp.settings.searchCombineOnField)
 						vehicle.cp.hud.content.pages[page][line][1].text = vehicle.cp.settings.searchCombineOnField:getLabel():format(vehicle.cp.settings.searchCombineOnField:getText())
 					else
-						self:disableButtonWithFunction(vehicle,page, 'searchCombineOnField:changeByX')
+						self:disableButtonWithFunction(vehicle,page, 'changeByX',vehicle.cp.settings.searchCombineOnField)
 					end;
 					self:updateCombinesList(vehicle,page)
 
@@ -2361,8 +2361,9 @@ function courseplay.hud:setFieldWorkAIDriverContent(vehicle)
 	
 	--page 8 fieldwork settings
 	self:enablePageButton(vehicle, 8)
+--	self:addSettingsRow(vehicle,vehicle.cp.settings.convoyMinDistance,'changeByX', 3, 4, 1 )	
 	self:addSettingsRowWithArrows(vehicle,vehicle.cp.settings.laneNumberOffset,'changeByX', 8, 1, 1 )
-	self:addSettingsRowWithArrows(vehicle,vehicle.cp.settings.laneOffset,'changeByX', 8, 1, 2 )
+	self:addSettingsRowWithArrows(vehicle,vehicle.cp.settings.laneOffset,'changeByX', 8, 1, 2)
 	self:addRowButton(vehicle,vehicle.cp.settings.symmetricLaneChange,'toggle', 8, 2, 1 )
 	self:addRowButton(vehicle,vehicle.cp.settings.turnOnField,'toggle', 8, 3, 1 )
 	self:addRowButton(vehicle,vehicle.cp.settings.useRealisticDriving,'toggle', 8, 4, 1 )

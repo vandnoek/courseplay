@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<GUI name="CourseGeneratorScreen" onOpen="onOpen" onClose="onClose" onCreate="onCreate">
+	<!-- Background FullScreen Relative -->
+	<GuiElement type="bitmap" profile="uiFullInGameBackground"/>
+
+	<GuiElement type="empty" profile="cpMenuFrame">
+		<GuiElement type="ingameMap" id="ingameMap" profile="ingameMapOverview" cursorId="mapCursor" onClickMap="onClickMap"
+								onDrawPostIngameMap="onDrawPostIngameMap" onClickHotspot="onClickHotspot"/>
+		<GuiElement type="bitmap" profile="ingameMapCursor" id="mapCursor" visible="false" />
+
+		<GuiElement type="bitmap" profile="cpSettingsFrame" id="settingsFrame">
+			<GuiElement type="text" profile="cpHeader" position="20px -10px" text="$l10n_COURSEPLAY_ADVANCED_COURSE_GENERATOR_SETTINGS" />
+			<GuiElement type="bitmap" profile="cpSettingsBg" position="20px -60px" id="settingsContainer">
+
+					<GuiElement type="boxLayout" profile="cpSettingsLayout" size="600px 500px" id="boxLayoutTop">
+
+						<GuiElement type="multiTextOption" profile="cpMultiTextOption" id="fieldSelector" toolTip="$l10n_COURSEPLAY_FIELD_EDGE_PATH" onOpen="onOpenFieldSelector" onClick="onClickFieldSelector">
+							<GuiElement type="button" profile="cpMultiTextOptionLeft" />
+							<GuiElement type="button" profile="cpMultiTextOptionRight"/>
+							<GuiElement type="text" profile="cpMultiTextOptionText" />
+							<GuiElement type="text" profile="cpMultiTextOptionTitle" text="$l10n_COURSEPLAY_FIELD_EDGE_PATH"/>
+							<GuiElement type="bitmap" profile="cpMultiTextOptionBg" />
+						</GuiElement>
+
+				<GuiElement type="flowLayout" profile="buttonBoxDocked" screenAlign="bottomLeft" positionOrigin="bottomLeft" id="buttonsPanel">
+					<!-- these are standard buttons with standard callbacks according to the action assigned to them in inputActions.xml and
+					 bound to the key as in inputBinding.xml. So buttonBack will have create an onClickBack, buttonSave an onClickActivate callback,
+					 but these still need to be defined here to be able to click on them using the mouse -->
+					<GuiElement type="button" profile="buttonBack" size="333px 40px" text="$l10n_button_back" onClick="onClickPreviousPage"/>
+					<GuiElement type="button" profile="buttonBack" size="333px 40px" text="$l10n_button_back" onClick="onClickBack"/>
+					<GuiElement type="button" profile="buttonSave" size="334px 40px" text="$l10n_COURSEPLAY_GENERATE_FIELD_COURSE" onClick="onClickActivate"/>
+					<GuiElement type="button" profile="buttonBack" size="333px 40px" text="$l10n_button_back" onClick="onClickNextPage"/>
+				</GuiElement>
+			</GuiElement>
+		</GuiElement>
+	</GuiElement>
+</GUI>
