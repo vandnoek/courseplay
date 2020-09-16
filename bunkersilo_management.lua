@@ -111,13 +111,21 @@ function courseplay:checkAndSetMovingToolsPosition(vehicle, movingTools, seconda
 			-- DIRTY FLAGS (movingTool)
 			-- TODO: check if Cylindered.setMovingToolDirty() is better here
 			if changed then
+                local object 
 				if vehicle.cp.attachedFrontLoader ~= nil then
-					Cylindered.setDirty(vehicle.cp.attachedFrontLoader, mt);
+					object = vehicle.cp.attachedFrontLoader
 				else
-					Cylindered.setDirty(mtMainObject, mt);
+					object = mtMainObject
 				end	
-				vehicle:raiseDirtyFlags(mtMainObject.spec_cylindered.cylinderedDirtyFlag);
-			end;
+				local spec = object.spec_cylindered				
+				Cylindered.setDirty(self, tool)
+                tool.networkPositionIsDirty = true
+                self:raiseDirtyFlags(tool.dirtyFlag)
+                self:raiseDirtyFlags(spec.cylinderedDirtyFlag)
+
+                -- keep moving tool at least 2 frames in a row network dirty, so the client will always recieve and set the final position of the tool
+                mt.networkDirtyNextFrame = true
+            end
 		end;
 	end;
 

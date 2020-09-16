@@ -111,20 +111,6 @@ function courseplay:setDriveNow(vehicle)
 	vehicle.cp.driver:setDriveNow()
 end
 
-
-function courseplay:toggleConvoyActive(vehicle)
-	vehicle.cp.convoyActive =  not vehicle.cp.convoyActive
-	--self:setCpVar('convoyActive', self.cp.convoyActive, courseplay.isClient);
-end
-
-function courseplay:setConvoyMinDistance(vehicle, changeBy)
-	vehicle.cp.convoy.minDistance = MathUtil.clamp(vehicle.cp.convoy.minDistance + changeBy*10, 20, 2000);
-end
-
-function courseplay:setConvoyMaxDistance(vehicle, changeBy)
-	vehicle.cp.convoy.maxDistance = MathUtil.clamp(vehicle.cp.convoy.maxDistance + changeBy*10, 40, 3000);
-end
-
 function courseplay:toggleMode10automaticSpeed(self)
 	if self.cp.mode10.leveling then
 		self.cp.mode10.automaticSpeed = not self.cp.mode10.automaticSpeed
@@ -246,45 +232,6 @@ function courseplay:changeTipperOffset(vehicle, changeBy)
 	end;
 end
 
-function courseplay:changeLaneOffset(vehicle, changeBy, force)
-	vehicle.cp.laneOffset = force or (courseplay:round(vehicle.cp.laneOffset, 1) + changeBy*0.1);
-	if abs(vehicle.cp.laneOffset) < 0.1 then
-		vehicle.cp.laneOffset = 0;
-	end;
-end;
-
-function courseplay:changeLaneNumber(vehicle, changeBy, reset)
-	--This function takes input from the hud. And claculates laneOffset by dividing tool workwidth and multiplying that by the lane number counting outwards.
-	local toolsIsEven = vehicle.cp.multiTools%2 == 0
-	
-	if reset then
-		vehicle.cp.laneNumber = 0;
-		vehicle.cp.laneOffset = 0
-	else
-		--skip zero if multiTools is even
-		if toolsIsEven then
-			if vehicle.cp.laneNumber == -1 and changeBy > 0 then
-				changeBy = 2
-			elseif vehicle.cp.laneNumber == 1 and changeBy < 0 then
-				changeBy = -2
-			end
-		end
-		vehicle.cp.laneNumber = MathUtil.clamp(vehicle.cp.laneNumber + changeBy, math.floor(vehicle.cp.multiTools/2)*-1, math.floor(vehicle.cp.multiTools/2));
-		local newOffset = 0
-		if toolsIsEven then
-			if vehicle.cp.laneNumber > 0 then
-				newOffset = vehicle.cp.workWidth/2 + (vehicle.cp.workWidth*(vehicle.cp.laneNumber-1))
-			else
-				newOffset = -vehicle.cp.workWidth/2 + (vehicle.cp.workWidth*(vehicle.cp.laneNumber+1))
-			end
-		else
-			newOffset = vehicle.cp.workWidth*vehicle.cp.laneNumber
-		end
-		courseplay:changeLaneOffset(vehicle, nil , newOffset)
-	end;
-
-end;
-
 function courseplay:changeToolOffsetX(vehicle, changeBy, force, noDraw)
 	vehicle.cp.toolOffsetX = force or (courseplay:round(vehicle.cp.toolOffsetX, 1) + changeBy*0.1);
 	if abs(vehicle.cp.toolOffsetX) < 0.1 then
@@ -353,7 +300,8 @@ function courseplay:changeWorkWidth(vehicle, changeBy, force, noDraw)
 		end
 	elseif force ~= nil and noDraw == nil then
 		vehicle.cp.manualWorkWidth = nil
-		courseplay:changeLaneNumber(vehicle, 0, true)
+		vehicle.cp.settings.laneNumberOffset:set(0)
+		vehicle.cp.settings.laneOffset:set(0)
 		courseplay:setMultiTools(vehicle, 1)
 		--print("is set by calculate button")
 	end
@@ -973,9 +921,10 @@ end;
 function courseplay:setMultiTools(vehicle, set)
 	vehicle:setCpVar('multiTools',set,courseplay.isClient)
 	if vehicle.cp.multiTools%2 == 0 then
-		courseplay:changeLaneNumber(vehicle, 1)
+		vehicle.cp.settings.laneNumberOffset:changeByX(1)
 	else
-		courseplay:changeLaneNumber(vehicle, 0, true)
+		vehicle.cp.settings.laneNumberOffset:set(0)
+		vehicle.cp.settings.laneOffset:set(0)
 	end;
 end;
 
@@ -1702,8 +1651,12 @@ FloatSetting = CpObject(Setting)
 --- @param label string text ID in translations used as a label for this setting on the GUI
 --- @param toolTip string text ID in translations used as a tooltip for this setting on the GUI
 --- @param vehicle table vehicle, needed for vehicle specific settings for multiplayer syncs
-function FloatSetting:init(name, label, toolTip, vehicle, value)
+--- @param min int min, smallest number possible
+--- @param max int max, highest number possible
+function FloatSetting:init(name, label, toolTip, vehicle, value,min,max)
 	Setting.init(self, name, label, toolTip, vehicle, value)
+	self.max = max
+	self.min = min
 end
 
 function FloatSetting:loadFromXml(xml, parentKey)
@@ -1728,6 +1681,13 @@ function FloatSetting:onReadStream(stream)
 	end
 end
 
+function FloatSetting:set(value)
+	local ok = self.max and value <self.max or true
+	ok = self.min and value >self.min or true
+	if ok then 
+		Setting.set(self,value)
+	end
+end
 
 ---@class IntSetting
 IntSetting = CpObject(Setting)
@@ -1735,8 +1695,12 @@ IntSetting = CpObject(Setting)
 --- @param label string text ID in translations used as a label for this setting on the GUI
 --- @param toolTip string text ID in translations used as a tooltip for this setting on the GUI
 --- @param vehicle table vehicle, needed for vehicle specific settings for multiplayer syncs
-function IntSetting:init(name, label, toolTip, vehicle, value)
+--- @param min int min, smallest number possible
+--- @param max int max, highest number possible
+function IntSetting:init(name, label, toolTip, vehicle, value,min,max)
 	Setting.init(self, name, label, toolTip, vehicle, value)
+	self.max = max
+	self.min = min
 end
 
 function IntSetting:loadFromXml(xml, parentKey)
@@ -1758,6 +1722,14 @@ function IntSetting:onReadStream(stream)
 	local value = streamDebugReadInt32(stream)
 	if value then 
 		self:setFromNetwork(value)
+	end
+end
+
+function IntSetting:set(value)
+	local ok = self.max and value <self.max or true
+	ok = self.min and value >self.min or true
+	if ok then 
+		Setting.set(self,math.floor(value))
 	end
 end
 
@@ -1978,13 +1950,13 @@ end
 function SettingList:getNetworkCurrentValue()
 	return self.current
 end
----WIP
+
 ---Generic LinkedList setting and Interface for LinkedList.lua
 ---@class LinkedList : Setting
 LinkedListSetting = CpObject(Setting)
 function LinkedListSetting:init(name, label, toolTip, vehicle)
 	Setting.init(self, name, label, toolTip, vehicle)
-	self.List = LinkedList({value=nil,text="Dummy"})
+	self.List = LinkedList({value=nil,text="Dummy"}) --dummy element with no function!!
 end
 
 function LinkedListSetting:moveUpByIndex(index)
@@ -2097,7 +2069,7 @@ function PercentageSettingList:checkAndSetValidValue(new)
 	end
 end
 
---- Generic Speed setting from x to y 
+--- Generic Speed setting from startValue to stopValue 
 ---@class SpeedSetting : SettingList
 SpeedSetting = CpObject(SettingList)
 function SpeedSetting:init(name, label, toolTip, vehicle,startValue,stopValue)
@@ -2782,7 +2754,7 @@ function SiloSelectedFillTypeSetting:init(vehicle, mode)
 	self.MAX_PERCENT = 100
 	self.MIN_PERCENT = 0
 	self.runCounterActive = true
-	self.MAX_FILLTYPES = 2
+	self.MAX_FILLTYPES = 2 --equals lenght of the visual list
 	self.disallowedFillTypes = nil
 	self.xmlKey = 'siloSelectedFillType'..mode
 	self.xmlAttributeSize = '#size'
@@ -2818,6 +2790,7 @@ function SiloSelectedFillTypeSetting:sendEvent(NetworkType, index , value)
 	SiloSelectedFillTypeEvent.sendEvent(self.vehicle,self.name,NetworkType, index, value)
 end
 
+--callback by giants showSiloDialog once a fillType is selected
 function SiloSelectedFillTypeSetting:onFillTypeSelection(selectedFillType,noEventSend)
 	if selectedFillType and selectedFillType ~= FillType.UNKNOWN then 
 		self:addLast(self:fillTypeDataToAdd(selectedFillType))
@@ -2827,6 +2800,7 @@ function SiloSelectedFillTypeSetting:onFillTypeSelection(selectedFillType,noEven
 	end
 end  
 
+--LinkedList element data 
 function SiloSelectedFillTypeSetting:fillTypeDataToAdd(selectedfillType,counter,maxLevel,minLevel)
 	local data = nil
 	if self.runCounterActive then
@@ -2848,6 +2822,7 @@ function SiloSelectedFillTypeSetting:fillTypeDataToAdd(selectedfillType,counter,
 	return data
 end
 
+--clear old fillTypes that are no longer supported by the current vehicle/implement combi
 function SiloSelectedFillTypeSetting:cleanUpOldFillTypes(noEventSend)
 	local supportedFillTypes = {}
 	self:getSupportedFillTypes(self.vehicle,supportedFillTypes)
@@ -2896,7 +2871,7 @@ function SiloSelectedFillTypeSetting:getSupportedFillTypes(object,supportedFillT
 	end
 end
 
---TODO: fix this one not working as it should!!
+--check if we have more than one FillType and runCounters are okay
 function SiloSelectedFillTypeSetting:isActive()  
 	if self:getSize() == 0 then 
 		return false
@@ -2914,6 +2889,7 @@ function SiloSelectedFillTypeSetting:isActive()
 	return runCounterCheck
 end
 
+--used for mode 4/8 as they don't need a runCounter
 function SiloSelectedFillTypeSetting:isRunCounterActive()
 	return self.runCounterActive
 end
@@ -2941,6 +2917,7 @@ function SiloSelectedFillTypeSetting:incrementRunCounter(index)
 	end
 end
 
+--decrement every filled fillType by mode 1
 function SiloSelectedFillTypeSetting:decrementRunCounterByFillType(lastFillTypes)
 	local totalData = self:getData()
 	for index,data in ipairs(totalData) do 
@@ -3253,6 +3230,7 @@ function SeperateFillTypeLoadingSetting:getSeperateFillUnits()
 	return TrailerInfo.fillUnits
 end
 
+--gets all fillUnits viable for mode 1 filling
 function SeperateFillTypeLoadingSetting:getTrailerFillUnitCount(object,TrailerInfo)
 	if self:hasNeededSpec(object,Dischargeable) and self:hasNeededSpec(object,Trailer) and not self:hasNeededSpec(object,Pipe) then 
 		if object.getFillUnits then 
@@ -3414,6 +3392,7 @@ function AssignedCombinesSetting:getPossibleCombines()
 	return g_combineUnloadManager:getPossibleCombines(self.vehicle)
 end
 
+--connect combine to cp driver
 function AssignedCombinesSetting:toggleAssignedCombine(index,noEventSend)
 	local newIndex = index-2+self.offsetHead
 	local possibleCombines = self:getPossibleCombines()
@@ -3448,6 +3427,7 @@ function AssignedCombinesSetting:getTexts()
 	return texts
 end
 
+--clears list of inactive combines
 function AssignedCombinesSetting:clearInactiveCombines(possibleCombines)
 	local validCombines = {}
 	for index, combine in pairs(possibleCombines) do 
@@ -3480,6 +3460,7 @@ function AssignedCombinesSetting:changeListOffset(x,noEventSend)
 	self.vehicle.cp.driver:refreshHUD()
 end
 
+--some network magic as AssignedCombinesList can only be synced once every CombineAIDriver is initialized
 function AssignedCombinesSetting:sendPostSyncRequestEvent()
 	RequestAssignedCombinesPostSyncEvent:sendEvent(self.vehicle)
 end
@@ -3555,13 +3536,39 @@ function SearchCombineAutomaticallySetting:init(vehicle)
 	BooleanSetting.init(self, 'searchCombineAutomatically','COURSEPLAY_COMBINE_SEARCH_MODE', 'COURSEPLAY_COMBINE_SEARCH_MODE', vehicle, {'COURSEPLAY_MANUAL_SEARCH','COURSEPLAY_AUTOMATIC_SEARCH'}) 
 	self:set(false)
 end
-
+]]--
 ---@class ConvoyActiveSetting : BooleanSetting
 ConvoyActiveSetting = CpObject(BooleanSetting)
 function ConvoyActiveSetting:init(vehicle)
 	BooleanSetting.init(self, 'convoyActive','COURSEPLAY_COMBINE_CONVOY', 'COURSEPLAY_COMBINE_CONVOY', vehicle) 
 	self:set(false)
 end
+
+---@class ConvoyMinDistanceSetting : IntSetting
+ConvoyMinDistanceSetting = CpObject(IntSetting)
+function ConvoyMinDistanceSetting:init(vehicle)
+	IntSetting.init(self, 'convoyMinDistance','COURSEPLAY_CONVOY_MIN_DISTANCE', 'COURSEPLAY_CONVOY_MIN_DISTANCE', vehicle,20,2000) 
+	self:set(100)
+end
+
+function ConvoyMinDistanceSetting:getText()
+	return string.format('%d%s', self:get(),courseplay:loc('COURSEPLAY_UNIT_METER'));
+end
+
+--not sure if this one would still be needed ??
+---@class ConvoyMaxDistanceSetting : IntSetting
+ConvoyMaxDistanceSetting = CpObject(IntSetting)
+function ConvoyMaxDistanceSetting:init(vehicle)
+	IntSetting.init(self, 'convoyMaxDistance','COURSEPLAY_CONVOY_MAX_DISTANCE', 'COURSEPLAY_CONVOY_MAX_DISTANCE', vehicle,40,3000) 
+	self:set(300)
+end
+
+function ConvoyMaxDistanceSetting:getText()
+	return string.format('%d%s', self:get(),courseplay:loc('COURSEPLAY_UNIT_METER'));
+end
+
+
+--[[
 
 --??
 ---@class Mode10_automaticSpeedSetting : BooleanSetting
@@ -3591,14 +3598,14 @@ function Mode10_searchModeSetting:init(vehicle)
 	BooleanSetting.init(self, 'mode10_searchMode','COURSEPLAY_MODE10_SEARCH_MODE', 'COURSEPLAY_MODE10_SEARCH_MODE', vehicle, {'COURSEPLAY_MODE10_SEARCH_MODE_ALL','COURSEPLAY_MODE10_SEARCH_MODE_CP'}) 
 	self:set(false)
 end
-
+]]--
 ---@class OppositeTurnModeSetting : BooleanSetting
 OppositeTurnModeSetting = CpObject(BooleanSetting)
 function OppositeTurnModeSetting:init(vehicle)
 	BooleanSetting.init(self, 'oppositeTurnMode','COURSEPLAY_OPPOSITE_TURN_DIRECTION', 'COURSEPLAY_OPPOSITE_TURN_DIRECTION', vehicle,{'COURSEPLAY_OPPOSITE_TURN_AT_END','COURSEPLAY_OPPOSITE_TURN_WHEN_POSSIBLE'}) 
 	self:set(false)
 end
-
+--[[
 ---@class ShovelStopAndGoSetting : BooleanSetting
 ShovelStopAndGoSetting = CpObject(BooleanSetting)
 function ShovelStopAndGoSetting:init(vehicle)
@@ -3629,6 +3636,66 @@ end
 
 
 ]]--
+
+---@class LaneNumberOffsetSetting : IntSetting
+LaneNumberOffsetSetting = CpObject(IntSetting)
+function LaneNumberOffsetSetting:init(vehicle)
+	IntSetting.init(self, 'laneNumberOffset','COURSEPLAY_LANE_OFFSET', 'COURSEPLAY_LANE_OFFSET', vehicle) 
+	self:set(0)
+end
+
+function LaneNumberOffsetSetting:getText()
+	if self:is(0) then 
+		return ('%s'):format(courseplay:loc('COURSEPLAY_CENTER'));
+	else 
+		return ('%d %s'):format(math.abs(self:get()), courseplay:loc(self:get() > 0 and 'COURSEPLAY_RIGHT' or 'COURSEPLAY_LEFT'))
+	end		
+end
+
+function LaneNumberOffsetSetting:changeByX(x)
+	local toolsIsEven = vehicle.cp.multiTools%2 == 0
+	if toolsIsEven then
+		if self:get() == -1 and x > 0 then
+			x = 2
+		elseif self:get() == 1 and x < 0 then
+			x = -2
+		end
+	end
+	local value = MathUtil.clamp(self:get() + x, math.floor(vehicle.cp.multiTools/2)*-1, math.floor(vehicle.cp.multiTools/2))
+	self:set(value)
+	local newOffset = 0
+	if toolsIsEven then
+		if self:get() > 0 then
+			newOffset = vehicle.cp.workWidth/2 + (vehicle.cp.workWidth*(self:get()-1))
+		else
+			newOffset = -vehicle.cp.workWidth/2 + (vehicle.cp.workWidth*(self:get()+1))
+		end
+	else
+		newOffset = vehicle.cp.workWidth*self:get()
+	end
+	self.vehicle.cp.settings.laneOffset:set(newOffset)
+end
+
+---@class LaneOffsetSetting : FloatSetting
+LaneOffsetSetting = CpObject(FloatSetting)
+function LaneOffsetSetting:init(vehicle)
+	FloatSetting.init(self, 'laneOffset','COURSEPLAY_LANE_OFFSET', 'COURSEPLAY_LANE_OFFSET', vehicle) 
+	self:set(0)
+end
+
+function LaneOffsetSetting:getText()
+	if not self:is(0) then 
+		return ('%.1f%s (%s)'):format(math.abs(self:get()), courseplay:loc('COURSEPLAY_UNIT_METER'), courseplay:loc(self:get() > 0 and 'COURSEPLAY_RIGHT' or 'COURSEPLAY_LEFT'));
+	else
+		return '---'
+	end
+end
+
+function LaneOffsetSetting:ChangeByX(x)
+	 local value = self:get() + x*0.1
+	 self:set(value)
+end
+
 
 --- Container for settings
 --- @class SettingsContainer

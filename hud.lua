@@ -456,8 +456,11 @@ function courseplay.hud:setContent(vehicle)
 		vehicle.cp.hud.content.bottomInfo.timeRemainingText = nil
 	end
 	
-	if vehicle.cp.convoyActive then
-		vehicle.cp.hud.content.bottomInfo.convoyText = string.format("<--%s--> %d/%d",(vehicle.cp.convoy.distance == 0 and "--" or string.format("%d%s",vehicle.cp.convoy.distance,courseplay:loc('COURSEPLAY_UNIT_METER'))),vehicle.cp.convoy.number,vehicle.cp.convoy.members)
+	if vehicle.cp.settings.convoyActive:is(true) then
+		local distance = vehicle.cp.driver.convoyCurrentDistance
+		local pos = vehicle.cp.driver.convoyCurrentPosition
+		local total = vehicle.cp.driver.convoyTotalMembers
+		vehicle.cp.hud.content.bottomInfo.convoyText = string.format("<--%s--> %d/%d",(distance == 0 and "--" or string.format("%d%s",distance,courseplay:loc('COURSEPLAY_UNIT_METER'))),pos,total)
 	else
 		vehicle.cp.hud.content.bottomInfo.convoyText = nil
 	end	
@@ -847,30 +850,21 @@ function courseplay.hud:updatePageContent(vehicle, page)
 						vehicle.cp.hud.content.pages[page][line][2].text = vehicle.cp.workWidth ~= nil and string.format('%.1fm', vehicle.cp.workWidth) or '---';
 					end
 				
-				elseif entry.functionToCall == 'changeLaneNumber' then
-					vehicle.cp.hud.content.pages[page][line][1].text = courseplay:loc('COURSEPLAY_LANE_OFFSET');
+				elseif entry.functionToCall == 'laneNumberOffset:changeByX' then
+					vehicle.cp.hud.content.pages[page][line][1].text = vehicle.cp.settings.laneNumberOffset:getLabel()
 					if vehicle.cp.multiTools > 1 then
-						self:enableButtonWithFunction(vehicle,page, 'changeLaneNumber')
-						if vehicle.cp.laneNumber == 0 then
-							vehicle.cp.hud.content.pages[page][line][2].text = ('%s'):format(courseplay:loc('COURSEPLAY_CENTER'));
-						else
-							vehicle.cp.hud.content.pages[page][line][2].text = ('%d %s'):format(abs(vehicle.cp.laneNumber), courseplay:loc(vehicle.cp.laneNumber > 0 and 'COURSEPLAY_RIGHT' or 'COURSEPLAY_LEFT'));
-						end						
+						self:enableButtonWithFunction(vehicle,page, 'laneNumberOffset:changeByX')						
+						vehicle.cp.hud.content.pages[page][line][2].text = vehicle.cp.settings.laneNumberOffset:getText()
 					else
-						self:disableButtonWithFunction(vehicle,page, 'changeLaneNumber')
+						self:disableButtonWithFunction(vehicle,page, 'laneNumberOffset:changeByX')
 					end
-				
-				elseif entry.functionToCall == 'changeLaneOffset' then
-					vehicle.cp.hud.content.pages[page][line][1].text = courseplay:loc('COURSEPLAY_LANE_OFFSET');
+				elseif entry.functionToCall == 'laneOffset:changeByX' then
+					vehicle.cp.hud.content.pages[page][line][1].text = vehicle.cp.settings.laneOffset:getLabel()
 					if vehicle.cp.multiTools == 1 then
-						self:enableButtonWithFunction(vehicle,page, 'changeLaneOffset')
-						if vehicle.cp.laneOffset and vehicle.cp.laneOffset ~= 0 then 
-							vehicle.cp.hud.content.pages[page][line][2].text = ('%.1f%s (%s)'):format(abs(vehicle.cp.laneOffset), courseplay:loc('COURSEPLAY_UNIT_METER'), courseplay:loc(vehicle.cp.laneOffset > 0 and 'COURSEPLAY_RIGHT' or 'COURSEPLAY_LEFT'));
-						else
-							vehicle.cp.hud.content.pages[page][line][2].text = '---';
-						end
+						self:enableButtonWithFunction(vehicle,page, 'laneOffset:changeByX')
+						vehicle.cp.hud.content.pages[page][line][2].text = vehicle.cp.settings.laneOffset:getText()
 					else
-						self:disableButtonWithFunction(vehicle,page, 'changeLaneOffset')	
+						self:disableButtonWithFunction(vehicle,page, 'laneOffset:changeByX')	
 					end
 				elseif entry.functionToCall == 'turnOnField:toggle' then
 					--TurnOnFieldSetting
@@ -924,7 +918,7 @@ function courseplay.hud:updatePageContent(vehicle, page)
 				elseif entry.functionToCall == 'symmetricLaneChange:toggle' then
 					--SymmetricLaneChangeSetting
 					vehicle.cp.hud.content.pages[page][line][1].text = vehicle.cp.settings.symmetricLaneChange:getLabel()
-					if vehicle.cp.laneOffset ~= 0 then
+					if vehicle.cp.settings.laneOffset:get() ~= 0 then
 						vehicle.cp.hud.content.pages[page][line][2].text = vehicle.cp.settings.symmetricLaneChange:getText()
 					else
 						vehicle.cp.hud.content.pages[page][line][2].text = '---';
@@ -965,17 +959,17 @@ function courseplay.hud:updatePageContent(vehicle, page)
 					vehicle.cp.hud.content.pages[page][line][1].text = courseplay:loc('COURSEPLAY_ALIGNMENT_WAYPOINT');
 					vehicle.cp.hud.content.pages[page][line][2].text = vehicle.cp.alignment.enabled and courseplay:loc('COURSEPLAY_ACTIVATED') or courseplay:loc('COURSEPLAY_DEACTIVATED');
 				
-				elseif entry.functionToCall == 'toggleConvoyActive' then
-					vehicle.cp.hud.content.pages[page][line][1].text = courseplay:loc('COURSEPLAY_COMBINE_CONVOY');
-					vehicle.cp.hud.content.pages[page][line][2].text = vehicle.cp.convoyActive and courseplay:loc('COURSEPLAY_ACTIVATED') or courseplay:loc('COURSEPLAY_DEACTIVATED')
+				elseif entry.functionToCall == 'convoyActive:toggle' then
+					vehicle.cp.hud.content.pages[page][line][1].text = vehicle.cp.settings.convoyActive:getLabel()
+					vehicle.cp.hud.content.pages[page][line][2].text = vehicle.cp.settings.convoyActive:getText()
 				
-				elseif entry.functionToCall == 'setConvoyMinDistance' then
-					vehicle.cp.hud.content.pages[page][line][1].text = string.format('  %s',courseplay:loc('COURSEPLAY_CONVOY_MAX_DISTANCE'));
-					vehicle.cp.hud.content.pages[page][line][2].text = string.format('%dm', vehicle.cp.convoy.minDistance);
+				elseif entry.functionToCall == 'convoyMinDistance:changeByX' then
+					vehicle.cp.hud.content.pages[page][line][1].text = vehicle.cp.settings.convoyMinDistance:getLabel()
+					vehicle.cp.hud.content.pages[page][line][2].text = vehicle.cp.settings.convoyMinDistance:getText()
 				
-				elseif entry.functionToCall == 'setConvoyMaxDistance' then
-					vehicle.cp.hud.content.pages[page][line][1].text = string.format('  %s',courseplay:loc('COURSEPLAY_CONVOY_MIN_DISTANCE'));
-					vehicle.cp.hud.content.pages[page][line][2].text = string.format('%dm', vehicle.cp.convoy.maxDistance);
+				elseif entry.functionToCall == 'convoyMaxDistance:changeByX' then
+					vehicle.cp.hud.content.pages[page][line][1].text = vehicle.cp.settings.convoyMaxDistance:getLabel()
+					vehicle.cp.hud.content.pages[page][line][2].text = vehicle.cp.settings.convoyMaxDistance:getText()
 				
 				
 				elseif entry.functionToCall == 'driveOnAtFillLevel:changeByX' then
@@ -1144,9 +1138,9 @@ function courseplay.hud:updatePageContent(vehicle, page)
 						vehicle.cp.hud.content.pages[page][line][1].text = courseplay:loc('COURSEPLAY_REMOVEACTIVECOMBINEFROMTRACTOR');
 					end;
 					
-				elseif entry.functionToCall == 'toggleOppositeTurnMode' then
-					vehicle.cp.hud.content.pages[page][line][1].text = courseplay:loc('COURSEPLAY_OPPOSITE_TURN_DIRECTION');
-					vehicle.cp.hud.content.pages[page][line][2].text = vehicle.cp.oppositeTurnMode and courseplay:loc('COURSEPLAY_OPPOSITE_TURN_WHEN_POSSIBLE') or courseplay:loc('COURSEPLAY_OPPOSITE_TURN_AT_END');
+				elseif entry.functionToCall == 'oppositeTurnMode:toggle' then
+					vehicle.cp.hud.content.pages[page][line][1].text = vehicle.cp.settings.oppositeTurnMode:getLabel()
+					vehicle.cp.hud.content.pages[page][line][2].text = vehicle.cp.settings.oppositeTurnMode:getText()
 														
 				elseif entry.functionToCall == 'refillUntilPct:changeByX' then
 					vehicle.cp.hud.content.pages[page][line][1].text = vehicle.cp.settings.refillUntilPct:getLabel() 
@@ -1448,7 +1442,7 @@ function courseplay.hud:updatePageContent(vehicle, page)
 	end; -- END if page == n
 ]]
 	-- make sure AutoDrive mode has all options currently available for the vehicle
-	vehicle.cp.settings.autoDriveMode:update()
+	vehicle.cp.settings.autoDriveMode:update() --still used ??
 	self:setReloadPageOrder(vehicle, page, forceUpdate);
 end;
 --END updatePageContent
@@ -2357,8 +2351,8 @@ function courseplay.hud:setFieldWorkAIDriverContent(vehicle)
 	self:addSettingsRow(vehicle,nil,'changeTurnDiameter', 3, 1, 1 )
 	self:addSettingsRow(vehicle,nil,'changeWorkWidth', 3, 2, 1 )
 	self:setupCalculateWorkWidthButton(vehicle,3, 2)
-	self:addRowButton(vehicle,nil,'toggleConvoyActive', 3, 3, 1 )
-	self:addSettingsRow(vehicle,nil,'setConvoyMinDistance', 3, 4, 1 )
+	self:addRowButton(vehicle,vehicle.cp.settings.convoyActive,'toggle', 3, 3, 1 )
+	self:addSettingsRow(vehicle,vehicle.cp.settings.convoyMinDistance,'changeByX', 3, 4, 1 )
 	self:addRowButton(vehicle,vehicle.cp.settings.autoDriveMode,'next', 3, 8, 1 ):setOnlyCallLocal();
 	
 	--page 7
@@ -2367,15 +2361,15 @@ function courseplay.hud:setFieldWorkAIDriverContent(vehicle)
 	
 	--page 8 fieldwork settings
 	self:enablePageButton(vehicle, 8)
-	self:addSettingsRowWithArrows(vehicle,nil,'changeLaneNumber', 8, 1, 1 )
-	self:addSettingsRowWithArrows(vehicle,nil,'changeLaneOffset', 8, 1, 2 )
+	self:addSettingsRowWithArrows(vehicle,vehicle.cp.settings.laneNumberOffset,'changeByX', 8, 1, 1 )
+	self:addSettingsRowWithArrows(vehicle,vehicle.cp.settings.laneOffset,'changeByX', 8, 1, 2 )
 	self:addRowButton(vehicle,vehicle.cp.settings.symmetricLaneChange,'toggle', 8, 2, 1 )
 	self:addRowButton(vehicle,vehicle.cp.settings.turnOnField,'toggle', 8, 3, 1 )
 	self:addRowButton(vehicle,vehicle.cp.settings.useRealisticDriving,'toggle', 8, 4, 1 )
 	self:addSettingsRowWithArrows(vehicle,nil,'changeToolOffsetX', 8, 5, 1 )
 	self:setupSetAutoToolOffsetXButton(vehicle,8,5)
 	self:addSettingsRowWithArrows(vehicle,nil,'changeToolOffsetZ', 8, 6, 1 )
-	self:addRowButton(vehicle,nil,'toggleOppositeTurnMode', 8, 7, 1 )
+	self:addRowButton(vehicle,vehicle.cp.settings.oppositeTurnMode,'toggle', 8, 7, 1 )
 
 	self:setReloadPageOrder(vehicle, -1, true)
 end

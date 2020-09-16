@@ -166,8 +166,8 @@ function PlowAIDriver:getTurnEndSideOffset()
 		local toolOffsetX = self.vehicle.cp.toolOffsetX
 		-- need the double tool offset as the turn end still has the current offset, after the rotation it'll be
 		-- on the other side, (one toolOffsetX would put it to 0 only)
-		return self.vehicle.cp.laneOffset + 2 * toolOffsetX
+		return self.vehicle.cp.settings.laneOffset:get() + 2 * toolOffsetX
 	else
-		return self.vehicle.cp.laneOffset
+		return self.vehicle.cp.settings.laneOffset:get()
 	end
 end
