@@ -389,10 +389,6 @@ function courseplay:onLoad(savegame)
 	self.cp.copyCourseFromDriver = nil;
 	self.cp.selectedDriverNumber = 0;
 
-	--MultiTools
-	self.cp.multiTools = 1;
-
-
 	--Course generation	
 	self.cp.startingCorner = 4;
 	self.cp.hasStartingCorner = false;
@@ -565,6 +561,7 @@ function courseplay:onLoad(savegame)
 	self.cp.courseGeneratorSettings:addSetting(CenterModeSetting, self)
 	self.cp.courseGeneratorSettings:addSetting(NumberOfRowsPerLandSetting, self)
 	self.cp.courseGeneratorSettings:addSetting(HeadlandOverlapPercent, self)
+	self.cp.courseGeneratorSettings:addSetting(MultiToolsSetting, self)
 --	self.cp.courseGeneratorSettings:addSetting(SeedCalculatorSetting, self) WIP
 	courseplay.signs:updateWaypointSigns(self);
 	

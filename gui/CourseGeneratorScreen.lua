@@ -373,17 +373,17 @@ end
 -----------------------------------------------------------------------------------------------------
 -- Multiple tools
 function CourseGeneratorScreen:onOpenMultiTools( element, parameter )
-	local texts = {}
-	for i = 1,8 do
-		table.insert( texts, i )
-	end
-	element:setTexts( texts )
-	element:setState( self.vehicle.cp.multiTools )
+	local setting = self.vehicle.cp.courseGeneratorSettings.multiTools
+	setting:setGuiElement(element)
+	element:setTexts(setting:getGuiElementTexts())
+	element:setState(setting:getGuiElementState())
 end
 
 function CourseGeneratorScreen:onClickMultiTools( state )
-	--Courseplay call here cause of courseplay:changeLaneNumber function is called when this number is changed
-	courseplay:setMultiTools(self.vehicle, state)
+	local setting = self.vehicle.cp.courseGeneratorSettings.multiTools
+	if setting:getGuiElement() then
+		setting:setToIx(setting:getGuiElement():getState())
+	end
 end
 
 -----------------------------------------------------------------------------------------------------

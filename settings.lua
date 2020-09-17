@@ -302,7 +302,7 @@ function courseplay:changeWorkWidth(vehicle, changeBy, force, noDraw)
 		vehicle.cp.manualWorkWidth = nil
 		vehicle.cp.settings.laneNumberOffset:set(0)
 		vehicle.cp.settings.laneOffset:set(0)
-		courseplay:setMultiTools(vehicle, 1)
+		vehicle.cp.courseGeneratorSettings.multiTools:set(1)
 		--print("is set by calculate button")
 	end
 	if force then
@@ -914,19 +914,6 @@ function courseplay:changeHeadlandReverseManeuverType( vehicle )
 			vehicle.cp.headland.reverseManeuverType = courseplay.HEADLAND_REVERSE_MANEUVER_TYPE_MIN
 		end
 end
-
-function courseplay:changeByMultiTools(vehicle, changeBy)
-	courseplay:setMultiTools(vehicle, MathUtil.clamp(vehicle.cp.multiTools + changeBy, 1, 8))
-end;
-function courseplay:setMultiTools(vehicle, set)
-	vehicle:setCpVar('multiTools',set,courseplay.isClient)
-	if vehicle.cp.multiTools%2 == 0 then
-		vehicle.cp.settings.laneNumberOffset:changeByX(1)
-	else
-		vehicle.cp.settings.laneNumberOffset:set(0)
-		vehicle.cp.settings.laneOffset:set(0)
-	end;
-end;
 
 function courseplay:validateCourseGenerationData(vehicle)
 	local numWaypoints = 0;
@@ -1600,7 +1587,7 @@ end
 
 -- function only called from network to set synced setting
 function Setting:setFromNetwork(value)
-	self:set(value)
+	self:set(value,true)
 	self:onChange()
 end
 
@@ -1681,11 +1668,17 @@ function FloatSetting:onReadStream(stream)
 	end
 end
 
-function FloatSetting:set(value)
+function FloatSetting:set(value,noEventSend)
 	local ok = self.max and value <self.max or true
 	ok = self.min and value >self.min or true
-	if ok then 
+	if ok and self.value ~=value then 
 		Setting.set(self,value)
+		if noEventSend == nil or noEventSend == false then
+			if self.syncValue then
+				IntFloatSettingEvent.sendEvent(self.vehicle,self.parentName, self.name, value)
+			end
+		end
+		self:onChange()
 	end
 end
 
@@ -1725,11 +1718,17 @@ function IntSetting:onReadStream(stream)
 	end
 end
 
-function IntSetting:set(value)
+function IntSetting:set(value,noEventSend)
 	local ok = self.max and value <self.max or true
 	ok = self.min and value >self.min or true
-	if ok then 
+	if ok and self.value ~=value then 
 		Setting.set(self,math.floor(value))
+		if noEventSend == nil or noEventSend == false then
+			if self.syncValue then
+				IntFloatSettingEvent.sendEvent(self.vehicle,self.parentName, self.name, value)
+			end
+		end
+		self:onChange()
 	end
 end
 
@@ -2267,6 +2266,28 @@ function HeadlandOverlapPercent:init(vehicle)
 			values, texts)
 	-- reasonable default used for years
 	self:set(7)
+end
+
+---@class MultiToolsSetting : SettingList
+MultiToolsSetting = CpObject(SettingList)
+function MultiToolsSetting:init(vehicle)
+	local texts = {}
+	local values = {}
+	for i = 1,8 do
+		table.insert( values, i )
+		table.insert( texts, i )
+	end
+	SettingList.init(self, 'multiTools','COURSEPLAY_MULTI_TOOLS', 'COURSEPLAY_MULTI_TOOLS', vehicle,values,texts) 
+	self:set(1)
+end
+
+function MultiToolsSetting:onChange(x)
+	if self:get()%2 == 0 then
+		self.vehicle.cp.settings.laneNumberOffset:changeByX(1)
+	else
+		self.vehicle.cp.settings.laneNumberOffset:set(0)
+		self.vehicle.cp.settings.laneOffset:set(0)
+	end;
 end
 
 --WIP
@@ -3708,7 +3729,7 @@ function LaneNumberOffsetSetting:getText()
 end
 
 function LaneNumberOffsetSetting:changeByX(x)
-	local multiTools = self.vehicle.cp.multiTools
+	local multiTools = self.vehicle.cp.courseGeneratorSettings.multiTools:get()
 	local workWidth = self.vehicle.cp.workWidth
 	local toolsIsEven = multiTools%2 == 0
 	if toolsIsEven then
@@ -3753,7 +3774,6 @@ function LaneOffsetSetting:changeByX(x)
 	 if value <0.1 and value >-0.1 then value = 0 end
 	 self:set(value)
 end
-
 
 --- Container for settings
 --- @class SettingsContainer

@@ -719,17 +719,18 @@ function FieldworkAIDriver:setUpCourses()
 	self.fieldworkCourse:setOffset(self.vehicle.cp.toolOffsetX, self.vehicle.cp.toolOffsetZ)
 	-- TODO: consolidate the working width calculation and usage, this is currently an ugly mess
 	self.fieldworkCourse:setWorkWidth(self.vehicle.cp.courseWorkWidth or courseplay:getWorkWidth(self.vehicle))
-	if self.vehicle.cp.multiTools > 1 then
-		self:debug('Calculating offset course for position %d of %d', self.vehicle.cp.settings.laneNumberOffset:get(), self.vehicle.cp.multiTools)
+	local multiTools = self.vehicle.cp.courseGeneratorSettings.multiTools:get()
+	if multiTools > 1 then
+		self:debug('Calculating offset course for position %d of %d', self.vehicle.cp.settings.laneNumberOffset:get(), multiTools)
 		self.fieldworkCourse = self.fieldworkCourse:calculateOffsetCourse(
-				self.vehicle.cp.multiTools, self.vehicle.cp.settings.laneNumberOffset:get(),  courseplay:getWorkWidth(self.vehicle),
+				multiTools, self.vehicle.cp.settings.laneNumberOffset:get(),  courseplay:getWorkWidth(self.vehicle),
 				self.vehicle.cp.settings.symmetricLaneChange:is(true))
 	end
 end
 
 function FieldworkAIDriver:setRidgeMarkers()
 	-- no ridge markers with multitools to avoid collisions.
-	if self.vehicle.cp.settings.ridgeMarkersAutomatic:is(false) or self.vehicle.cp.multiTools > 1 then return end
+	if self.vehicle.cp.settings.ridgeMarkersAutomatic:is(false) or self.vehicle.cp.courseGeneratorSettings.multiTools:get() > 1 then return end
 	local active = self.state == self.states.ON_FIELDWORK_COURSE and self.fieldworkState ~= self.states.TURNING
 	for _, workTool in ipairs(self.vehicle.cp.workTools) do
 		-- yes, another Giants typo. And not sure why implements with no ridge markers even have the spec_ridgeMarker

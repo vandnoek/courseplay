@@ -77,8 +77,9 @@ function courseGenerator.generate( vehicle )
 	courseplay:clearCurrentLoadedCourse(vehicle);
 
 	local workWidth = vehicle.cp.workWidth;
-	if vehicle.cp.multiTools > 1 then
-		workWidth = workWidth * vehicle.cp.multiTools
+	local multiTools = vehicle.cp.courseGeneratorSettings.multiTools:get()
+	if multiTools > 1 then
+		workWidth = workWidth * multiTools
 	end
 
 	if vehicle.cp.startingCorner == courseGenerator.STARTING_LOCATION_VEHICLE_POSITION then
@@ -168,8 +169,8 @@ function courseGenerator.generate( vehicle )
 	-- turn tighter than possible
 	-- Using vehicle.cp.turnDiameter has this is updated when the user changes the vaule
 	local turnRadiusAdjustedForMultiTool = vehicle.cp.turnDiameter/2
-	if vehicle.cp.multiTools then
-		turnRadiusAdjustedForMultiTool = turnRadiusAdjustedForMultiTool + vehicle.cp.workWidth*((vehicle.cp.multiTools-1)/2)
+	if multiTools then
+		turnRadiusAdjustedForMultiTool = turnRadiusAdjustedForMultiTool + vehicle.cp.workWidth*((multiTools-1)/2)
 	end
 	local status, ok = xpcall( generateCourseForField, function(err) printCallstack(); return err end,
 		field, workWidth, headlandSettings,

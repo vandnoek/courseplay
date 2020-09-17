@@ -132,6 +132,7 @@ local function initialize()
 		'Events/AssignedCombinesEvents',
 		'Events/CourseEvent',
 		'Events/InfoTextEvent',
+		'Events/IntFloatSettingEvent',
 		'Generic/LinkedList'
 	};
 

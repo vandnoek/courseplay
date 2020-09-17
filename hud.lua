@@ -852,7 +852,7 @@ function courseplay.hud:updatePageContent(vehicle, page)
 				
 				elseif entry.functionToCall == 'laneNumberOffset:changeByX' then
 					vehicle.cp.hud.content.pages[page][line][1].text = vehicle.cp.settings.laneNumberOffset:getLabel()
-					if vehicle.cp.multiTools > 1 then					
+					if vehicle.cp.courseGeneratorSettings.multiTools:get() > 1 then					
 						self:enableButtonWithFunction(vehicle,page, 'changeByX',vehicle.cp.settings.laneNumberOffset)
 						vehicle.cp.hud.content.pages[page][line][2].text = vehicle.cp.settings.laneNumberOffset:getText()
 					else
@@ -860,7 +860,7 @@ function courseplay.hud:updatePageContent(vehicle, page)
 					end
 				elseif entry.functionToCall == 'laneOffset:changeByX' then
 					vehicle.cp.hud.content.pages[page][line][1].text = vehicle.cp.settings.laneOffset:getLabel()
-					if vehicle.cp.multiTools == 1 then
+					if vehicle.cp.courseGeneratorSettings.multiTools:get() == 1 then
 						self:enableButtonWithFunction(vehicle,page, 'changeByX',vehicle.cp.settings.laneOffset)
 						vehicle.cp.hud.content.pages[page][line][2].text = vehicle.cp.settings.laneOffset:getText()
 					else
