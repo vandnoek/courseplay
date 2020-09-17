@@ -457,9 +457,9 @@ function courseplay.hud:setContent(vehicle)
 	end
 	
 	if vehicle.cp.settings.convoyActive:is(true) then
-		local distance = vehicle.cp.driver.convoyCurrentDistance
-		local pos = vehicle.cp.driver.convoyCurrentPosition
-		local total = vehicle.cp.driver.convoyTotalMembers
+		local distance = vehicle.cp.driver.convoyCurrentDistance or 0
+		local pos = vehicle.cp.driver.convoyCurrentPosition or 0
+		local total = vehicle.cp.driver.convoyTotalMembers or 0
 		vehicle.cp.hud.content.bottomInfo.convoyText = string.format("<--%s--> %d/%d",(distance == 0 and "--" or string.format("%d%s",distance,courseplay:loc('COURSEPLAY_UNIT_METER'))),pos,total)
 	else
 		vehicle.cp.hud.content.bottomInfo.convoyText = nil
