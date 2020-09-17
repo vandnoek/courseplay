@@ -361,11 +361,12 @@ function courseplay:copyCourse(vehicle)
 		vehicle.cp.copyCourseFromDriver = nil;
 		
 		--MultiTools
-		if src.cp.multiTools > 1 then
+		local multiTools =  src.cp.courseGeneratorSettings.multiTools:get()
+		if multiTools > 1 then
 			vehicle.cp.workWidth = src.cp.workWidth
 			vehicle.cp.courseWorkWidth = src.cp.courseWorkWidth
 			vehicle.cp.manualWorkWidth = src.cp.manualWorkWidth
-			vehicle.cp.courseGeneratorSettings.multiTools:set(src.cp.multiTools) 
+			vehicle.cp.courseGeneratorSettings.multiTools:set(multiTools) 
 		end;
 		
 		courseplay:validateCanSwitchMode(vehicle);
