@@ -70,7 +70,17 @@ function SettingsListEvent:run(connection) -- wir fuehren das empfangene event a
 	courseplay:debug(('\t\t\t\tid=%s, name=%s, value=%s'):format(tostring(self.vehicle),tostring(self.parentName), tostring(self.name), tostring(self.value)), 5);
 
 	if self.vehicle then 
-		self.vehicle.cp[self.parentName][self.name]:setFromNetwork(self.value)
+		if self.vehicle[self.parentName] then 
+			if self.vehicle.cp[self.parentName][self.name] then 
+				self.vehicle.cp[self.parentName][self.name]:setFromNetwork(self.value)
+			else 
+				courseplay.infoVehicle(self.vehicle, string.format('SettingsListEvent Error function not found: settingName: %s, functionName: %s, parameter: %s',tostring(self.parentName),tostring(self.name),tostring(self.value)))
+				printCallstack()
+			end
+		else
+			courseplay.infoVehicle(self.vehicle, string.format('SettingsListEvent Error setting not found: settingName: %s, functionName: %s, parameter: %s',tostring(self.parentName),tostring(self.name),tostring(self.value)))
+			printCallstack()
+		end
 	else
 		courseplay[self.parentName][self.name]:setFromNetwork(self.value)
 	end
