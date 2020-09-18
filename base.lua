@@ -1231,7 +1231,7 @@ function courseplay:onReadStream(streamId, connection)
 		end
 	end
 	-- SETUP 2D COURSE DRAW DATA
-	vehicle.cp.course2dUpdateDrawData = true;
+	self.cp.course2dUpdateDrawData = true;
 
 	
 	local debugChannelsString = streamDebugReadString(streamId)
