@@ -73,7 +73,7 @@ end
 function CourseEvent:writeWaypoint(streamId, waypoint,index)
 	courseplay.debugVehicle(5,self.vehicle,"waypoint: %s",tostring(index))
 	if courseplay.debugChannels[5] then
-		printTable(DebugUtil.printTableRecursively(waypoint, '  ', 1, 1)
+		DebugUtil.printTableRecursively(waypoint, '  ', 1, 1)
 	end
 	streamWriteFloat32(streamId, waypoint.cx or 0)
 	streamWriteFloat32(streamId, waypoint.cz or 0)
