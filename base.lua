@@ -553,8 +553,8 @@ function courseplay:onLoad(savegame)
 	self.cp.settings:addSetting(ConvoyActiveSetting,self)
 	self.cp.settings:addSetting(ConvoyMinDistanceSetting,self)
 	self.cp.settings:addSetting(ConvoyMaxDistanceSetting,self) -- do we need this one ?
-	self.cp.settings:addSetting(LaneNumberOffsetSetting,self)
 	self.cp.settings:addSetting(LaneOffsetSetting,self)
+	self.cp.settings:addSetting(LaneNumberOffsetSetting,self)
 	self.cp.settings:addSetting(OppositeTurnModeSetting,self)
 	---@type SettingsContainer
 	self.cp.courseGeneratorSettings = SettingsContainer("courseGeneratorSettings")

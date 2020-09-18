@@ -1588,7 +1588,6 @@ end
 -- function only called from network to set synced setting
 function Setting:setFromNetwork(value)
 	self:set(value,true)
-	self:onChange()
 end
 
 
@@ -2283,10 +2282,10 @@ end
 
 function MultiToolsSetting:onChange(x)
 	if self:get()%2 == 0 then
-		self.vehicle.cp.settings.laneNumberOffset:changeByX(1)
+		self.vehicle.cp.settings.laneNumberOffset:changeByX(1,true)
 	else
-		self.vehicle.cp.settings.laneNumberOffset:set(0)
-		self.vehicle.cp.settings.laneOffset:set(0)
+		self.vehicle.cp.settings.laneNumberOffset:set(0,true)
+		self.vehicle.cp.settings.laneOffset:set(0,true)
 	end;
 end
 
@@ -3728,7 +3727,7 @@ function LaneNumberOffsetSetting:getText()
 	end		
 end
 
-function LaneNumberOffsetSetting:changeByX(x)
+function LaneNumberOffsetSetting:changeByX(x,noEventSend)
 	local multiTools = self.vehicle.cp.courseGeneratorSettings.multiTools:get()
 	local workWidth = self.vehicle.cp.workWidth
 	local toolsIsEven = multiTools%2 == 0
@@ -3740,7 +3739,7 @@ function LaneNumberOffsetSetting:changeByX(x)
 		end
 	end
 	local value = MathUtil.clamp(self:get() + x, math.floor(multiTools/2)*-1, math.floor(multiTools/2))
-	self:set(value)
+	self:set(value,noEventSend)
 	local newOffset = 0
 	if toolsIsEven then
 		if self:get() > 0 then
@@ -3751,7 +3750,7 @@ function LaneNumberOffsetSetting:changeByX(x)
 	else
 		newOffset = workWidth*self:get()
 	end
-	self.vehicle.cp.settings.laneOffset:set(newOffset)
+	self.vehicle.cp.settings.laneOffset:set(newOffset,noEventSend)
 end
 
 ---@class LaneOffsetSetting : FloatSetting
@@ -3769,10 +3768,10 @@ function LaneOffsetSetting:getText()
 	end
 end
 
-function LaneOffsetSetting:changeByX(x)
+function LaneOffsetSetting:changeByX(x,noEventSend)
 	 local value = self:get() + x*0.1
 	 if value <0.1 and value >-0.1 then value = 0 end
-	 self:set(value)
+	 self:set(value,noEventSend)
 end
 
 --- Container for settings
