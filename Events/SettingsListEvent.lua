@@ -60,7 +60,7 @@ function SettingsListEvent:writeStream(streamId, connection)  -- Wird aufgrufen 
 		streamWriteBool(streamId, true)
 		streamWriteFloat32(streamId, self.value)
 	else
-		treamWriteBool(streamId, false)
+		streamWriteBool(streamId, false)
 		streamWriteInt32(streamId, self.value)
 	end
 end
