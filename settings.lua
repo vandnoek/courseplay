@@ -1671,11 +1671,11 @@ end
 function FloatSetting:set(value,noEventSend)
 	local ok = self.max and value <self.max or true
 	ok = self.min and value >self.min or true
-	if ok and self.value ~=value then 
+	if ok and value and self.value ~=value then 
 		Setting.set(self,value)
 		if noEventSend == nil or noEventSend == false then
 			if self.syncValue then
-				IntFloatSettingEvent.sendEvent(self.vehicle,self.parentName, self.name, value)
+				SettingsListEvent.sendEvent(self.vehicle,self.parentName, self.name, value,true)
 			end
 		end
 		self:onChange()
@@ -1721,11 +1721,11 @@ end
 function IntSetting:set(value,noEventSend)
 	local ok = self.max and value <self.max or true
 	ok = self.min and value >self.min or true
-	if ok and self.value ~=value then 
+	if ok and value and self.value ~=value then 
 		Setting.set(self,math.floor(value))
 		if noEventSend == nil or noEventSend == false then
 			if self.syncValue then
-				IntFloatSettingEvent.sendEvent(self.vehicle,self.parentName, self.name, value)
+				SettingsListEvent.sendEvent(self.vehicle,self.parentName, self.name, value)
 			end
 		end
 		self:onChange()

@@ -1230,6 +1230,8 @@ function courseplay:onReadStream(streamId, connection)
 			self.cp.currentCourseName = string.format("%d %s", self.cp.numCourses, courseplay:loc('COURSEPLAY_COMBINED_COURSES'));
 		end
 	end
+	-- SETUP 2D COURSE DRAW DATA
+	vehicle.cp.course2dUpdateDrawData = true;
 
 	
 	local debugChannelsString = streamDebugReadString(streamId)
@@ -1307,7 +1309,7 @@ function courseplay:onWriteStream(streamId, connection)
 			CourseEvent:writeWaypoint(streamId, self.Waypoints[w])
 		end
 	end
-
+	
 	local debugChannelsString = table.concat(table.map(courseplay.debugChannels, tostring), ",");
 	streamDebugWriteString(streamId, debugChannelsString) 
 		

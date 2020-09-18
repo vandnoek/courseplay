@@ -12,13 +12,14 @@ function SettingsListEvent:emptyNew()
 	return self;
 end
 
-function SettingsListEvent:new(vehicle,parentName, name, value)
+function SettingsListEvent:new(vehicle,parentName, name, value,isFloat)
 	courseplay:debug(string.format("courseplay:SettingsListEvent:new(%s, %s, %s)", tostring(name),tostring(parentName), tostring(value)), 5)
 	self.vehicle = vehicle;
 	self.parentName = parentName
 	self.messageNumber = Utils.getNoNil(self.messageNumber, 0) + 1
 	self.name = name
 	self.value = value;
+	self.isFloat = isFloat
 	return self;
 end
 
@@ -31,8 +32,11 @@ function SettingsListEvent:readStream(streamId, connection) -- wird aufgerufen w
 	self.parentName = streamReadString(streamId)
 	local messageNumber = streamReadFloat32(streamId)
 	self.name = streamReadString(streamId)
-	self.value = streamReadInt32(streamId)
-
+	if streamReadBool(streamId) then
+		self.value = streamReadFloat32(streamId)
+	else 
+		self.value = streamReadInt32(streamId)
+	end
 	courseplay:debug("	readStream",5)
 	courseplay:debug("		id: "..tostring(self.vehicle).."/"..tostring(messageNumber).."  self.parentName: "..tostring(self.parentName).."  self.name: "..tostring(self.name).."  self.value: "..tostring(self.value),5)
 
@@ -52,7 +56,13 @@ function SettingsListEvent:writeStream(streamId, connection)  -- Wird aufgrufen 
 	streamWriteString(streamId, self.parentName)
 	streamWriteFloat32(streamId, self.messageNumber)
 	streamWriteString(streamId, self.name)
-	streamWriteInt32(streamId, self.value)
+	if self.isFloat then 
+		streamWriteBool(streamId, true)
+		streamWriteFloat32(streamId, self.value)
+	else
+		treamWriteBool(streamId, false)
+		streamWriteInt32(streamId, self.value)
+	end
 end
 
 function SettingsListEvent:run(connection) -- wir fuehren das empfangene event aus
@@ -66,19 +76,19 @@ function SettingsListEvent:run(connection) -- wir fuehren das empfangene event a
 	end
 	if not connection:getIsServer() then
 		courseplay:debug("broadcast settings event feedback",5)
-		g_server:broadcastEvent(SettingsListEvent:new(self.vehicle,self.parentName, self.name, self.value), nil, connection, self.vehicle);
+		g_server:broadcastEvent(SettingsListEvent:new(self.vehicle,self.parentName, self.name, self.value,self.isFloat), nil, connection, self.vehicle);
 	end;
 end
 
-function SettingsListEvent.sendEvent(vehicle,parentName, name, value)
+function SettingsListEvent.sendEvent(vehicle,parentName, name, value,isFloat)
 	if g_server ~= nil then
 		courseplay:debug("broadcast settings event", 5)
 		courseplay:debug(('\tid=%s, name=%s, value=%s'):format(tostring(vehicle), tostring(name), tostring(value)), 5);
-		g_server:broadcastEvent(SettingsListEvent:new(vehicle,parentName, name, value), nil, nil, self);
+		g_server:broadcastEvent(SettingsListEvent:new(vehicle,parentName, name, value,isFloat), nil, nil, self);
 	else
 		courseplay:debug("send settings event", 5)
 		courseplay:debug(('\tid=%s, name=%s, value=%s'):format(tostring(vehicle), tostring(name), tostring(value)), 5);
-		g_client:getServerConnection():sendEvent(SettingsListEvent:new(vehicle,parentName, name, value));
+		g_client:getServerConnection():sendEvent(SettingsListEvent:new(vehicle,parentName, name, value,isFloat));
 	end;
 end
 
