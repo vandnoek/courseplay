@@ -169,7 +169,7 @@ function courseGenerator.generate( vehicle )
 	-- turn tighter than possible
 	-- Using vehicle.cp.turnDiameter has this is updated when the user changes the vaule
 	local turnRadiusAdjustedForMultiTool = vehicle.cp.turnDiameter/2
-	if multiTools then
+	if multiTools>1 then
 		turnRadiusAdjustedForMultiTool = turnRadiusAdjustedForMultiTool + vehicle.cp.workWidth*((multiTools-1)/2)
 	end
 	local status, ok = xpcall( generateCourseForField, function(err) printCallstack(); return err end,

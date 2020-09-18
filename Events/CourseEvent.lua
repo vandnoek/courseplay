@@ -40,7 +40,7 @@ function CourseEvent:writeStream(streamId, connection)  -- Wird aufgrufen wenn i
 	end
 	streamWriteInt32(streamId, #(self.course))
 	for w = 1, #(self.course) do
-		CourseEvent:writeWaypoint(streamId, self.course[w])
+		CourseEvent:writeWaypoint(streamId, self.course[w],w)
 	end
 end
 
@@ -70,21 +70,72 @@ function CourseEvent.sendEvent(vehicle,course)
 end
 
 
-function CourseEvent:writeWaypoint(streamId, waypoint)
-	streamWriteFloat32(streamId, waypoint.cx)
-	streamWriteFloat32(streamId, waypoint.cz)
-	streamWriteFloat32(streamId, waypoint.angle)
-	streamWriteBool(streamId, waypoint.wait)
-	streamWriteBool(streamId, waypoint.rev)
-	streamWriteBool(streamId, waypoint.crossing)
-	streamWriteInt32(streamId, waypoint.speed)
+function CourseEvent:writeWaypoint(streamId, waypoint,index)
+	courseplay.debugVehicle(5,self.vehicle,"waypoint: %s",tostring(index))
+	if courseplay.debugChannels[5] then
+		printTable(DebugUtil.printTableRecursively(waypoint, '  ', 1, 1)
+	end
+	streamWriteFloat32(streamId, waypoint.cx or 0)
+	streamWriteFloat32(streamId, waypoint.cz or 0)
+	streamWriteFloat32(streamId, waypoint.angle or 0)
+	streamWriteBool(streamId, waypoint.wait or false)
+	streamWriteBool(streamId, waypoint.rev or false)
+	streamWriteBool(streamId, waypoint.crossing or false)
+	streamWriteInt32(streamId, waypoint.speed or 0)
 
-	streamWriteBool(streamId, waypoint.generated)
+	streamWriteBool(streamId, waypoint.generated or false)
 	
-	streamWriteBool(streamId, waypoint.turnStart)
-	streamWriteBool(streamId, waypoint.turnEnd)
-	streamWriteInt32(streamId, waypoint.ridgeMarker)
-	streamWriteInt32(streamId, waypoint.headlandHeightForTurn)
+	streamWriteBool(streamId, waypoint.turnStart or false)
+	streamWriteBool(streamId, waypoint.turnEnd or false)
+	streamWriteInt32(streamId, waypoint.ridgeMarker or 0)
+	streamWriteInt32(streamId, waypoint.headlandHeightForTurn or 0)
+	
+	streamWriteBool(streamId, waypoint.isConnectingTrack or false)
+	streamWriteBool(streamId, waypoint.mustReach or false)
+	streamWriteBool(streamId, waypoint.align or false)
+	streamWriteInt32(streamId, waypoint.lane or 0)
+	streamWriteInt32(streamId, waypoint.radius or 0)
+	--[[
+	
+		wp.generated = true
+		wp.ridgeMarker = point.ridgeMarker
+		wp.angle = courseGenerator.toCpAngleDeg( point.nextEdge.angle )
+		wp.cx = point.x
+		wp.cz = -point.y
+		wp.wait = nil
+		if point.rev then
+			wp.rev = point.rev
+		else
+			wp.rev = false
+		end
+		wp.crossing = nil
+		wp.speed = 0
+
+		if point.passNumber then
+			wp.lane = -point.passNumber
+		end
+		if point.turnStart then
+			wp.turnStart = true
+		end
+		if point.turnEnd then
+			wp.turnEnd = true
+		end
+		if point.isConnectingTrack then
+			wp.isConnectingTrack = true
+		end
+		if point.mustReach then
+			wp.mustReach = true
+		end
+		if point.align then
+			wp.align = true
+		end
+		wp.headlandHeightForTurn = point.headlandHeightForTurn
+		if point.islandBypass then
+			-- save radius only for island bypass sections for now.
+			wp.radius = point.radius
+		end
+	
+	]]--
 end;
 
 function CourseEvent:readWaypoint(streamId)
@@ -103,6 +154,12 @@ function CourseEvent:readWaypoint(streamId)
 	local ridgeMarker = streamReadInt32(streamId)
 	local headlandHeightForTurn = streamReadInt32(streamId)
 
+	local isConnectingTrack = streamReadBool(streamId)
+	local mustReach = streamReadBool(streamId)
+	local align = streamReadBool(streamId)
+	local lane = streamReadInt32(streamId)
+	local radius = streamReadInt32(streamId)
+
 	local wp = {
 		cx = cx, 
 		cz = cz, 
@@ -115,7 +172,13 @@ function CourseEvent:readWaypoint(streamId)
 		turnStart = turnStart,
 		turnEnd = turnEnd,
 		ridgeMarker = ridgeMarker,
-		headlandHeightForTurn = headlandHeightForTurn
+		headlandHeightForTurn = headlandHeightForTurn,
+		
+		isConnectingTrack = isConnectingTrack,
+		mustReach = mustReach,
+		align = align,
+		lane = lane,
+		radius = radius
 	};
 	return wp;
 end;
