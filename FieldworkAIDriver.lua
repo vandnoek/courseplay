@@ -611,7 +611,7 @@ end
 --- Should we return to the first point of the course after we are done?
 function FieldworkAIDriver:shouldReturnToFirstPoint()
 	-- TODO: implement and check setting in course or HUD
-	if self.vehicle.cp.settings.endWorkAtSetting:is(1) or self.vehicle.cp.settings.endWorkAt:is(3) then
+	if self.vehicle.cp.settings.endWorkAt:is(1) or self.vehicle.cp.settings.endWorkAt:is(3) then
 		self:debug('Returning to first point.')
 		return true
 	else
@@ -622,12 +622,14 @@ end
 
 --- Should CP be stopped when we jump in after work is done?
 function FieldworkAIDriver:shouldStopDriver()
-	if (self.vehicle.cp.settings.endWorkAtSetting:is(2) or self.vehicle.cp.settings.endWorkAtSetting:is(3)) and self:getIsEntered() then
+	if (self.vehicle.cp.settings.endWorkAt:is(2) or self.vehicle.cp.settings.endWorkAt:is(3)) and self:getIsEntered() then
 		self:debug('CP Driver stopped on enter vehicle')
 		return true
 	else
 		self:debug('CP Driver not stopped on enter vehicle')
 		return false
+	end
+end
 		
 
 --- Pass on self.speed set elsewhere to the AIDriver.
