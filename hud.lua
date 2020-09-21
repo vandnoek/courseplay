@@ -663,7 +663,7 @@ end
 -- set the content on demand
 function courseplay.hud:updatePageContent(vehicle, page)
 	-- self = courseplay.hud
-	-- this is an ugly hack to enable two different settings occupy the same row, like toggleReturnToFirstPoint and
+	-- this is an ugly hack to enable two different settings occupy the same row, like toggleEndWorkAt and
 	-- setCustomSingleFieldEdge on page 1. They are mutually exclusive and when enabled, will disable the other. If
 	-- there is a change, they set forceUpdate to force the update of the HUD page, otherwise there's only an empty
 	-- row shown until the page is reselected
@@ -716,15 +716,15 @@ function courseplay.hud:updatePageContent(vehicle, page)
 					else
 						self:disableButtonWithFunction(vehicle,page, 'toggle',vehicle.cp.settings.stopAtEnd)
 					end
-				elseif entry.functionToCall == 'endWorkAt:toggle' then
+				elseif entry.functionToCall == 'endWorkAt:changeByX' then
 					--endWorkAtSetting
 					if vehicle.cp.canDrive then
-						self:enableButtonWithFunction(vehicle,page, 'toggle',vehicle.cp.settings.endWorkAt)
+						self:enableButtonWithFunction(vehicle,page, 'changeByX',vehicle.cp.settings.endWorkAt)
 						self:disableButtonWithFunction(vehicle,page, 'setCustomSingleFieldEdge')
 						vehicle.cp.hud.content.pages[page][line][1].text = vehicle.cp.settings.endWorkAt:getLabel()
 						vehicle.cp.hud.content.pages[page][line][2].text = vehicle.cp.settings.endWorkAt:getText()
 					else
-						self:disableButtonWithFunction(vehicle,page, 'toggle',vehicle.cp.settings.endWorkAt)
+						self:disableButtonWithFunction(vehicle,page, 'changeByX',vehicle.cp.settings.endWorkAt)
 						forceUpdate = true -- force reload of this page if functionToCall changed
 						entry.functionToCall = 'setCustomSingleFieldEdge'
 						self:enableButtonWithFunction(vehicle,page, 'setCustomSingleFieldEdge')
@@ -883,13 +883,13 @@ function courseplay.hud:updatePageContent(vehicle, page)
 					and not vehicle.cp.isRecording 
 					and not vehicle.cp.recordingIsPaused then
 						self:enableButtonWithFunction(vehicle,page, 'setCustomSingleFieldEdge')
-						self:disableButtonWithFunction(vehicle,page, 'toggle',vehicle.cp.settings.returnToFirstPoint)
+						self:disableButtonWithFunction(vehicle,page, 'changeByX',vehicle.cp.settings.endWorkAt)
 						vehicle.cp.hud.content.pages[page][line][1].text = courseplay:loc('COURSEPLAY_SCAN_CURRENT_FIELD_EDGES');
 					else
 						self:disableButtonWithFunction(vehicle,page, 'setCustomSingleFieldEdge')
 						forceUpdate = true -- force reload of this page if functionToCall changed
-						entry.functionToCall = 'returnToFirstPoint:toggle'
-						self:enableButtonWithFunction(vehicle, page, 'toggle',vehicle.cp.settings.returnToFirstPoint)
+						entry.functionToCall = 'endWorkAt:changeByX'
+						self:enableButtonWithFunction(vehicle, page, 'changeByX',vehicle.cp.settings.endWorkAt)
 						courseplay.hud:setReloadPageOrder(vehicle, page, true);
 					end
 				elseif entry.functionToCall == 'setCustomFieldEdgePathNumber' then
@@ -2355,7 +2355,7 @@ function courseplay.hud:setFieldWorkAIDriverContent(vehicle)
 	self:setupCustomFieldEdgeButtons(vehicle,1,5)
 	self:addRowButton(vehicle,nil,'addCustomSingleFieldEdgeToList', 1, 6, 1 )
 	-- shown in place of the custom field row when a course is loaded
-	self:addRowButton(vehicle,vehicle.cp.settings.returnToFirstPoint,'toggle', 1, 5, 1 )
+	self:addRowButton(vehicle,vehicle.cp.settings.endWorkAt,'changeByX', 1, 5, 1 )
 
 	--page 3 settings
 	self:enablePageButton(vehicle, 3)
