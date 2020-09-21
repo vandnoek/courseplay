@@ -40,7 +40,6 @@ function CpManager:loadMap(name)
 	courseplay.signs:setup();
 	courseplay.fields:setup();
 	self.showFieldScanYesNoDialogue = false;
-	self:setupIngameMap();
 	self:setup2dCourseData(false); -- NOTE: this call is only to initiate the position and opacity
 
 	-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -106,6 +105,9 @@ function CpManager:loadMap(name)
 	addConsoleCommand( 'print', 'Print a variable', 'printVariable', self )
 	addConsoleCommand( 'printVehicleVariable', 'Print g_currentMission.controlledVehicle.variable', 'printVehicleVariable', self )
 	addConsoleCommand( 'printDriverVariable', 'Print g_currentMission.controlledVehicle.cp.driver.variable', 'printDriverVariable', self )
+	addConsoleCommand( 'printSettingVariable', 'Print g_currentMission.controlledVehicle.cp.settings.variable', 'printSettingVariable', self )
+	addConsoleCommand( 'printCourseGeneratorSettingVariable', 'Print g_currentMission.controlledVehicle.cp.courseGeneratorSettings.variable', 'printCourseGeneratorSettingVariable', self )
+	addConsoleCommand( 'printGlobalSettingVariable', 'Print g_currentMission.controlledVehicle.cp.globalSettings.variable', 'printGlobalSettingVariable', self )
 	addConsoleCommand( 'cpTraceOn', 'Turn on function call argument tracing', 'traceOn', self )
 	addConsoleCommand( 'cpTraceOnForAll', 'Turn on call argument tracing for all functions of the given table (lots of output)', 'traceOnForAll', self )
 	addConsoleCommand( 'cpLoadFile', 'Load a lua file', 'loadFile', self )
@@ -145,11 +147,12 @@ function CpManager:deleteMap()
 	courseplay.courses.batchWriteSize = nil;
 
 	-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	-- deactivate debug channels
-	for channel,_ in pairs(courseplay.debugChannels) do
-		courseplay.debugChannels[channel] = false;
-	end;
-
+	if courseplay.debugChannels then
+		-- deactivate debug channels
+		for channel,_ in pairs(courseplay.debugChannels) do
+			courseplay.debugChannels[channel] = false;
+		end;
+	end
 	-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	-- delete vehicles' button overlays
 	for i,vehicle in pairs(g_currentMission.vehicles) do
@@ -272,7 +275,7 @@ function CpManager:update(dt)
 		end;
 	end;
 	g_trafficController:update(dt)
-	g_combineUnloadManager:onUpdate()
+	g_combineUnloadManager:onUpdate(dt)
 
 	-- REAL TIME 5 SECS CHANGER
 	if self.realTime5SecsTimer < 5000 then
@@ -440,11 +443,7 @@ function CpManager.saveXmlSettings(self)
 		setXMLBool(cpSettingsXml, key .. '#debugCustomLoadedFields',	courseplay.fields.debugCustomLoadedFields);
 		setXMLInt (cpSettingsXml, key .. '#scanStep',					courseplay.fields.scanStep);
 
-		-- Save Ingame Map Settings
-		key = 'CPSettings.courseplayIngameMap';
-		setXMLBool(cpSettingsXml, key .. '#active', 		CpManager.ingameMapIconActive);
-		setXMLBool(cpSettingsXml, key .. '#showName', 		CpManager.ingameMapIconShowName);
-		setXMLBool(cpSettingsXml, key .. '#showCourse',		CpManager.ingameMapIconShowCourse);
+	
 
 		-- Save 2D Course Settings
 		key = 'CPSettings.course2D';
@@ -466,7 +465,6 @@ FSBaseMission.saveSavegame = Utils.appendedFunction(FSBaseMission.saveSavegame, 
 function CpManager:addToTotalCoursePlayers(vehicle)
 	local vehicleNum = (table.maxn(self.totalCoursePlayers) or 0) + 1;
 	self.totalCoursePlayers[vehicleNum] = vehicle;
-	CourseplayEvent.sendEvent(vehicle, "self.cp.coursePlayerNum", vehicleNum);
 	return vehicleNum;
 end;
 function CpManager:addToActiveCoursePlayers(vehicle)
@@ -549,6 +547,19 @@ end
 function CpManager:printDriverVariable(variableName, maxDepth)
 	self:printVariableInternal( 'g_currentMission.controlledVehicle.cp.driver', variableName, maxDepth)
 end
+
+function CpManager:printSettingVariable(variableName, maxDepth)
+	self:printVariableInternal( 'g_currentMission.controlledVehicle.cp.settings', variableName, maxDepth)
+end
+
+function CpManager:printCourseGeneratorSettingVariable(variableName, maxDepth)
+	self:printVariableInternal( 'g_currentMission.controlledVehicle.cp.courseGeneratorSettings', variableName, maxDepth)
+end
+
+function CpManager:printGlobalSettingVariable(variableName, maxDepth)
+	self:printVariableInternal( 'g_currentMission.controlledVehicle.cp.globalSettings', variableName, maxDepth)
+end
+
 
 function CpManager:printVariableInternal(prefix, variableName, maxDepth)
 	if not StringUtil.startsWith(variableName, ':') and not StringUtil.startsWith(variableName, '.') then
@@ -648,12 +659,13 @@ function CpManager:loadFile(fileName)
 end
 
 function CpManager:loadAIDriver()
-	self:loadFile()
+	local result = self:loadFile()
 	if g_currentMission.controlledVehicle then
 		-- re-instantiate the AIDriver after loaded
 		courseplay:setAIDriver(g_currentMission.controlledVehicle, g_currentMission.controlledVehicle.cp.mode)
 		g_combineUnloadManager:addNewCombines()
 	end
+	return result
 end
 
 function CpManager:saveVehiclePositions()
@@ -859,17 +871,6 @@ function CpManager:fieldScanDialogueCallback(setActive)
 end;
 
 -- ####################################################################################################
--- INGAME MAP
-function CpManager:setupIngameMap()
-	self.ingameMapIconActive		 = true;
-	self.ingameMapIconShowName		 = true;
-	self.ingameMapIconShowCourse	 = true;
-	self.ingameMapIconShowText		 = self.ingameMapIconShowName or self.ingameMapIconShowCourse;
-	self.ingameMapIconShowTextLoaded = self.ingameMapIconShowText;
-end;
-
-
--- ####################################################################################################
 -- GLOBALINFOTEXT
 function CpManager:setupGlobalInfoText()
 	print('## Courseplay: setting up globalInfoText');
@@ -917,33 +918,38 @@ function CpManager:setupGlobalInfoText()
 
 
 	self.globalInfoText.msgReference = {
-		BGA_IS_FULL					= { level = -1, text = 'COURSEPLAY_BGA_IS_FULL'};
-		DAMAGE_IS					= { level =  0, text = 'COURSEPLAY_DAMAGE_IS_BEING_REPAIRED' };
-		DAMAGE_MUST					= { level = -2, text = 'COURSEPLAY_DAMAGE_MUST_BE_REPAIRED' };
-		DAMAGE_SHOULD				= { level = -1, text = 'COURSEPLAY_DAMAGE_SHOULD_BE_REPAIRED' };
-		END_POINT					= { level =  0, text = 'COURSEPLAY_REACHED_END_POINT' };
-		END_POINT_MODE_1			= { level =  0, text = 'COURSEPLAY_REACHED_END_POINT_MODE_1' };
-		END_POINT_MODE_8			= { level =  0, text = 'COURSEPLAY_REACHED_END_POINT_MODE_8' };
-		FARM_SILO_NO_FILLTYPE		= { level = -2, text = 'COURSEPLAY_FARM_SILO_NO_FILLTYPE'};
-		FARM_SILO_IS_EMPTY			= { level =  0, text = 'COURSEPLAY_FARM_SILO_IS_EMPTY'};
-		FARM_SILO_IS_FULL			= { level =  0, text = 'COURSEPLAY_FARM_SILO_IS_FULL'};
-		FUEL_IS						= { level =  0, text = 'COURSEPLAY_IS_BEING_REFUELED' };
-		FUEL_MUST					= { level = -2, text = 'COURSEPLAY_MUST_BE_REFUELED' };
-		FUEL_SHOULD					= { level = -1, text = 'COURSEPLAY_SHOULD_BE_REFUELED' };
-		HOSE_MISSING				= { level = -2, text = 'COURSEPLAY_HOSEMISSING' };
-		NEEDS_REFILLING				= { level = -1, text = 'COURSEPLAY_NEEDS_REFILLING' };
-		NEEDS_UNLOADING				= { level = -1, text = 'COURSEPLAY_NEEDS_UNLOADING' };
-		OVERLOADING_POINT			= { level =  0, text = 'COURSEPLAY_REACHED_OVERLOADING_POINT' };
-		PICKUP_JAMMED				= { level = -2, text = 'COURSEPLAY_PICKUP_JAMMED' };
-		SLIPPING_1					= { level = -1, text = 'COURSEPLAY_SLIPPING_WARNING' };
-		SLIPPING_2					= { level = -2, text = 'COURSEPLAY_SLIPPING_WARNING' };
-		TRAFFIC						= { level = -1, text = 'COURSEPLAY_IS_IN_TRAFFIC' };
-		UNLOADING_BALE				= { level =  0, text = 'COURSEPLAY_UNLOADING_BALES' };
-		WAIT_POINT					= { level =  0, text = 'COURSEPLAY_REACHED_WAITING_POINT' };
-		WATER						= { level = -2, text = 'COURSEPLAY_WATER_WARNING' };
-		WEATHER						= { level =  0, text = 'COURSEPLAY_WEATHER_WARNING' };
-		WEIGHING_VEHICLE			= { level =  0, text = 'COURSEPLAY_IS_BEING_WEIGHED' };
-		WORK_END					= { level =  1, text = 'COURSEPLAY_WORK_END' };
+		BGA_IS_FULL							= { level = -1, text = 'COURSEPLAY_BGA_IS_FULL'};
+		DAMAGE_IS							= { level =  0, text = 'COURSEPLAY_DAMAGE_IS_BEING_REPAIRED' };
+		DAMAGE_MUST							= { level = -2, text = 'COURSEPLAY_DAMAGE_MUST_BE_REPAIRED' };
+		DAMAGE_SHOULD						= { level = -1, text = 'COURSEPLAY_DAMAGE_SHOULD_BE_REPAIRED' };
+		END_POINT							= { level =  0, text = 'COURSEPLAY_REACHED_END_POINT' };
+		END_POINT_MODE_1					= { level =  0, text = 'COURSEPLAY_REACHED_END_POINT_MODE_1' };
+		END_POINT_MODE_8					= { level =  0, text = 'COURSEPLAY_REACHED_END_POINT_MODE_8' };
+		FARM_SILO_NO_FILLTYPE				= { level = -2, text = 'COURSEPLAY_FARM_SILO_NO_FILLTYPE'};
+		FARM_SILO_IS_EMPTY					= { level =  0, text = 'COURSEPLAY_FARM_SILO_IS_EMPTY'};
+		FARM_SILO_IS_FULL					= { level =  0, text = 'COURSEPLAY_FARM_SILO_IS_FULL'};
+		FUEL_IS								= { level =  0, text = 'COURSEPLAY_IS_BEING_REFUELED' };
+		FUEL_MUST							= { level = -2, text = 'COURSEPLAY_MUST_BE_REFUELED' };
+		FUEL_SHOULD							= { level = -1, text = 'COURSEPLAY_SHOULD_BE_REFUELED' };
+		HOSE_MISSING						= { level = -2, text = 'COURSEPLAY_HOSEMISSING' };
+		NEEDS_REFILLING						= { level = -1, text = 'COURSEPLAY_NEEDS_REFILLING' };
+		NEEDS_UNLOADING						= { level = -1, text = 'COURSEPLAY_NEEDS_UNLOADING' };
+		OVERLOADING_POINT					= { level =  0, text = 'COURSEPLAY_REACHED_OVERLOADING_POINT' };
+		PICKUP_JAMMED						= { level = -2, text = 'COURSEPLAY_PICKUP_JAMMED' };
+		SLIPPING_1							= { level = -1, text = 'COURSEPLAY_SLIPPING_WARNING' };
+		SLIPPING_2							= { level = -2, text = 'COURSEPLAY_SLIPPING_WARNING' };
+		TRAFFIC								= { level = -1, text = 'COURSEPLAY_IS_IN_TRAFFIC' };
+		UNLOADING_BALE						= { level =  0, text = 'COURSEPLAY_UNLOADING_BALES' };
+		WAIT_POINT							= { level =  0, text = 'COURSEPLAY_REACHED_WAITING_POINT' };
+		WATER								= { level = -2, text = 'COURSEPLAY_WATER_WARNING' };
+		WEATHER								= { level =  0, text = 'COURSEPLAY_WEATHER_WARNING' };
+		WEIGHING_VEHICLE					= { level =  0, text = 'COURSEPLAY_IS_BEING_WEIGHED' };
+		WORK_END							= { level =  1, text = 'COURSEPLAY_WORK_END' };
+		REACHED_OVERLOADING_POINT			= { level =  0, text = 'COURSEPLAY_REACHED_OVERLOADING_POINT' };
+		NO_SELECTED_FILLTYPE				= { level =  0, text = 'COURSEPLAY_NO_SELECTED_FILLTYPE' };
+		REACHED_REFILLING_POINT				= { level =  0, text = 'COURSEPLAY_REACHED_REFILL_POINT' };
+		WRONG_FILLTYPE_FOR_TRIGGER			= { level =  0, text = 'COURSEPLAY_WRONG_FILLTYPE_FOR_TRIGGER' };
+		RUNCOUNTER_ERROR_FOR_TRIGGER		= { level =  0, text = 'COURSEPLAY_RUNCOUNTER_ERROR_FOR_TRIGGER' };
 	};
 end;
 
@@ -958,9 +964,10 @@ function CpManager:setGlobalInfoText(vehicle, refIdx, forceRemove,additionalStri
 	
 	
 	--print(string.format('setGlobalInfoText(vehicle, %s, %s)', tostring(refIdx), tostring(forceRemove)));
-	if forceRemove == true then
+	if forceRemove then
 		if g_server ~= nil then
-			CourseplayEvent.sendEvent(vehicle, "setMPGlobalInfoText", refIdx, false, forceRemove)
+		--	CourseplayEvent.sendEvent(vehicle, "setMPGlobalInfoText", refIdx, false, forceRemove)
+			InfoTextEvent.sendEvent(vehicle,refIdx,forceRemove)
 		end
 		if git.content[vehicle.rootNode][refIdx] then
 			git.content[vehicle.rootNode][refIdx] = nil;
@@ -980,7 +987,8 @@ function CpManager:setGlobalInfoText(vehicle, refIdx, forceRemove,additionalStri
 	--print(string.format('refIdx=%q, level=%s, text=%q, textLoc=%q', tostring(refIdx), tostring(data.level), tostring(data.text), tostring(courseplay:loc(data.text))));
 	if vehicle.cp.activeGlobalInfoTexts[refIdx] == nil or vehicle.cp.activeGlobalInfoTexts[refIdx] ~= data.level then
 		if g_server ~= nil then
-			CourseplayEvent.sendEvent(vehicle, "setMPGlobalInfoText", refIdx, false, forceRemove)
+		--	CourseplayEvent.sendEvent(vehicle, "setMPGlobalInfoText", refIdx, false, forceRemove)
+			InfoTextEvent.sendEvent(vehicle,refIdx,forceRemove)
 		end	
 		if vehicle.cp.activeGlobalInfoTexts[refIdx] == nil then
 			vehicle.cp.numActiveGlobalInfoTexts = vehicle.cp.numActiveGlobalInfoTexts + 1;
@@ -1168,13 +1176,6 @@ function CpManager:loadXmlSettings()
 		courseplay.fields.debugScannedFields 	  = Utils.getNoNil(getXMLBool(cpSettingsXml, key .. '#debugScannedFields'),		 courseplay.fields.debugScannedFields);
 		courseplay.fields.debugCustomLoadedFields = Utils.getNoNil(getXMLBool(cpSettingsXml, key .. '#debugCustomLoadedFields'), courseplay.fields.debugCustomLoadedFields);
 		courseplay.fields.scanStep				  = Utils.getNoNil( getXMLInt(cpSettingsXml, key .. '#scanStep'),				 courseplay.fields.scanStep);
-
-		-- ingame map
-		key = 'CPSettings.courseplayIngameMap';
-		self.ingameMapIconActive	 = Utils.getNoNil(getXMLBool(cpSettingsXml, key .. '#active'),		self.ingameMapIconActive);
-		self.ingameMapIconShowName	 = Utils.getNoNil(getXMLBool(cpSettingsXml, key .. '#showName'),	self.ingameMapIconShowName);
-		self.ingameMapIconShowCourse = Utils.getNoNil(getXMLBool(cpSettingsXml, key .. '#showCourse'),	self.ingameMapIconShowCourse);
-		self.ingameMapIconShowText = true --self.ingameMapIconShowName or self.ingameMapIconShowCourse;
 
 		-- 2D course
 		key = 'CPSettings.course2D';

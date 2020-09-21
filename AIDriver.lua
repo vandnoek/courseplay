@@ -121,6 +121,8 @@ AIDriver.proximityMinLimitedSpeed = 2
 -- if anything closer than this, we stop
 AIDriver.proximityLimitLow = 1
 
+AIDriver.APPROACH_AUGER_TRIGGER_SPEED = 3
+AIDriver.EMERGENCY_BRAKE_FORCE = 1000000
 -- we use this as an enum
 AIDriver.myStates = {
 	TEMPORARY = {}, -- Temporary course, dynamically generated, for example alignment or fruit avoidance
@@ -170,15 +172,46 @@ function AIDriver:init(vehicle)
 		self.vehicle.cp.settings:validateCurrentValues()
 	end
 	self:setHudContent()
+	self.triggerHandler = TriggerHandler(self,self.vehicle,self:getSiloSelectedFillTypeSetting())
+	self.triggerHandler:enableFuelLoading()
 end
 
-function AIDriver:writeUpdateStream(streamId)
+function AIDriver:updateLoadingText()
+	local fillableObject = self.triggerHandler.fillableObject
+	if fillableObject then
+		local fillLevel = fillableObject.object:getFillUnitFillLevel(fillableObject.fillUnitIndex)
+		local fillCapacity = fillableObject.object:getFillUnitCapacity(fillableObject.fillUnitIndex)
+		if fillLevel and fillCapacity then
+			if fillableObject.isLoading then 
+				courseplay:setInfoText(self.vehicle, string.format("COURSEPLAY_LOADING_AMOUNT;%d;%d",math.floor(fillLevel),fillCapacity))
+			else
+				courseplay:setInfoText(self.vehicle, string.format("COURSEPLAY_UNLOADING_AMOUNT;%d;%d",math.floor(fillLevel),fillCapacity))
+			end
+		end
+	end
+end
+
+function AIDriver:writeUpdateStream(streamId, connection, dirtyMask)
+	self.triggerHandler:writeUpdateStream(streamId)
 	streamWriteString(streamId,self.state.name)
+	if self.active then 
+		streamWriteBool(streamId,true)
+	else 
+		streamWriteBool(streamId,false)
+	end
+--	streamWriteBool(streamId,self.vehicle.cp.isDriving)
 end 
 
-function AIDriver:readUpdateStream(streamId)
+function AIDriver:readUpdateStream(streamId, timestamp, connection)
+	self.triggerHandler:readUpdateStream(streamId)
 	local nameState = streamReadString(streamId)
 	self.state = self.states[nameState]
+	self.active = streamReadBool(streamId)
+--	self.vehicle.cp.isDriving = streamReadBool(streamId)
+end
+
+function AIDriver:postSync()
+
 end
 
 function AIDriver:setHudContent()
@@ -218,7 +251,7 @@ function AIDriver:beforeStart()
 	if self.collisionDetector == nil then
 		self.collisionDetector = CollisionDetector(self.vehicle)
 	end
-
+	self.normalBrakeForce = self.vehicle.spec_motorized.brakeForce
 	self:setBackMarkerNode(self.vehicle)
 	self:setFrontMarkerNode(self.vehicle)
 
@@ -227,6 +260,13 @@ function AIDriver:beforeStart()
 	self.firstReversingWheeledWorkTool = courseplay:getFirstReversingWheeledWorkTool(self.vehicle)
 	-- for now, pathfinding generated courses can't be driven by towed tools
 	self.allowReversePathfinding = self.firstReversingWheeledWorkTool == nil
+	if self.vehicle:getAINeedsTrafficCollisionBox() then
+		courseplay.debugVehicle(3,self.vehicle,"Making sure cars won't stop around us")
+		-- something deep inside the Giants vehicle sets the translation of this box to whatever
+		-- is in aiTrafficCollisionTranslation, if you do a setTranslation() it won't remain there...
+		self.vehicle.spec_aiVehicle.aiTrafficCollisionTranslation[2] = -1000
+	end
+	self.triggerHandler:onStart()
 end
 
 --- Start driving
@@ -240,7 +280,8 @@ function AIDriver:start(startingPoint)
 	-- main course is the one generated/loaded/recorded
 	self.mainCourse = Course(self.vehicle, self.vehicle.Waypoints)
 	local ix = self.mainCourse:getStartingWaypointIx(AIDriverUtil.getDirectionNode(self.vehicle), startingPoint)
-	self:debug('AI driver in mode %d starting at %d/%d waypoints', self:getMode(), ix, self.mainCourse:getNumberOfWaypoints())
+	self:info('AI driver in mode %d starting at %d/%d waypoints (%s)',
+			self:getMode(), ix, self.mainCourse:getNumberOfWaypoints(), tostring(startingPoint))
 	self:startCourseWithAlignment(self.mainCourse, ix)
 end
 
@@ -265,6 +306,7 @@ end
 --- @param msgReference string as defined in globalInfoText.msgReference
 function AIDriver:stop(msgReference)
 	self:deleteCollisionDetector()
+	self.triggerHandler:onStop()
 	-- not much to do here, see the derived classes
 	self:setInfoText(msgReference)
 	self.state = self.states.STOPPED
@@ -281,6 +323,7 @@ end
 function AIDriver:continue()
 	self:debug('Continuing...')
 	self.state = self.states.RUNNING
+	self.triggerHandler:onContinue()
 	-- can be stopped for various reasons and those can have different msgReferences, so
 	-- just remove all, if there's a condition which requires a message it'll call setInfoText() again anyway.
 	self:clearAllInfoTexts()
@@ -333,6 +376,13 @@ function AIDriver:update(dt)
 	self:payWages(dt)
 	self:detectSlipping()
 	self:resetSpeed()
+	self:updateLoadingText()
+	self.triggerHandler:onUpdate(dt)
+end
+
+--- UpdateTick AI driver
+function AIDriver:updateTick(dt)
+	self.triggerHandler:onUpdateTick(dt)
 end
 
 --- Main driving function
@@ -347,11 +397,10 @@ function AIDriver:drive(dt)
 
 	self:updateInfoText()
 
-	if self.state == self.states.STOPPED then
+	if self.state == self.states.STOPPED or self.triggerHandler:isLoading() or self.triggerHandler:isUnloading() then
 		self:hold()
 		self:continueIfWaitTimeIsOver()
 	end
-
 	self:driveCourse(dt)
 	self:drawTemporaryCourse()
 end
@@ -363,10 +412,9 @@ function AIDriver:driveCourse(dt)
 	-- check if reversing
 	local lx, lz, moveForwards, isReverseActive = self:getReverseDrivingDirection()
 	-- stop for fuel if needed
-	if not courseplay:checkFuel(self.vehicle, lx, lz, true) then
+	if not self:checkFuel() then 
 		self:hold()
 	end
-
 	if not self:getIsEngineReady() then
 		if self:getSpeed() > 0 and self.allowedToDrive then
 			self:startEngineIfNeeded()
@@ -374,16 +422,19 @@ function AIDriver:driveCourse(dt)
 			self:debugSparse('Wait for the engine to start')
 		end
 	end
-
 	-- use the recorded speed by default
 	if not self:hasTipTrigger() then
 		self:setSpeed(self:getRecordedSpeed())
 	end
-
-	if self:getIsInFilltrigger() then
+	local isInTrigger, isAugerWagonTrigger = self.triggerHandler:isInTrigger()
+--	if self:getIsInFilltrigger() or self:hasTipTrigger() then-- or isInTrigger then
+	if isInTrigger then 
 		self:setSpeed(self.vehicle.cp.speeds.approach)
+		if isAugerWagonTrigger then 
+			self:setSpeed(self.APPROACH_AUGER_TRIGGER_SPEED)
+		end
 	end
-
+	
 	self:slowDownForWaitPoints()
 
 	self:stopEngineIfNotNeeded()
@@ -571,7 +622,7 @@ function AIDriver:onEndCourse()
 			local parkDestination = self.vehicle.spec_autodrive:GetParkDestination(self.vehicle)
 			self.vehicle.spec_autodrive:StartDrivingWithPathFinder(self.vehicle, parkDestination, -3, nil, nil, nil)
 		end
-	elseif self.vehicle.cp.stopAtEnd then
+	elseif self.vehicle.cp.settings.stopAtEnd:is(true) then
 		if self.state ~= self.states.STOPPED then
 			self:stop('END_POINT')
 		end
@@ -742,10 +793,15 @@ function AIDriver:getTotalLength()
 	return self.vehicle.cp.totalLength
 end
 
+--- Get waypoint closest to the current position of the vehicle
+function AIDriver:getRelevantWaypointIx()
+	return self.ppc:getRelevantWaypointIx()
+end
+
 function AIDriver:getRecordedSpeed()
 	-- default is the street speed (reduced in corners)
 	local speed = self:getDefaultStreetSpeed(self.ppc:getCurrentWaypointIx()) or self.vehicle.cp.speeds.street
-	if self.vehicle.cp.speeds.useRecordingSpeed then
+	if self.vehicle.cp.settings.useRecordingSpeed:is(true) then
 		-- use default street speed if there's no recorded speed.
 		speed = math.min(self.course:getAverageSpeed(self.ppc:getCurrentWaypointIx(), 4) or speed, speed)
 	end
@@ -777,7 +833,7 @@ function AIDriver:isNearFillPoint()
 	if self.course == nil then
 		return false
 	else
-		return self.course:havePhysicallyPassedWaypoint(self:getDirectionNode(),#self.course.waypoints) and self.ppc:getCurrentWaypointIx() <= 3;
+		return self.course:havePhysicallyPassedWaypoint(self:getDirectionNode(),#self.course.waypoints) and self.ppc:getCurrentWaypointIx() <= 5;
 	end
 end
 
@@ -850,7 +906,11 @@ end
 
 function AIDriver:drawTemporaryCourse()
 	if not self.course:isTemporary() then return end
-	if not courseplay.debugChannels[self.debugChannel] then return end
+	if self.vehicle.cp.settings.enableVisualWaypointsTemporary:is(false) and
+			not courseplay.debugChannels[self.debugChannel] then
+		return
+	end
+
 	for i = 1, self.course:getNumberOfWaypoints() do
 		local x, y, z = self.course:getWaypointPosition(i)
 		cpDebug:drawPoint(x, y + 3, z, 10, 0, 0)
@@ -865,25 +925,11 @@ end
 function AIDriver:enableCollisionDetection()
 	courseplay.debugVehicle(3,self.vehicle,'Collision detection enabled')
 	self.collisionDetectionEnabled = true
-	-- move the big collision box around the vehicle underground because this will stop
-	-- traffic (not CP drivers though) around us otherwise
-	if self.vehicle:getAINeedsTrafficCollisionBox() then
-		courseplay.debugVehicle(3,self.vehicle,"Making sure cars won't stop around us")
-		-- something deep inside the Giants vehicle sets the translation of this box to whatever
-		-- is in aiTrafficCollisionTranslation, if you do a setTranslation() it won't remain there...
-		self.vehicle.spec_aiVehicle.aiTrafficCollisionTranslation[2] = -1000
-	end
 end
 
 function AIDriver:disableCollisionDetection()
 	courseplay.debugVehicle(3,self.vehicle,'Collision detection disabled')
 	self.collisionDetectionEnabled = false
-	-- move the big collision box around the vehicle back over the ground so
-	-- game traffic around us will stop while we are working on the field
-	if self.vehicle:getAINeedsTrafficCollisionBox() then
-		courseplay.debugVehicle(3,self.vehicle,'Cars will stop around us again.')
-		self.vehicle.spec_aiVehicle.aiTrafficCollisionTranslation[2] = 0
-	end
 end
 
 function AIDriver:detectCollision(dt)
@@ -916,7 +962,7 @@ function AIDriver:detectCollision(dt)
 end
 
 function AIDriver:areBeaconLightsEnabled()
-	return self.vehicle.cp.warningLightsMode > courseplay.lights.WARNING_LIGHTS_NEVER
+	return self.vehicle.cp.settings.warningLightsMode:get() > WarningLightsModeSetting.WARNING_LIGHTS_NEVER
 end
 
 function AIDriver:updateLights()
@@ -1101,9 +1147,10 @@ function AIDriver:dischargeAtTipTrigger(dt)
 				--we are reversing into the BGA Silo. We are taking the last rev waypoint as virtual unloadpoint and start tipping there the same way as on unload point
 				allowedToDrive, takeOverSteering = self:dischargeAtUnloadPoint(dt,self.course:getLastReverseAt(self.ppc:getCurrentWaypointIx()))     
 			end
+			courseplay:setInfoText(self.vehicle, "COURSEPLAY_TIPTRIGGER_REACHED");
 		else
-			--using all standard tip triggers
-			allowedToDrive = self:tipIntoStandardTipTrigger()
+			--dischargeAtObjects is handled by the new TriggerHandler
+		--	allowedToDrive = self:tipIntoStandardTipTrigger()
 		end;
 	end
 	return allowedToDrive, takeOverSteering
@@ -1224,7 +1271,6 @@ function AIDriver:onUnLoadCourse(allowedToDrive, dt)
 		and not self:isNearFillPoint() then
 			self:setSpeed(self.vehicle.cp.speeds.approach)
 			allowedToDrive, takeOverSteering = self:dischargeAtTipTrigger(dt)
-			courseplay:setInfoText(self.vehicle, "COURSEPLAY_TIPTRIGGER_REACHED");
 		end
 	--end
 	-- tractor reaches unloadPoint
@@ -1406,7 +1452,7 @@ end
 --- pathfinding considers any collision-free path valid, also outside of the field.
 ---@return boolean true when a pathfinding successfully started
 function AIDriver:driveToPointWithPathfinding(waypoint, zOffset, course, ix, fieldNum)
-	if self.vehicle.cp.realisticDriving then
+	if self.vehicle.cp.settings.useRealisticDriving:is(true) then
 		if not self.pathfinder or not self.pathfinder:isActive() then
 			self.courseAfterPathfinding = course
 			self.waypointIxAfterPathfinding = ix
@@ -1523,7 +1569,7 @@ end;
 --- Is auto stop engine enabled?
 function AIDriver:isEngineAutoStopEnabled()
 	-- do not auto stop engine when auto motor start is enabled as it'll try to restart the engine on each update tick.
-	return self.vehicle.cp.saveFuelOptionActive and not g_currentMission.missionInfo.automaticMotorStartEnabled
+	return self.vehicle.cp.settings.saveFuelOption:is(true) and not g_currentMission.missionInfo.automaticMotorStartEnabled
 end
 
 --- Check the engine state and stop if we have the fuel save option and been stopped too long
@@ -1558,15 +1604,26 @@ function AIDriver:onDraw()
 	if CpManager.isDeveloper and self.pathfinder then
 		PathfinderUtil.showNodes(self.pathfinder)
 	end
-
 end
-
+--TODO: do we want to continue using this setter/getter for driveUnloadNow??
 function AIDriver:setDriveUnloadNow(driveUnloadNow)
 	courseplay:setDriveUnloadNow(self.vehicle, driveUnloadNow or false)
 end
 
+function AIDriver:setDriveNow()
+	if self:isWaiting() then 
+		self:continue()
+		self.vehicle.cp.wait = false
+		--is this one needed ??
+		if self.vehicle.cp.mode == 1 or self.vehicle.cp.mode == 3 then
+			self.vehicle.cp.isUnloaded = true;
+		end;
+	end
+	self.triggerHandler:onDriveNow()
+end
+
 function AIDriver:getDriveUnloadNow()
-	return self.vehicle.cp.driveUnloadNow
+	return self.vehicle.cp.settings.driveUnloadNow:get()
 end
 
 function AIDriver:refreshHUD()
@@ -1792,4 +1849,42 @@ function AIDriver:checkProximitySensor(maxSpeed, allowedToDrive, moveForwards)
 	local newSpeed = AIDriver.proximityMinLimitedSpeed + normalizedD * deltaV
 	self:debugSparse('proximity: d = %.1f (%d %%), speed = %.1f', d, 100 * normalizedD, newSpeed)
 	return newSpeed, allowedToDrive
+end
+
+function AIDriver:isAutoDriveDriving()
+	return false
+end
+
+function AIDriver:checkFuel()
+	--override
+	local allowedToDrive = true
+	if self.vehicle.getConsumerFillUnitIndex ~= nil then
+		local dieselIndex = self.vehicle:getConsumerFillUnitIndex(FillType.DIESEL)
+		local currentFuelPercentage = self.vehicle:getFillUnitFillLevelPercentage(dieselIndex) * 100;
+		if currentFuelPercentage < 5 then
+			allowedToDrive = false;
+			CpManager:setGlobalInfoText(self.vehicle, 'FUEL_MUST');
+		elseif currentFuelPercentage < 20 then
+			CpManager:setGlobalInfoText(self.vehicle, 'FUEL_SHOULD');
+		elseif currentFuelPercentage < 99.99 then
+		--	CpManager:setGlobalInfoText(vehicle, 'FUEL_IS');
+		end;
+	end
+	return allowedToDrive;
+end
+
+function AIDriver:getSiloSelectedFillTypeSetting()
+
+end
+
+function AIDriver:getSeperateFillTypeLoadingSetting()
+
+end
+
+function AIDriver:notAllowedToLoadNextFillType()
+
+end
+
+function AIDriver:getCanShowDriveOnButton()
+	return self.triggerHandler:isLoading() or self.triggerHandler:isUnloading() or self:isWaiting()
 end

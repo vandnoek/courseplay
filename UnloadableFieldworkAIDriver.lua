@@ -39,6 +39,7 @@ function UnloadableFieldworkAIDriver:init(vehicle)
 	self:initStates(UnloadableFieldworkAIDriver.myStates)
 	self.mode = courseplay.MODE_FIELDWORK
 	self.stopImplementsWhileUnloadOrRefillOnField = false
+	self.refillUntilPct = vehicle.cp.settings.refillUntilPct
 end
 
 function UnloadableFieldworkAIDriver:setHudContent()
@@ -47,20 +48,22 @@ function UnloadableFieldworkAIDriver:setHudContent()
 end
 
 function UnloadableFieldworkAIDriver.create(vehicle)
-	if FieldworkAIDriver.hasImplementWithSpecialization(vehicle, BaleLoader) then
+	if AIDriverUtil.hasAIImplementWithSpecialization(vehicle, BaleLoader) then
 		return BaleLoaderAIDriver(vehicle)
-	elseif FieldworkAIDriver.hasImplementWithSpecialization(vehicle, BaleWrapper) then
+	elseif AIDriverUtil.hasAIImplementWithSpecialization(vehicle, BaleWrapper) then
 		-- Bale wrapper is derived from baler so must check it first to make sure that we instantiate a
 		-- BaleWrapperAIDriver if we have both the baler and the balewrapper specialization
 		return BaleWrapperAIDriver(vehicle)
-	elseif FieldworkAIDriver.hasImplementWithSpecialization(vehicle, Baler) then
+	elseif AIDriverUtil.hasAIImplementWithSpecialization(vehicle, Baler) then
 		return BalerAIDriver(vehicle)
 	elseif SpecializationUtil.hasSpecialization(Combine, vehicle.specializations) or
-		FieldworkAIDriver.hasImplementWithSpecialization(vehicle, Combine) then
+		AIDriverUtil.hasAIImplementWithSpecialization(vehicle, Combine) then
 		return CombineAIDriver(vehicle)
 	elseif SpecializationUtil.hasSpecialization(Plow, vehicle.specializations) or
-		FieldworkAIDriver.hasImplementWithSpecialization(vehicle, Plow) then
+		AIDriverUtil.hasAIImplementWithSpecialization(vehicle, Plow) then
 		return PlowAIDriver(vehicle)
+    elseif FS19_addon_strawHarvest and AIDriverUtil.hasAIImplementWithSpecialization(vehicle, FS19_addon_strawHarvest.StrawHarvestPelletizer) then
+        return CombineAIDriver(vehicle)
 	else
 		return UnloadableFieldworkAIDriver(vehicle)
 	end
@@ -80,6 +83,7 @@ function UnloadableFieldworkAIDriver:drive(dt)
 	-- only reason we need this is to update the totalFillLevel for reverse.lua so it will
 	-- do a raycast for tip triggers (side effects, side effects all over the place, killing me...)
 	courseplay:updateFillLevelsAndCapacities(self.vehicle)
+	self.triggerHandler:disableFillTypeUnloading()
 	-- the rest is the same as the parent class
 	FieldworkAIDriver.drive(self, dt)
 end
@@ -114,7 +118,7 @@ function UnloadableFieldworkAIDriver:driveUnloadOrRefill(dt)
 			self:setSpeed(self.vehicle.cp.speeds.turn)
 		end
 	end
-	
+	self.triggerHandler:enableFillTypeUnloading()
 	-- tractor reaches unloadPoint
 	if isNearUnloadPoint then
 		self:setSpeed(self.vehicle.cp.speeds.approach)
@@ -178,7 +182,7 @@ function UnloadableFieldworkAIDriver:isLevelOk(workTool, index, fillUnit)
 		self:debugSparse('Stop for unloading: %s: %.2f', fillTypeName, pc )
 		return false
 	end
-	if self:isValidFillType(fillUnit.fillType) and pc > self.fillLevelFullPercentage then
+	if self:isValidFillType(fillUnit.fillType) and pc > self.fillLevelFullPercentage or pc>self.refillUntilPct:get() then
 		self:debugSparse('Full: %s: %.2f', fillTypeName, pc )
 		return false
 	end
@@ -236,5 +240,13 @@ function UnloadableFieldworkAIDriver:setLightsMask(vehicle)
 		vehicle:setLightsTypesMask(courseplay.lights.HEADLIGHT_STREET)
 	else
 		vehicle:setLightsTypesMask(courseplay.lights.HEADLIGHT_FULL)
+	end
+end
+
+function UnloadableFieldworkAIDriver:setDriveNow()
+	if self.state == self.states.ON_FIELDWORK_COURSE then
+		self:stopAndChangeToUnload()
+	else
+		AIDriver.setDriveNow(self)
 	end
 end

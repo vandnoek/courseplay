@@ -20,8 +20,8 @@ function courseplay:onMouseEvent(posX, posY, isDown, isUp, mouseButton)
 	local mouseIsInHudArea = vehicle.cp.mouseCursorActive and courseplay:mouseIsInArea(posX, posY, hudGfx.x1, hudGfx.x2, hudGfx.y1, vehicle.cp.suc.active and courseplay.hud.suc.visibleArea.y2 or hudGfx.y2);
 	-- if not mouseIsInHudArea then return; end;
 
-	-- should we switch vehicles?
-	if courseplay.globalSettings.clickToSwitch:is(true) and vehicle.cp.mouseCursorActive and vehicle.cp.hud.show and vehicle:getIsEntered() and not mouseIsInHudArea and
+	-- should we switch vehicles? Removed condition: vehicle.cp.mouseCursorActive <- is it important that it have to be CP mouseCursor ?
+	if courseplay.globalSettings.clickToSwitch:is(true) and vehicle:getIsEntered() and not mouseIsInHudArea and
 		mouseButton == courseplay.inputBindings.mouse.primaryButtonId then
 			clickToSwitch:updateMouseState(vehicle, posX, posY, isDown, isUp, mouseButton)
 	end
@@ -175,6 +175,7 @@ end
 
 function courseplay:executeFunction(self, func, value, page)
 	courseplay:debug("executeFunction: function: " .. func .. " value: " .. tostring(value) .. " page: " .. tostring(page), 5)
+	--legancy code
 	if func == "setMPGlobalInfoText" then
 		CpManager:setGlobalInfoText(self, value, page)
 		courseplay:debug("					setting infoText: "..value..", force remove: "..tostring(page),5)
@@ -501,8 +502,7 @@ function courseplay.inputActionCallback(vehicle, actionName, keyStatus)
 		elseif actionName == 'COURSEPLAY_DRIVENOW' and vehicle.cp.HUD1noWaitforFill and vehicle.cp.canDrive and vehicle.cp.isDriving then
 			vehicle:setCourseplayFunc('setDriveUnloadNow', true, false, 1);
 		elseif actionName == 'COURSEPLAY_STOP_AT_END' and vehicle.cp.canDrive then
-			vehicle:setCourseplayFunc('setStopAtEnd', not vehicle.cp.stopAtEnd, false, 1);
-		
+			vehicle:setCourseplayFunc('Setting:stopAtEnd:toggle',nil,false,1)
 		--Switch Mode, but doesn't work right now, not sure why
 		elseif vehicle.cp.canSwitchMode and vehicle.cp.nextMode and actionName == 'COURSEPLAY_NEXTMODE' then
 			vehicle:setCourseplayFunc('setCpMode', vehicle.cp.nextMode, false, 1);

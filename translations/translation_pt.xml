@@ -440,8 +440,9 @@
 		<text name="COURSEPLAY_YES_NO_PIPE_ALWAYS_UNFOLD"					text="Pipe always out when Combine waits for unload" />
 		<text name="COURSEPLAY_SHOW_MINI_HUD"								text="Show Mini-HUD" />
 		<text name="COURSEPLAY_YES_NO_SHOW_MINI_HUD"						text="Toggle show Mini-HUD" />
-		<text name="COURSEPLAY_STRAW_ON_HEADLAND"							text="Straw discharge on headland" />
-		<text name="COURSEPLAY_YES_NO_STRAW_ON_HEADLAND"					text="Turn on/off the Straw discharge on headland" />
+		<text name="COURSEPLAY_STRAW_ON_HEADLAND"							text="Harvester Straw discharge" />
+		<text name="COURSEPLAY_STRAW_ON_ONLY_CENTER"						text="only Center" />
+		<text name="COURSEPLAY_YES_NO_STRAW_ON_HEADLAND"					text="Straw discharge on/off/only Center" />
 		<text name="COURSEPLAY_FERTILIZE_OPTION"                            text="Use fertilizer of seeder" />
         <text name="COURSEPLAY_YES_NO_FERTILIZE_OPTION"                     text="Activate or deactivate the fertilizer function of the seeder" />
 		<text name="COURSEPLAY_ENABLE_OPEN_HUD_WITH_MOUSE_GLOBAL"			text="Right click HUD" />
@@ -449,10 +450,10 @@
 		<text name="COURSEPLAY_ENABLE_OPEN_HUD_WITH_MOUSE_VEHICLE"			text="Right click HUD" />
 		<text name="COURSEPLAY_YES_NO_ENABLE_OPEN_HUD_WITH_MOUSE_VEHICLE"	text="Enable/Disable right mouse click to open the HUD (current vehicle)" />
 
-		<text name="COURSEPLAY_ENABLE_VISUAL_WAYPOINTS_TEMPORARY"			text="Pathfinder Waypoints" />
-		<text name="COURSEPLAY_YES_NO_ENABLE_VISUAL_WAYPOINTS_TEMPORARY"	text="Shows Pathfinder Lines" />
-		<text name="COURSEPLAY_HEADLAN_DOVERLAP_PERCENT"					text="Headland Overlap" />
-		<text name="COURSEPLAY_HEADLAN_DOVERLAP_PERCENT_TOOLTIP"			text="Headland Overlap in percent" />
+		<text name="COURSEPLAY_ENABLE_VISUAL_WAYPOINTS_TEMPORARY"			text="Show temporary waypoints" />
+		<text name="COURSEPLAY_ENABLE_VISUAL_WAYPOINTS_TEMPORARY_TOOLTIP"	text="Show temporary courses (like pathfinding or turns)" />
+		<text name="COURSEPLAY_HEADLAND_OVERLAP_PERCENT"					text="Headland overlap" />
+		<text name="COURSEPLAY_HEADLAND_OVERLAP_PERCENT_TOOLTIP"			text="Overlap between headland passes in percent" />
 
 		<text name="COURSEPLAY_IMPLEMENT_RAISE_LOWER_EARLY"				   	text="Cedo" />
 		<text name="COURSEPLAY_IMPLEMENT_RAISE_LOWER_LATE"				   	text="Tarde" />
@@ -469,5 +470,19 @@
 		<text name="COURSEPLAY_SELF_UNLOAD_TOOLTIP"							text="Ceifadeira se descarrega automaticamente quando estiver cheia e um carreto estiver próximo" />
 		<text name="COURSEPLAY_ALLOW_REVERSE_FOR_PATHFINDING_IN_TURNS"	   	text="Reversing for pathfinding in turns" />
 		<text name="COURSEPLAY_ALLOW_REVERSE_FOR_PATHFINDING_IN_TURNS_TOOLTIP"	text="Allow finding a turn path which needs reverse driving (with non-towed implements only)" />
-		<!-- Replace marker, do not remove! --></texts>
+
+		<text name="COURSEPLAY_NO_SELECTED_FILLTYPE"						text="no fillType selected!/no Refillcourse supported!!" />
+		<text name="COURSEPLAY_ADD_FILLTYPE"								text="add new fillType" />
+		<text name="COURSEPLAY_REACHED_REFILL_POINT"						text="has reached refill point." />
+		<text name="COURSEPLAY_WRONG_FILLTYPE_FOR_TRIGGER"					text="has wrong fillType for Trigger." />
+
+		<text name="COURSEPLAY_ALLOW_UNLOAD_ON_FIRST_HEADLAND"				text="Unload harvester on first headland" />
+		<text name="COURSEPLAY_ALLOW_UNLOAD_ON_FIRST_HEADLAND_TOOLTIP"		text="Allow unloading a moving harvester on the first headland, unloader drives off the field." />
+		<text name="COURSEPLAY_RUNCOUNTER_ERROR_FOR_TRIGGER"                text="last runCounter = 0" />
+        <text name="COURSEPLAY_LOADING_SEPERATE_FILLTYPES"                  text="Loading seperate FillTypes" />
+        <text name="COURSEPLAY_LOADING_SEPERATE_FILLTYPES_TRAILERS"         text="Seperate Trailers:" />
+		<text name="COURSEPLAY_UNLOADING_AMOUNT"							text="Unloading amount %d of %d" />
+		<text name="COURSEPLAY_MANUAL_LOADING"								text="manual Loading" />
+		<!-- Replace marker, do not remove! -->
+	</texts>
 </l10n>

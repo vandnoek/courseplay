@@ -43,6 +43,7 @@ courseplay.clock = 0;
 	['3e701b6620453edcd4c170543e72788b'] = true; -- Peter
 	['0d8e45a8ed916c1cd40820165b81e12d'] = true; -- Tensuko
 	['97c8e6d0d14f4e242c3c37af68cc376c'] = true; -- Dan
+	['8f5e9e8fb5a23375afbb3b7abbc6335c'] = true; -- Goof
 };
 
 local function initialize()
@@ -80,8 +81,10 @@ local function initialize()
 		'vehicles',
 		'PurePursuitController',
 		'Waypoint',
+		'TriggerHandler',
 		'AIDriver',
 		'CombineUnloadAIDriver',
+		'OverloaderAIDriver',
 		'CombineUnloadManager',
 		'GrainTransportAIDriver',
 		'FieldworkAIDriver',
@@ -122,6 +125,14 @@ local function initialize()
 		'gui/GlobalSettingsPage',
 		'gui/VehicleSettingsPage',
 		'Events/StartStopEvent',
+		'Events/UnloaderEvents',
+		'Events/SiloSelectedFillTypeEvent',
+		'Events/StartStopWorkEvent',
+		'Events/SettingsListEvent',
+		'Events/AssignedCombinesEvents',
+		'Events/CourseEvent',
+		'Events/InfoTextEvent',
+		'Generic/LinkedList'
 	};
 
 	local numFiles, numFilesLoaded = #(fileList) + 2, 2; -- + 2 as 'register.lua', 'courseplay.lua' have already been loaded
@@ -188,12 +199,8 @@ local function setGlobalData()
 	StartingPointSetting.START_AT_CURRENT_POINT = 3;
 	StartingPointSetting.START_AT_NEXT_POINT = 4;
 
-	-- warning lights options
-	courseplay.lights.WARNING_LIGHTS_NEVER = 0;
-	courseplay.lights.WARNING_LIGHTS_BEACON_ON_STREET = 1;
-	courseplay.lights.WARNING_LIGHTS_BEACON_HAZARD_ON_STREET = 2;
-	courseplay.lights.WARNING_LIGHTS_BEACON_ALWAYS = 3;
-
+	-- lights options
+	-- this should have a Setting Class like WarningLightsModeSetting
 	courseplay.lights.HEADLIGHT_OFF = 0;
 	courseplay.lights.HEADLIGHT_STREET = 1;
 	courseplay.lights.HEADLIGHT_FULL = 7;
@@ -226,29 +233,6 @@ local function setGlobalData()
 		courseplay.numberDecimalSeparator = langNumData[g_languageShort][2];
 	end;
 
-	--MULTIPLAYER
-	
-	courseplay.checkValues = {
-		"infoText",
-		"HUD0noCourseplayer",
-		"HUD0wantsCourseplayer",
-		"HUD0tractorName",
-		"HUD0tractorForcedToStop",
-		"HUD0tractor",
-		"HUD0combineForcedSide",
-		"HUD0isManual",
-		"HUD0turnStage",
-		"HUD1notDrive",
-		"HUD1wait",
-		"HUD1noWaitforFill",
-		"HUD4combineName",
-		"HUD4hasActiveCombine",
-		"HUD4savedCombine",
-		"HUD4savedCombineName"
-		
-	};
-
-
 	--UTF8
 	courseplay.allowedCharacters = courseplay:getAllowedCharacters();
 	courseplay.utf8normalization = courseplay:getUtf8normalization();
@@ -278,100 +262,68 @@ local function setGlobalData()
 		
 	courseplay.multiplayerSyncTable = {
 	
-	[1]={name='self.cp.automaticCoverHandling',dataFormat='Bool'},
-	[2]={name='self.cp.automaticUnloadingOnField',dataFormat='Bool'},
-	[3]={name='self.cp.mode',dataFormat='Int'},
-	[4]={name='self.cp.turnDiameterAuto',dataFormat='Float'},
-	[5]={name='self.cp.canDrive',dataFormat='Bool'},
-	[6]={name='self.cp.combineOffsetAutoMode',dataFormat='Bool'},
-	[7]={name='self.cp.combineOffset',dataFormat='Float'},
-	[8]={name='self.cp.currentCourseName',dataFormat='String'},
-	[9]={name='self.cp.driverPriorityUseFillLevel',dataFormat='Bool'},
-	[10]={name='self.cp.drivingDirReverse',dataFormat='Bool'},
-	[11]={name='self.cp.fieldEdge.customField.isCreated',dataFormat='Bool'},
-	[12]={name='self.cp.fieldEdge.customField.fieldNum',dataFormat='Int'},
-	[13]={name='self.cp.fieldEdge.customField.selectedFieldNumExists',dataFormat='Bool'},
-	[14]={name='self.cp.fieldEdge.selectedField.fieldNum',dataFormat='Int'}, 
-	[15]={name='self.cp.globalInfoTextLevel',dataFormat='Int'},
-	[16]={name='self.cp.hasBaleLoader',dataFormat='Bool'},
-	[17]={name='self.cp.hasStartingCorner',dataFormat='Bool'},
-	[18]={name='self.cp.hasStartingDirection',dataFormat='Bool'},
-	[19]={name='self.cp.hasValidCourseGenerationData',dataFormat='Bool'},
-	[20]={name='self.cp.headland.numLanes',dataFormat='Int'},
-	[21]={name='self.cp.headland.turnType',dataFormat='Int'},
-    [22]={name='self.cp.hasUnloadingRefillingCourse	',dataFormat='Bool'},
-	[23]={name='self.cp.infoText',dataFormat='String'},
-	[24]={name='self.cp.returnToFirstPoint',dataFormat='Bool'},
-	[25]={name='self.cp.ridgeMarkersAutomatic',dataFormat='Bool'},
-	[26]={name='self.cp.shovelStopAndGo',dataFormat='Bool'},
-	[27]={name='self.cp.startAtPoint',dataFormat='Int'}, -- TODO: remove!
-	[28]={name='self.cp.stopAtEnd',dataFormat='Bool'},
-	[29]={name='self.cp.isDriving',dataFormat='Bool'},
-	[30]={name='self.cp.hud.openWithMouse',dataFormat='Bool'},
-	[31]={name='self.cp.realisticDriving',dataFormat='Bool'},
-	[32]={name='self.cp.driveOnAtFillLevel',dataFormat='Float'},
-	[33]={name='self.cp.followAtFillLevel',dataFormat='Float'},
-	[34]={name='self.cp.refillUntilPct',dataFormat='Float'},
-	[35]={name='self.cp.tipperOffset',dataFormat='Float'},
-	[36]={name='self.cp.tipperHasCover',dataFormat='Bool'},
-	[37]={name='self.cp.workWidth',dataFormat='Float'}, 
-	[38]={name='self.cp.turnDiameterAutoMode',dataFormat='Bool'},
-	[39]={name='self.cp.turnDiameter',dataFormat='Float'},
-	[40]={name='self.cp.speeds.useRecordingSpeed',dataFormat='Bool'},
-	[41]={name='self.cp.coursePlayerNum',dataFormat='Int'},
-	[42]={name='self.cp.laneOffset',dataFormat='Float'},
-	[43]={name='self.cp.toolOffsetX',dataFormat='Float'},
-	[44]={name='self.cp.toolOffsetZ',dataFormat='Float'},
-	[45]={name='self.cp.loadUnloadOffsetX',dataFormat='Float'},
-	[46]={name='self.cp.loadUnloadOffsetZ',dataFormat='Float'},
-	[47]={name='self.cp.hud.currentPage',dataFormat='Int'},
-	[48]={name='self.cp.HUD0noCourseplayer',dataFormat='Bool'},
-	[49]={name='self.cp.HUD0wantsCourseplayer',dataFormat='Bool'},
-	[50]={name='self.cp.HUD0combineForcedSide',dataFormat='String'},
-	[51]={name='self.cp.HUD0isManual',dataFormat='Bool'},
-	[52]={name='self.cp.HUD0turnStage',dataFormat='Int'},
-	[53]={name='self.cp.HUD0tractorForcedToStop',dataFormat='Bool'},
-	[54]={name='self.cp.HUD0tractorName',dataFormat='String'},
-	[55]={name='self.cp.HUD0tractor',dataFormat='Bool'},
-	[56]={name='self.cp.HUD1wait',dataFormat='Bool'},
-	[57]={name='self.cp.HUD1noWaitforFill',dataFormat='Bool'},
-	[58]={name='self.cp.HUD4hasActiveCombine',dataFormat='Bool'},
-	[59]={name='self.cp.HUD4combineName',dataFormat='String'},
-	[60]={name='self.cp.HUD4savedCombine',dataFormat='Bool'},
-	[61]={name='self.cp.HUD4savedCombineName',dataFormat='String'},
-	[62]={name='self.cp.waypointIndex',dataFormat='Int'},
-	[63]={name='self.cp.isRecording',dataFormat='Bool'},
-	[64]={name='self.cp.recordingIsPaused',dataFormat='Bool'},
-	[65]={name='self.cp.searchCombineAutomatically',dataFormat='Bool'},
-	[66]={name='self.cp.searchCombineOnField',dataFormat='Int'},
-	[67]={name='self.cp.speeds.turn',dataFormat='Float'},
-	[68]={name='self.cp.speeds.field',dataFormat='Float'},
-	[69]={name='self.cp.speeds.reverse',dataFormat='Float'},
-	[70]={name='self.cp.speeds.street',dataFormat='Float'},
-	[71]={name='self.cp.visualWaypointsStartEnd',dataFormat='Bool'},
-	[72]={name='self.cp.visualWaypointsAll',dataFormat='Bool'},
-	[73]={name='self.cp.visualWaypointsCrossing',dataFormat='Bool'},
-	[74]={name='self.cp.warningLightsMode',dataFormat='Int'},
-	[75]={name='self.cp.waitTime',dataFormat='Int'},
-	[77]={name='self.cp.startingCorner',dataFormat='Int'},
-	[78]={name='self.cp.startingDirection',dataFormat='Int'},
-	[79]={name='self.cp.hasShovelStatePositions[2]',dataFormat='Bool'},
-	[80]={name='self.cp.hasShovelStatePositions[3]',dataFormat='Bool'},
-	[81]={name='self.cp.hasShovelStatePositions[4]',dataFormat='Bool'},
-	[82]={name='self.cp.hasShovelStatePositions[5]',dataFormat='Bool'}, 
-	[83]={name='self.cp.multiTools',dataFormat='Int'},
-	[84]={name='self.cp.convoyActive',dataFormat='Bool'},
-	[85]={name='self.cp.alignment.enabled',dataFormat='Bool'},
-	[86]={name='self.cp.hasSowingMachine',dataFormat='Bool'},
-	[87]={name='self.cp.generationPosition.fieldNum',dataFormat='Int'},
-	[87]={name='self.cp.generationPosition.hasSavedPosition',dataFormat='Bool'},
-	[88]={name='self.cp.generationPosition.x',dataFormat='Float'},
-	[89]={name='self.cp.generationPosition.z',dataFormat='Float'},
-	[90]={name='self.cp.turnOnField',dataFormat='Bool'}
+	[1]={name='self.cp.mode',dataFormat='Int'},
+	[2]={name='self.cp.turnDiameterAuto',dataFormat='Float'},
+	[3]={name='self.cp.canDrive',dataFormat='Bool'},
+	[4]={name='self.cp.combineOffsetAutoMode',dataFormat='Bool'},
+	[5]={name='self.cp.combineOffset',dataFormat='Float'},
+	[6]={name='self.cp.currentCourseName',dataFormat='String'},
+	[7]={name='self.cp.drivingDirReverse',dataFormat='Bool'},
+	[8]={name='self.cp.fieldEdge.customField.isCreated',dataFormat='Bool'},
+	[9]={name='self.cp.fieldEdge.customField.fieldNum',dataFormat='Int'},
+	[10]={name='self.cp.fieldEdge.customField.selectedFieldNumExists',dataFormat='Bool'},
+	[11]={name='self.cp.fieldEdge.selectedField.fieldNum',dataFormat='Int'}, 
+	[12]={name='self.cp.globalInfoTextLevel',dataFormat='Int'},
+	[13]={name='self.cp.hasBaleLoader',dataFormat='Bool'},
+	[14]={name='self.cp.hasStartingCorner',dataFormat='Bool'},
+	[15]={name='self.cp.hasStartingDirection',dataFormat='Bool'},
+	[16]={name='self.cp.hasValidCourseGenerationData',dataFormat='Bool'},
+	[17]={name='self.cp.headland.numLanes',dataFormat='Int'},
+	[18]={name='self.cp.headland.turnType',dataFormat='Int'},
+    [19]={name='self.cp.hasUnloadingRefillingCourse	',dataFormat='Bool'},
+	[20]={name='self.cp.infoText',dataFormat='String'},
+	[21]={name='self.cp.returnToFirstPoint',dataFormat='Bool'},
+	[22]={name='self.cp.shovelStopAndGo',dataFormat='Bool'},
+	[23]={name='self.cp.isDriving',dataFormat='Bool'},
+	[24]={name='self.cp.hud.openWithMouse',dataFormat='Bool'},
+	[25]={name='self.cp.tipperOffset',dataFormat='Float'},
+	[26]={name='self.cp.tipperHasCover',dataFormat='Bool'},
+	[27]={name='self.cp.workWidth',dataFormat='Float'}, 
+	[28]={name='self.cp.turnDiameterAutoMode',dataFormat='Bool'},
+	[29]={name='self.cp.turnDiameter',dataFormat='Float'},
+	[30]={name='self.cp.coursePlayerNum',dataFormat='Int'},
+	[31]={name='self.cp.laneOffset',dataFormat='Float'},
+	[32]={name='self.cp.toolOffsetX',dataFormat='Float'},
+	[33]={name='self.cp.toolOffsetZ',dataFormat='Float'},
+	[34]={name='self.cp.loadUnloadOffsetX',dataFormat='Float'},
+	[35]={name='self.cp.loadUnloadOffsetZ',dataFormat='Float'},
+	[36]={name='self.cp.hud.currentPage',dataFormat='Int'},
+	[37]={name='self.cp.waypointIndex',dataFormat='Int'},
+	[38]={name='self.cp.isRecording',dataFormat='Bool'},
+	[39]={name='self.cp.recordingIsPaused',dataFormat='Bool'},
+	[40]={name='self.cp.searchCombineAutomatically',dataFormat='Bool'},
+	[41]={name='self.cp.searchCombineOnField',dataFormat='Int'},
+	[42]={name='self.cp.speeds.turn',dataFormat='Float'},
+	[43]={name='self.cp.speeds.field',dataFormat='Float'},
+	[44]={name='self.cp.speeds.reverse',dataFormat='Float'},
+	[45]={name='self.cp.speeds.street',dataFormat='Float'},
+	[46]={name='self.cp.waitTime',dataFormat='Int'},
+	[47]={name='self.cp.hasShovelStatePositions[2]',dataFormat='Bool'},
+	[48]={name='self.cp.hasShovelStatePositions[3]',dataFormat='Bool'},
+	[49]={name='self.cp.hasShovelStatePositions[4]',dataFormat='Bool'},
+	[50]={name='self.cp.hasShovelStatePositions[5]',dataFormat='Bool'}, 
+	[51]={name='self.cp.multiTools',dataFormat='Int'},
+	[52]={name='self.cp.convoyActive',dataFormat='Bool'},
+	[53]={name='self.cp.alignment.enabled',dataFormat='Bool'},
+	[54]={name='self.cp.hasSowingMachine',dataFormat='Bool'},
+	[55]={name='self.cp.generationPosition.fieldNum',dataFormat='Int'},
+	[56]={name='self.cp.generationPosition.hasSavedPosition',dataFormat='Bool'},
+	[57]={name='self.cp.generationPosition.x',dataFormat='Float'},
+	[58]={name='self.cp.generationPosition.z',dataFormat='Float'}
 	}
-
+	
 	-- TODO: see where is the best to instantiate these settings. Maybe we need a container for all these
-	courseplay.globalSettings = SettingsContainer()
+	courseplay.globalSettings = SettingsContainer("globalSettings")
 	courseplay.globalSettings:addSetting(LoadCoursesAtStartupSetting)
 	courseplay.globalSettings:addSetting(AutoFieldScanSetting)
 	courseplay.globalSettings:addSetting(EarnWagesSetting)

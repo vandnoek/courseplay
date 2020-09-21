@@ -420,9 +420,9 @@
 		<text name="COURSEPLAY_AUTODRIVE_MODE"				    			text="AutoDrive" />
 		<text name="COURSEPLAY_AUTODRIVE_NO_AUTODRIVE"				    	text="Nicht installiert" />
 		<text name="COURSEPLAY_AUTODRIVE_DONT_USE"				    		text="Nicht benutzen" />
-		<text name="COURSEPLAY_AUTODRIVE_UNLOAD_OR_REFILL"					text="Zum entladen/auffüllen" />
-		<text name="COURSEPLAY_AUTODRIVE_PARK"								text="Zum parken" />
-		<text name="COURSEPLAY_AUTODRIVE_UNLOAD_OR_REFILL_PARK"				text="Zum entladen/auffüllen und parken" />
+		<text name="COURSEPLAY_AUTODRIVE_UNLOAD_OR_REFILL"					text="entladen/auffüllen" />
+		<text name="COURSEPLAY_AUTODRIVE_PARK"								text="parken(P)" />
+		<text name="COURSEPLAY_AUTODRIVE_UNLOAD_OR_REFILL_PARK"				text="entladen/auffüllen/P" />
 
 		<text name="COURSEPLAY_AUTODRIVE_FOLDER"				   			text="AutoDrive" />
 		<text name="COURSEPLAY_AUTODRIVE_RETURN_COURSE"				   		text="(und zurück)" />
@@ -453,14 +453,15 @@
 		<text name="COURSEPLAY_YES_NO_ENABLE_OPEN_HUD_WITH_MOUSE_VEHICLE"	text="Aktiviert/Deaktiviert den Rechtsklick zum öffnen des HUDs (Fahrzeug)" />
 
 		<text name="COURSEPLAY_ENABLE_VISUAL_WAYPOINTS_TEMPORARY"			text="Pathfinder Wegpunkte" />
-		<text name="COURSEPLAY_YES_NO_ENABLE_VISUAL_WAYPOINTS_TEMPORARY"	text="Zeige Wegpunkte vom Pathfinder" />
-		<text name="COURSEPLAY_HEADLAN_DOVERLAP_PERCENT"					text="Überlappung Vorgewende" />
-		<text name="COURSEPLAY_HEADLAN_DOVERLAP_PERCENT_TOOLTIP"			text="Überlappung im Vorgewende in Prozent" />
+		<text name="COURSEPLAY_ENABLE_VISUAL_WAYPOINTS_TEMPORARY_TOOLTIP"	text="Zeige Wegpunkte vom Pathfinder" />
+		<text name="COURSEPLAY_HEADLAND_OVERLAP_PERCENT"					text="Überlappung Vorgewende" />
+		<text name="COURSEPLAY_HEADLAND_OVERLAP_PERCENT_TOOLTIP"			text="Überlappung im Vorgewende in Prozent" />
 		
 		<text name="COURSEPLAY_SHOW_MINI_HUD"								text="Zeige Mini-HUD" />
 		<text name="COURSEPLAY_YES_NO_SHOW_MINI_HUD"						text="Mini-HUD an/aus" />
-		<text name="COURSEPLAY_STRAW_ON_HEADLAND"							text="Strohablage im Vorgewende" />
-		<text name="COURSEPLAY_YES_NO_STRAW_ON_HEADLAND"					text="Schaltet die Strohablage im Vorgewende an oder aus" />
+		<text name="COURSEPLAY_STRAW_ON_HEADLAND"							text="Drescher Strohablage" />
+		<text name="COURSEPLAY_STRAW_ON_ONLY_CENTER"						text="Nur Mitte" />
+		<text name="COURSEPLAY_YES_NO_STRAW_ON_HEADLAND"					text="Strohablage an/aus/nur Mitte" />
 
 		<text name="COURSEPLAY_USE_PATHFINDING_IN_TURNS"				   	text="Pathfinding im Wendemanöver" />
 		<text name="COURSEPLAY_USE_PATHFINDING_IN_TURNS_TOOLTIP"			text="Pathfinding im Wendemanöver auf unförmigen Feldern, vom Vorgewende zur nächste Reihe" />
@@ -470,7 +471,20 @@
 		<text name="COURSEPLAY_SELF_UNLOAD_TOOLTIP"							text="Drescher sucht einen Trailer und fährt abtanken" />
 		<text name="COURSEPLAY_ALLOW_REVERSE_FOR_PATHFINDING_IN_TURNS"	   	text="Pathfinder darf rückwärts fahren" />
 		<text name="COURSEPLAY_ALLOW_REVERSE_FOR_PATHFINDING_IN_TURNS_TOOLTIP"	text="Erlaubt dem Pathfinder, rückwärts zu fahren (Nur nicht gezogene Tools)" />
-		
-		<!-- Replace marker, do not remove! --></texts>
 
+		<text name="COURSEPLAY_NO_SELECTED_FILLTYPE"						text="Kein Ladegut gewählt!/Nachfüllkurs nicht unterstützt!!" />
+		<text name="COURSEPLAY_ADD_FILLTYPE"								text="Ladegut hinzufügen" />
+		<text name="COURSEPLAY_REACHED_REFILL_POINT"						text="Auffüllpunkt erreicht" />
+		<text name="COURSEPLAY_WRONG_FILLTYPE_FOR_TRIGGER"					text="Ladegut wird hier nicht angenommen" />
+		
+
+		<text name="COURSEPLAY_ALLOW_UNLOAD_ON_FIRST_HEADLAND"				text="Entlade Drescher im ersten Vorgewende" />
+		<text name="COURSEPLAY_ALLOW_UNLOAD_ON_FIRST_HEADLAND_TOOLTIP"		text="Fahrenden Drescher im ersten Vorgewende entladen, Abfahrer fährt außerhalb des Feldes." />
+		<text name="COURSEPLAY_RUNCOUNTER_ERROR_FOR_TRIGGER"                text="letzter Durchlauf = 0" />
+        <text name="COURSEPLAY_LOADING_SEPERATE_FILLTYPES"                  text="verschiedene Ladegüter" />
+        <text name="COURSEPLAY_LOADING_SEPERATE_FILLTYPES_TRAILERS"         text="verschiedene Trailer: " />
+		<text name="COURSEPLAY_UNLOADING_AMOUNT"							text="Entladen %d of %d" />
+		<text name="COURSEPLAY_MANUAL_LOADING"								text="manuelles laden" />
+		<!-- Replace marker, do not remove! -->
+</texts>
 </l10n>
