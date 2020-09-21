@@ -82,7 +82,7 @@
 --   turn radius of the vehicle. Will do whatever we can not to generate turns sharper
 --   than this
 --
--- returnToFirstPoint
+-- endWorkAtSetting
 --   Return to the first waypoint of the course after done. Will add a section from the 
 --   last to the first wp if true.
 --
@@ -109,7 +109,7 @@
 
 function generateCourseForField( field, implementWidth, headlandSettings, extendTracks,
 																 minDistanceBetweenPoints, minSmoothAngle, maxSmoothAngle, doSmooth, fromInside,
-																 turnRadius, returnToFirstPoint, islandNodes, islandBypassMode, centerSettings )
+																 turnRadius, endWorkAtSetting, islandNodes, islandBypassMode, centerSettings )
 
 	local resultIsOk = true
 
@@ -173,9 +173,9 @@ function generateCourseForField( field, implementWidth, headlandSettings, extend
 		end
 	end
 	if #field.course > 0 then
-		if returnToFirstPoint then
+		if endWorkAtSetting then
 			courseGenerator.debug("Adding waypoints to return to first point.")
-			addWpsToReturnToFirstPoint( field.course, field.boundary )
+			addWpsToEndWorkAtSetting( field.course, field.boundary )
 		end
 		fixHeadlandToCenterTransition(field.course, headlandSettings, centerSettings, turnRadius, field.bigIslands, field.headlandTracks, implementWidth)
 		if not headlandSettings.headlandFirst then
@@ -287,7 +287,7 @@ function addTurnsToCorners( vertices, minHeadlandTurnAngle, headlandOnly)
 	end
 end
 
-function addWpsToReturnToFirstPoint( course, boundary )
+function addWpsToEndWorkAtSetting( course, boundary )
 	-- should not check for fruit
 	local path = courseGenerator.pathFinder:findPath( course[ #course ], course[ 1 ], boundary )
 	-- already close enough, don't add extra return path
@@ -297,7 +297,7 @@ function addWpsToReturnToFirstPoint( course, boundary )
 		-- start at the third wp in order to be far enough 
 		-- from the last course wp to avoid circling
 		for i = 3, #path do
-			path[ i ].returnToFirst = true -- just for debugging
+			path[ i ].endWorkAtSetting = true -- just for debugging
 			path[ i ].isConnectingTrack = true -- so it'll raise implements when driving back
 			table.insert( course, path[ i ])
 		end
