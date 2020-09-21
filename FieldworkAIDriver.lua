@@ -618,19 +618,7 @@ function FieldworkAIDriver:shouldReturnToFirstPoint()
 		self:debug('Not returning to first point.')
 		return false
 	end
-end
-
---- Should CP be stopped when we jump in after work is done?
-function FieldworkAIDriver:shouldStopDriver()
-	if (self.vehicle.cp.settings.endWorkAt:is(2) or self.vehicle.cp.settings.endWorkAt:is(3)) and self:getIsEntered() then
-		self:debug('CP Driver stopped on enter vehicle')
-		return true
-	else
-		self:debug('CP Driver not stopped on enter vehicle')
-		return false
-	end
-end
-		
+end		
 
 --- Pass on self.speed set elsewhere to the AIDriver.
 function FieldworkAIDriver:getSpeed()
