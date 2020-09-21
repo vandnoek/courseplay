@@ -2336,10 +2336,24 @@ end
 
 --- Return to first point after finishing fieldwork
 ---@class ReturnToFirstPointSetting : BooleanSetting
-ReturnToFirstPointSetting = CpObject(BooleanSetting)
-function ReturnToFirstPointSetting:init(vehicle)
-	BooleanSetting.init(self, 'returnToFirstPoint', 'COURSEPLAY_RETURN_TO_FIRST_POINT',
-		'COURSEPLAY_RETURN_TO_FIRST_POINT', vehicle)
+--ReturnToFirstPointSetting = CpObject(BooleanSetting)
+--function ReturnToFirstPointSetting:init(vehicle)
+	--BooleanSetting.init(self, 'returnToFirstPoint', 'COURSEPLAY_RETURN_TO_FIRST_POINT',
+		--'COURSEPLAY_RETURN_TO_FIRST_POINT', vehicle)
+--end
+
+---@class EndWorkAt : SettingList
+EndWorkAt = CpObject(SettingList)
+EndWorkAt.END = 0
+EndWorkAt.START = 1
+EndWorkAt.ENDEXIT = 2
+EndWorkAt.STARTEXIT = 3
+function EndWorkAt:init(vehicle)
+	SettingList.init(self, 'endWorkAt', 'COURSEPLAY_END_WORK_AT','COURSEPLAY_YES_NO_END_WORK_AT', vehicle,
+		{EndWorkAt.END,EndWorkAt.START,EndWorkAt.ENDEXIT,EndWorkAt.STARTEXIT},
+		{'COURSEPLAY_STOP_END','COURSEPLAY_STOP_START','COURSEPLAY_STOP_END_EXIT','COURSEPLAY_STOP_START_EXIT'})
+	-- set default while we are transitioning from the the old setting to this new one
+	self:set(0)
 end
 
 --- Load courses at startup?

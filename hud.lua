@@ -716,15 +716,15 @@ function courseplay.hud:updatePageContent(vehicle, page)
 					else
 						self:disableButtonWithFunction(vehicle,page, 'toggle',vehicle.cp.settings.stopAtEnd)
 					end
-				elseif entry.functionToCall == 'returnToFirstPoint:toggle' then
-					--ReturnToFirstPointSetting 
+				elseif entry.functionToCall == 'endWorkAt:toggle' then
+					--endWorkAtSetting
 					if vehicle.cp.canDrive then
-						self:enableButtonWithFunction(vehicle,page, 'toggle',vehicle.cp.settings.returnToFirstPoint)
+						self:enableButtonWithFunction(vehicle,page, 'toggle',vehicle.cp.settings.endWorkAt)
 						self:disableButtonWithFunction(vehicle,page, 'setCustomSingleFieldEdge')
-						vehicle.cp.hud.content.pages[page][line][1].text = vehicle.cp.settings.returnToFirstPoint:getLabel()
-						vehicle.cp.hud.content.pages[page][line][2].text = vehicle.cp.settings.returnToFirstPoint:getText()
+						vehicle.cp.hud.content.pages[page][line][1].text = vehicle.cp.settings.endWorkAt:getLabel()
+						vehicle.cp.hud.content.pages[page][line][2].text = vehicle.cp.settings.endWorkAt:getText()
 					else
-						self:disableButtonWithFunction(vehicle,page, 'toggle',vehicle.cp.settings.returnToFirstPoint)
+						self:disableButtonWithFunction(vehicle,page, 'toggle',vehicle.cp.settings.endWorkAt)
 						forceUpdate = true -- force reload of this page if functionToCall changed
 						entry.functionToCall = 'setCustomSingleFieldEdge'
 						self:enableButtonWithFunction(vehicle,page, 'setCustomSingleFieldEdge')
