@@ -623,10 +623,10 @@ end
 --- Should CP be stopped when we jump in after work is done?
 function FieldworkAIDriver:shouldStopDriver()
 	if (self.vehicle.cp.settings.endWorkAtSetting:is(2) or self.vehicle.cp.settings.endWorkAtSetting:is(3)) and self:getIsEntered() then
+		self:debug('CP Driver stopped on enter vehicle')
 		return true
-		self:debug('Waiting for Enter Vehicle to Stop')
 	else
-		self:debug('Will not stop CP Driver')
+		self:debug('CP Driver not stopped on enter vehicle')
 		return false
 		
 
