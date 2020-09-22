@@ -1701,7 +1701,7 @@ function AIDriver:payWages(dt)
 	local courseplayMultiplier
 	-- The Giants AIVehicle always pays wages so we need to take that into account and compensate for it
 	-- when paying less than 100% (hence the -1)
-	if courseplay.globalSettings.earnWages:is(true) and self:shouldPayWages() then
+	if courseplay.globalSettings.earnWages:is(true) and self:shouldPayWages() then -- and not 'work finished'
 		courseplayMultiplier = courseplay.globalSettings.workerWages:get() / 100 - 1
 	else
 		-- compensate for all the Giants wage paying
