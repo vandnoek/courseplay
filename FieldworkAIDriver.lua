@@ -1337,9 +1337,10 @@ function FieldworkAIDriver:resumeFieldworkAfterTurn(ix)
 	self:startCourse( self.fieldworkCourse, self.fieldworkCourse:getNextFwdWaypointIxFromVehiclePosition(ix, AIDriverUtil.getDirectionNode(self.vehicle), 0))
 end
 
---- Don't pay worker double when AutoDrive is driving
+--- Don't pay worker double when AutoDrive is driving and CP Driver is stopped
 function FieldworkAIDriver:shouldPayWages()
 	return self.state ~= self.states.ON_UNLOAD_OR_REFILL_WITH_AUTODRIVE
+	return self.state ~= self.states.STOPPED
 end
 
 function FieldworkAIDriver:onBlocked()
