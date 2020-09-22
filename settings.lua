@@ -152,7 +152,7 @@ end
 
 function courseplay:startStop(vehicle)
 	if vehicle.cp.canDrive then
-		if not vehicle:getIsCourseplayDriving() and not ((vehicle.cp.settings.endWorkAt:is(2) or vehicle.cp.settings.endWorkAt:is(3)) and vehicle:getIsEntered()) then -- Missing condition, fieldworkfinished, else we can't even start...
+		if not vehicle:getIsCourseplayDriving() and not ((vehicle.cp.settings.endWorkAt:is(2) or vehicle.cp.settings.endWorkAt:is(3)) and vehicle:getIsEntered() and self.state == self.states.STOPPED) then -- Not rly good, as we are in STOPPED state at other places	
 			courseplay:start(vehicle);
 		else
 			courseplay:stop(vehicle);
