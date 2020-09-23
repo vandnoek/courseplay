@@ -2337,7 +2337,7 @@ end
 --- Return to first point after finishing fieldwork
 ---@class ReturnToFirstPointSetting : BooleanSetting
 --ReturnToFirstPointSetting = CpObject(BooleanSetting)
---function ReturnToFirstPointSetting:init(vehicle)
+--function PointSetting:init(vehicle)
 	--BooleanSetting.init(self, 'returnToFirstPoint', 'COURSEPLAY_RETURN_TO_FIRST_POINT',
 		--'COURSEPLAY_RETURN_TO_FIRST_POINT', vehicle)
 --end
@@ -2346,12 +2346,12 @@ end
 EndWorkAtSetting = CpObject(SettingList)
 EndWorkAtSetting.END = 0
 EndWorkAtSetting.START = 1
-EndWorkAtSetting.ENDEXIT = 2
-EndWorkAtSetting.STARTEXIT = 3
+EndWorkAtSetting.ENDDISMISS = 2
+EndWorkAtSetting.STARTDISMISS = 3
 function EndWorkAtSetting:init(vehicle)
 	SettingList.init(self, 'endWorkAt', 'COURSEPLAY_END_WORK_AT','COURSEPLAY_YES_NO_END_WORK_AT', vehicle,
-		{EndWorkAtSetting.END,EndWorkAtSetting.START,EndWorkAtSetting.ENDEXIT,EndWorkAtSetting.STARTEXIT},
-		{'COURSEPLAY_STOP_END','COURSEPLAY_STOP_START','COURSEPLAY_STOP_END_EXIT','COURSEPLAY_STOP_START_EXIT'})
+		{EndWorkAtSetting.END,EndWorkAtSetting.START,EndWorkAtSetting.ENDDISMISS,EndWorkAtSetting.STARTDISMISS},
+		{'COURSEPLAY_STOP_END','COURSEPLAY_STOP_START','COURSEPLAY_STOP_END_DISMISS','COURSEPLAY_STOP_START_DISMISS'})
 	-- set default while we are transitioning from the the old setting to this new one
 	self:set(0)
 end
