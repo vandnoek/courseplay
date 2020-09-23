@@ -172,8 +172,8 @@
 		<text name="COURSEPLAY_YES_NO_END_WORK_AT"							text="End the work at End or Start WP" />
 		<text name="COURSEPLAY_STOP_END"									text="End" />
 		<text name="COURSEPLAY_STOP_START"									text="Start" />
-		<text name="COURSEPLAY_STOP_ENDDISMISS"								text="End and dismiss Driver" />
-		<text name="COURSEPLAY_STOP_STARTDISMISS"							text="Start and dismiss Driver" />
+		<text name="COURSEPLAY_STOP_END_DISMISS"								text="End and dismiss Driver" />
+		<text name="COURSEPLAY_STOP_START_DISMISS"							text="Start and dismiss Driver" />
 		<text name="COURSEPLAY_CORNER_1" 									text="South-West" />
 		<text name="COURSEPLAY_CORNER_2" 									text="North-West" />
 		<text name="COURSEPLAY_CORNER_3" 									text="North-East" />

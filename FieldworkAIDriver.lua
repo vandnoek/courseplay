@@ -507,7 +507,7 @@ function FieldworkAIDriver:onEndCourse()
 		AIDriver.onEndCourse(self)
 	else
 		self:debug('Fieldwork AI driver in mode %d ending fieldwork course', self:getMode())
-		if self:shouldReturnToFirstPoint() then
+		if self:endWorkAt() then
 			self:debug('Returning to first point')
 			if self:driveToPointWithPathfinding(self.fieldworkCourse:getWaypoint(1)) then
 				-- pathfinding was successful, drive back to first point
@@ -609,7 +609,7 @@ function FieldworkAIDriver:onTowedImplementPassedWaypoint(ix)
 end
 
 --- Should we return to the first point of the course after we are done?
-function FieldworkAIDriver:endWorkAtStart()
+function FieldworkAIDriver:endWorkAt()
 	-- TODO: implement and check setting in course or HUD
 	if self.vehicle.cp.settings.endWorkAt:is(1) or self.vehicle.cp.settings.endWorkAt:is(3) then
 		self:debug('Returning to first point.')
