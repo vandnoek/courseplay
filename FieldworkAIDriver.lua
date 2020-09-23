@@ -609,7 +609,7 @@ function FieldworkAIDriver:onTowedImplementPassedWaypoint(ix)
 end
 
 --- Should we return to the first point of the course after we are done?
-function FieldworkAIDriver:shouldReturnToFirstPoint()
+function FieldworkAIDriver:endWorkAtStart()
 	-- TODO: implement and check setting in course or HUD
 	if self.vehicle.cp.settings.endWorkAt:is(1) or self.vehicle.cp.settings.endWorkAt:is(3) then
 		self:debug('Returning to first point.')
