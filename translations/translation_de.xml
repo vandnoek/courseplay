@@ -167,7 +167,12 @@
         <text name="COURSEPLAY_STARTING_LOCATION" 							text="Startposition" />
         <text name="COURSEPLAY_ENDING_LOCATION" 							text="Endposition" />
 		<text name="COURSEPLAY_STARTING_DIRECTION" 							text="Startrichtung" />
-		<text name="COURSEPLAY_RETURN_TO_FIRST_POINT" 						text="Am Startpunkt enden" />
+		<text name="COURSEPLAY_END_WORK_AT" 								text="Beende Arbeit am" />
+		<text name="COURSEPLAY_YES_NO_END_WORK_AT"							text="Beende Arbeit am ersten oder letzten WP" />
+		<text name="COURSEPLAY_STOP_END"									text="Ende" />
+		<text name="COURSEPLAY_STOP_START"									text="Start" />
+		<text name="COURSEPLAY_STOP_ENDDISMISS"								text="Ende und entlasse Fahrer" />
+		<text name="COURSEPLAY_STOP_STARTDISMISS"							text="Start und entlasse Fahrer" />
 		<text name="COURSEPLAY_CORNER_1" 									text="Südwest" />
 		<text name="COURSEPLAY_CORNER_2" 									text="Nordwest" />
 		<text name="COURSEPLAY_CORNER_3" 									text="Nordost" />
