@@ -152,7 +152,7 @@ end
 
 function courseplay:startStop(vehicle)
 	if vehicle.cp.canDrive then
-		if not vehicle:getIsCourseplayDriving() and not ((vehicle.cp.settings.endWorkAt:is(2) or vehicle.cp.settings.endWorkAt:is(3)) and vehicle:getIsEntered() and vehicle.cp.driver:onEndCourse()) then
+		if not vehicle:getIsCourseplayDriving() then
 			courseplay:start(vehicle);
 		else
 			courseplay:stop(vehicle);
