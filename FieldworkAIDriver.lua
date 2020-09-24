@@ -505,7 +505,7 @@ function FieldworkAIDriver:onEndCourse()
 		self:startFieldworkWithPathfinding(self.aiDriverData.continueFieldworkAtWaypoint)
 	elseif self.state == self.states.RETURNING_TO_FIRST_POINT then
 		AIDriver.onEndCourse(self)
-		if ((vehicle.cp.settings.endWorkAt:is(2) or vehicle.cp.settings.endWorkAt:is(3)) and vehicle:getIsEntered() then
+		if vehicle.cp.settings.endWorkAt:is(3) and vehicle:getIsEntered() then
 			self:dismiss()
 		end
 	else
@@ -527,7 +527,7 @@ function FieldworkAIDriver:onEndCourse()
 		else
 			AIDriver.onEndCourse(self)
 			self:foldImplements()
-			if ((vehicle.cp.settings.endWorkAt:is(2) or vehicle.cp.settings.endWorkAt:is(3)) and vehicle:getIsEntered() then
+			if vehicle.cp.settings.endWorkAt:is(2) and vehicle:getIsEntered() then
 				self:dismiss()
 			end
 		end
