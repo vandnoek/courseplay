@@ -441,32 +441,45 @@ end
 
 --- Update the position of each collision trigger box.
 ---
---- For the next TrafficConflictDetector.numTrafficCollisionTriggers seconds calculate the position the vehicle
---- will be on its course, one position for every second, based on the vehicle's speed.
+--- For the expected course of the vehicle calculate the expected position at every
+--- TrafficConflictDetector.boxDistance meters.
+---
+--- If the vehicle is driving on a course, these will be positions on the course, otherwise on an estimated
+--- straight line in the direction the vehicle is currently driving.
+---
 --- Now place a collision box on each position but at different heights: instead of a snake on the ground (like
 --- with the CollisionDetector) this is going to be a stairway to heaven :).
 ---
---- The height of each box is proportional (TrafficConflictDetector.timeScale * seconds) to the estimated time
---- of arrival (ETA) of the vehicle to that x/z position.
+--- The altitude of each box above ground is proportional (TrafficConflictDetector.timeScale * seconds) to the
+--- estimated time of arrival (ETA) of the vehicle to that x/z position.
 ---
 --- This way a conflict will only be triggered (by a collision with another vehicle's TrafficConflictDetector
 --- boxes) when the vehicles are forecast to be a the same position at the same time.
 ---
----@param course Course
----@param ix number
-function TrafficConflictDetector:update(course, ix, nominalSpeed)
+---@param course Course course the vehicle is driving on, may be nil, if a directionNode is given
+---@param ix number current waypoint on the course
+---@param nominalSpeed number speed to use to calculate ETA if there is no course or course has no speed info
+--- The next two parameters are needed only when the vehicle isn't driving on a course
+---@param moveForwards boolean true if vehicle is moving forwards
+---@param directionNode number direction node of the vehicle
+function TrafficConflictDetector:update(course, ix, nominalSpeed, moveForwards, directionNode)
 
     if ix == self.lastWaypointIx then return end
 
-	local positions = course:getPositionsOnCourse(ix, TrafficConflictDetector.boxDistance, TrafficConflictDetector.numTrafficCollisionTriggers)
+	local positions
+	if course then
+		positions = course:getPositionsOnCourse(ix, TrafficConflictDetector.boxDistance, TrafficConflictDetector.numTrafficCollisionTriggers)
+	else
+		positions = self:getPositionsAtSpeed(nominalSpeed, moveForwards, directionNode)
+	end
 	local posIx = 1
 	local eta = 0
     if #positions > 0 then
         for i, trigger in ipairs(self.trafficCollisionTriggers) do
-            local d = i * TrafficConflictDetector.boxDistance
+            local d = (i - 1) * TrafficConflictDetector.boxDistance
 			local speed = positions[posIx].speed or nominalSpeed
             local metersPerSec = speed / 3.6
-            eta = eta + (metersPerSec > 0 and TrafficConflictDetector.boxDistance / metersPerSec or 0)
+            eta = metersPerSec > 0 and d / metersPerSec or eta
             setTranslation(trigger, positions[posIx].x, positions[posIx].y + eta * TrafficConflictDetector.timeScale, positions[posIx].z)
             setRotation(trigger, 0, positions[posIx].yRot, 0)
             DebugUtil.drawDebugNode(trigger, string.format('%.1f\n%.1f s', metersPerSec * 3.6, eta))
@@ -480,6 +493,30 @@ function TrafficConflictDetector:update(course, ix, nominalSpeed)
         end
 	end
 	self:updateConflicts()
+end
+
+--- Get estimated positions of the vehicle (in case there is no course, for example when the AI is driving
+--- the turn using steering angles only.
+---@return table list of positions every TrafficConflictDetector.boxDistance meters as if the vehicle was driving
+--- in the current direction at the given speed
+function TrafficConflictDetector:getPositionsAtSpeed(speed, moveForwards, directionNode)
+	local direction = moveForwards and 1 or -1
+	local x, y, z = localDirectionToWorld(directionNode, 0, 0, direction)
+	local yRot = MathUtil.getYRotationFromDirection(x, z)
+	local positions = {}
+	-- this is for short temporary courses driven without a generated course so don't create a position for all triggers
+	-- as the vehicle will most likely turn
+	for i = 0, TrafficConflictDetector.numTrafficCollisionTriggers / 2 do
+		x, _, z = localToWorld(directionNode, 0, 0, direction * i * TrafficConflictDetector.boxDistance)
+		y = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, x, 0, z)
+		table.insert(positions, {x = x,
+								 y = y,
+								 z = z,
+								 yRot =yRot,
+								 speed = speed})
+
+	end
+	return positions
 end
 
 function TrafficConflictDetector:updateConflicts()

@@ -943,6 +943,7 @@ function CpManager:setupGlobalInfoText()
 		SLIPPING_1							= { level = -1, text = 'COURSEPLAY_SLIPPING_WARNING' };
 		SLIPPING_2							= { level = -2, text = 'COURSEPLAY_SLIPPING_WARNING' };
 		TRAFFIC								= { level = -1, text = 'COURSEPLAY_IS_IN_TRAFFIC' };
+		SLOWING_DOWN_FOR_TRAFFIC			= { level =  0, text = 'COURSEPLAY_SLOWING_DOWN_FOR_TRAFFIC' };
 		UNLOADING_BALE						= { level =  0, text = 'COURSEPLAY_UNLOADING_BALES' };
 		WAIT_POINT							= { level =  0, text = 'COURSEPLAY_REACHED_WAITING_POINT' };
 		WATER								= { level = -2, text = 'COURSEPLAY_WATER_WARNING' };

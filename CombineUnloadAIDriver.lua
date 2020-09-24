@@ -226,10 +226,6 @@ function CombineUnloadAIDriver:stopForPathfinding()
 	self:hold()
 end
 
-function CombineUnloadAIDriver:stopAndWait(dt)
-	self:driveInDirection(dt,0,1,true,0,false)
-end
-
 function CombineUnloadAIDriver:driveInDirection(dt,lx,lz,fwd,speed,allowedToDrive)
 	--AIVehicleUtil.driveInDirection(self.vehicle, dt, self.vehicle.cp.steeringAngle, 1, 0.5, 10, allowedToDrive, fwd, lx, lz, speed, 1)
 	-- TODO: use this directly everywhere, seems to work better than the vanilla AIVehicleUtil version

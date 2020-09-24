@@ -419,13 +419,13 @@ end
 -- to reverse with trailer.
 function AIDriver:driveCourse(dt)
 	self:updateLights()
-	self:updateTrafficConflictDetector()
-	-- check if reversing
-	local lx, lz, moveForwards, isReverseActive = self:getReverseDrivingDirection()
+	self:updateTrafficConflictDetector(self.course, self.ppc:getRelevantWaypointIx(), self:getNominalSpeed())
+
 	-- stop for fuel if needed
 	if not self:isFuelLevelOk() then 
 		self:hold()
 	end
+
 	if not self:getIsEngineReady() then
 		if self:getSpeed() > 0 and self.allowedToDrive then
 			self:startEngineIfNeeded()
@@ -433,10 +433,12 @@ function AIDriver:driveCourse(dt)
 			self:debugSparse('Wait for the engine to start')
 		end
 	end
+
 	-- use the recorded speed by default
 	if not self:hasTipTrigger() then
 		self:setSpeed(self:getRecordedSpeed())
 	end
+
 	local isInTrigger, isAugerWagonTrigger = self.triggerHandler:isInTrigger()
 --	if self:getIsInFilltrigger() or self:hasTipTrigger() then-- or isInTrigger then
 	if isInTrigger then 
@@ -450,13 +452,12 @@ function AIDriver:driveCourse(dt)
 
 	self:stopEngineIfNotNeeded()
 
+	-- check if reversing
+	local lx, lz, moveForwards, isReverseActive = self:getReverseDrivingDirection()
+
 	if isReverseActive then
 		-- we go wherever goReverse() told us to go
 		self:driveVehicleInDirection(dt, self.allowedToDrive, moveForwards, lx, lz, self:getSpeed())
-	elseif self.useDirection then
-		lx, lz = self.ppc:getGoalPointDirection()
-		self:debug('%.1f %.1f', lx, lz)
-		self:driveVehicleInDirection(dt, self.allowedToDrive, moveForwards, lx / 2, lz, self:getSpeed())
 	else
 		-- use the PPC goal point when forward driving or reversing without trailer
 		local gx, _, gz = self.ppc:getGoalPointLocalPosition()
@@ -565,6 +566,8 @@ function AIDriver:driveVehicleBySteeringAngle(dt, moveForwards, steeringAngleNor
 		if not moveForwards then
 			acc = -acc;
 		end
+		local node = moveForwards and self:getFrontMarkerNode(self.vehicle) or self:getBackMarkerNode(self.vehicle)
+		self:updateTrafficConflictDetector(nil, nil, maxSpeed, moveForwards, node)
 		WheelsUtil.updateWheelsPhysics(self.vehicle, dt, self.vehicle.lastSpeedReal*self.vehicle.movingDirection, acc, not self.allowedToDrive, true)
 	end
 end
@@ -1676,9 +1679,9 @@ function AIDriver:createTrafficConflictDetector()
 	self.trafficConflictDetector = TrafficConflictDetector(self.vehicle, self.course)
 end
 
-function AIDriver:updateTrafficConflictDetector()
-	if self.trafficConflictDetector and self.course then
-		self.trafficConflictDetector:update(self.course, self.ppc:getRelevantWaypointIx(), self:getNominalSpeed())
+function AIDriver:updateTrafficConflictDetector(course, ix, speed, moveForwards, node)
+	if self.trafficConflictDetector then
+		self.trafficConflictDetector:update(course, ix, speed, moveForwards, node or self:getDirectionNode())
 	end
 end
 
@@ -1710,21 +1713,21 @@ function AIDriver:slowDownForTraffic(maxSpeed, allowedToDrive)
 	if self.trafficConflictActive then
 		if self.trafficConflictEta < 6 then
 			self:debugSparse('Traffic conflict in %.1f s (%.1f m), hold', self.trafficConflictEta, self.trafficConflictDistance)
-			self:clearInfoText('SLOW_DOWN_FOR_TRAFFIC')
+			self:clearInfoText('SLOWING_DOWN_FOR_TRAFFIC')
 			self:setInfoText('TRAFFIC')
 			allowedToDrive = false
 		elseif self.trafficConflictEta < 12 then
 			self:debugSparse('Traffic conflict in %.1f s (%.1f m), half speed', self.trafficConflictEta, self.trafficConflictDistance)
 			self:clearInfoText('TRAFFIC')
-			self:setInfoText('SLOW_DOWN_FOR_TRAFFIC')
+			self:setInfoText('SLOWING_DOWN_FOR_TRAFFIC')
 			maxSpeed = maxSpeed / 2
 		else
 			self:clearInfoText('TRAFFIC')
-			self:clearInfoText('SLOW_DOWN_FOR_TRAFFIC')
+			self:clearInfoText('SLOWING_DOWN_FOR_TRAFFIC')
 		end
 	else
 		self:clearInfoText('TRAFFIC')
-		self:clearInfoText('SLOW_DOWN_FOR_TRAFFIC')
+		self:clearInfoText('SLOWING_DOWN_FOR_TRAFFIC')
 	end
 	self.trafficConflictActive = false
 	return maxSpeed, allowedToDrive
