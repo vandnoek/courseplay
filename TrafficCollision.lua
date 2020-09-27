@@ -396,6 +396,7 @@ function CollisionDetector:adaptCollisHeight()
 	end
 end
 
+---@class TrafficConflictDetector : CollisionDetector
 TrafficConflictDetector = CpObject(CollisionDetector)
 TrafficConflictDetector.boxDistance = 4
 TrafficConflictDetector.numTrafficCollisionTriggers = 20
@@ -424,7 +425,7 @@ function TrafficConflictDetector:createTriggers()
 		local newTrigger = clone(self.collisionTriggerObject.aiTrafficCollisionTrigger, false)
 		link(g_currentMission.terrainRootNode, newTrigger)
 		self.trafficCollisionTriggers[i] = newTrigger
-		setName(newTrigger, self.vehicle:getName() .. ' trigger #' .. tostring(i))
+		setName(newTrigger, nameNum(self.vehicle) .. ' trigger #' .. tostring(i))
 		local x, y, z = getWorldTranslation(self.vehicle.rootNode)
 		local _, yRot, _ = getWorldRotation(self.vehicle.rootNode)
 		setTranslation(newTrigger, x, i + y + self.baseHeight, z)
@@ -468,9 +469,16 @@ function TrafficConflictDetector:update(course, ix, nominalSpeed, moveForwards, 
 
 	local positions
 	if course then
-		positions = course:getPositionsOnCourse(ix, TrafficConflictDetector.boxDistance, TrafficConflictDetector.numTrafficCollisionTriggers)
+		if AIDriverUtil.isStopped(self.vehicle) then
+			-- if we aren't moving, just keep the collision boxes above us, to avoid problems like the current waypoint
+			-- is already set and thus blocking part of a course (for instance a CombineUnloadAIDriver waiting for the
+			-- combine to call will have the unload course loaded but will not drive it for quite a while)
+			positions = self:getPositionsAtDirection(0, true, AIDriverUtil.getDirectionNode(self.vehicle))
+		else
+			positions = course:getPositionsOnCourse(nominalSpeed, ix, TrafficConflictDetector.boxDistance, TrafficConflictDetector.numTrafficCollisionTriggers)
+		end
 	else
-		positions = self:getPositionsAtSpeed(nominalSpeed, moveForwards, directionNode)
+		positions = self:getPositionsAtDirection(nominalSpeed, moveForwards, directionNode)
 	end
 	local posIx = 1
 	local eta = 0
@@ -479,7 +487,7 @@ function TrafficConflictDetector:update(course, ix, nominalSpeed, moveForwards, 
             local d = (i - 1) * TrafficConflictDetector.boxDistance
 			local speed = positions[posIx].speed or nominalSpeed
             local metersPerSec = speed / 3.6
-            eta = metersPerSec > 0 and d / metersPerSec or eta
+            eta = d / (metersPerSec > 0 and metersPerSec or 0.001)
             setTranslation(trigger, positions[posIx].x, positions[posIx].y + eta * TrafficConflictDetector.timeScale, positions[posIx].z)
             setRotation(trigger, 0, positions[posIx].yRot, 0)
             DebugUtil.drawDebugNode(trigger, string.format('%.1f\n%.1f s', metersPerSec * 3.6, eta))
@@ -492,22 +500,24 @@ function TrafficConflictDetector:update(course, ix, nominalSpeed, moveForwards, 
             end
         end
 	end
-	self:updateConflicts()
 end
 
 --- Get estimated positions of the vehicle (in case there is no course, for example when the AI is driving
 --- the turn using steering angles only.
 ---@return table list of positions every TrafficConflictDetector.boxDistance meters as if the vehicle was driving
 --- in the current direction at the given speed
-function TrafficConflictDetector:getPositionsAtSpeed(speed, moveForwards, directionNode)
+function TrafficConflictDetector:getPositionsAtDirection(speed, moveForwards, directionNode)
 	local direction = moveForwards and 1 or -1
 	local x, y, z = localDirectionToWorld(directionNode, 0, 0, direction)
 	local yRot = MathUtil.getYRotationFromDirection(x, z)
 	local positions = {}
 	-- this is for short temporary courses driven without a generated course so don't create a position for all triggers
 	-- as the vehicle will most likely turn
-	for i = 0, TrafficConflictDetector.numTrafficCollisionTriggers / 2 do
-		x, _, z = localToWorld(directionNode, 0, 0, direction * i * TrafficConflictDetector.boxDistance)
+	local dz = 0
+	local step = math.min(speed / 3.6, TrafficConflictDetector.boxDistance)
+	for i = 0, TrafficConflictDetector.numTrafficCollisionTriggers do
+		dz = dz + step
+		x, y, z = localToWorld(directionNode, 0, 0, direction * dz)
 		y = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, x, 0, z)
 		table.insert(positions, {x = x,
 								 y = y,
@@ -517,19 +527,6 @@ function TrafficConflictDetector:getPositionsAtSpeed(speed, moveForwards, direct
 
 	end
 	return positions
-end
-
-function TrafficConflictDetector:updateConflicts()
-	-- iterate backwards as we'll remove table elements
-	for i = #self.conflicts, 1, -1 do
-		local conflict = self.conflicts[i]
-		conflict:update()
-		local otherVehicle, d, eta, otherD, otherEta, yRotDiff = conflict:getClosest()
-
-		if conflict:isCleared() then
-			table.remove(self.conflicts, i)
-		end
-	end
 end
 
 function TrafficConflictDetector:isIgnored(otherId)
@@ -548,13 +545,17 @@ function TrafficConflictDetector:onCollision(triggerId, otherId, onEnter, onLeav
 		local yRotDiff = otherYRot and myYRot and MathUtil.getAngleDifference(myYRot, otherYRot)
 		local otherVehicle = g_currentMission.nodeToObject[otherVehicleRootNode]
 		if onEnter then
+			self:debug('onCollision: onEnter with %s (%s with %s)', nameNum(otherVehicle), getName(triggerId), getName(otherId))
 			-- call every time, even if we already have a conflict with this vehicle to update d and ETA
 			g_trafficController:onConflictDetected(self.vehicle, otherVehicle, triggerId,
 					getUserAttribute(triggerId, 'distance'), getUserAttribute(triggerId, 'eta'),
 					getUserAttribute(otherId, 'distance'), getUserAttribute(otherId, 'eta'), yRotDiff)
 		end
 		if onLeave then
+			self:debug('onCollision: onLeave with %s (%s with %s)', nameNum(otherVehicle), getName(triggerId), getName(otherId))
 			g_trafficController:onConflictCleared(self.vehicle, otherVehicle, triggerId)
 		end
+	elseif not otherVehicleRootNode then
+		--self:debug('onCollision: %s with %s', self.vehicle:getName(), getName(otherId))
 	end
 end

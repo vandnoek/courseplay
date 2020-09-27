@@ -874,17 +874,14 @@ function Course:getPreviousWaypointIxWithinDistance(ix, distance)
 	return nil
 end
 
---- Collect a nSteps number of positions on the course, starting at startIx, one position every dStep meters
+--- Collect a nSteps number of positions on the course, starting at startIx, one position for every second,
+--- or every dStep meters, whichever is less
 ---@param startIx number start at this waypoint
 ---@param dStep number step in meters
 ---@param nSteps number number of positions to collect
-function Course:getPositionsOnCourse(startIx, dStep, nSteps)
+function Course:getPositionsOnCourse(nominalSpeed, startIx, dStep, nSteps)
 
-	local function addPosition(positions, ix, x, y, z, dFromLastWp)
-		local speed
-		if self.waypoints[ix].speed then
-			speed = (self.waypoints[ix].speed > 0) and self.waypoints[ix].speed or nil
-		end
+	local function addPosition(positions, ix, x, y, z, dFromLastWp, speed)
 		table.insert(positions, {x = x + dFromLastWp * self.waypoints[ix].dx,
 								 y = y,
 								 z = z + dFromLastWp * self.waypoints[ix].dz,
@@ -901,12 +898,20 @@ function Course:getPositionsOnCourse(startIx, dStep, nSteps)
 	local dFromLastWp = 0
 	local ix = startIx
 	while #positions < nSteps and ix < #self.waypoints do
+		local speed = nominalSpeed
+		if self.waypoints[ix].speed then
+			speed = (self.waypoints[ix].speed > 0) and self.waypoints[ix].speed or nominalSpeed
+		end
+		-- speed / 3.6 is the speed in meter/sec, that's how many meters we travel in one sec
+		-- don't step more than 4 m as that would move the boxes too far away from each other creating a gap between them
+		-- so if we drive fast, our event horizon shrinks, which is probably not a good thing
+		local currentStep = math.min(speed / 3.6, dStep)
 		local x, y, z = self:getWaypointPosition(ix)
-		if dFromLastWp + dStep < self.waypoints[ix].dToNext then
-			while dFromLastWp + dStep < self.waypoints[ix].dToNext and #positions < nSteps and ix < #self.waypoints do
-				d = d + dStep
-				dFromLastWp = dFromLastWp + dStep
-				addPosition(positions, ix, x, y, z, dFromLastWp)
+		if dFromLastWp + currentStep < self.waypoints[ix].dToNext then
+			while dFromLastWp + currentStep < self.waypoints[ix].dToNext and #positions < nSteps and ix < #self.waypoints do
+				d = d + currentStep
+				dFromLastWp = dFromLastWp + currentStep
+				addPosition(positions, ix, x, y, z, dFromLastWp, speed)
 			end
 			-- this is before wp ix, so negative
 			dFromLastWp = - (self.waypoints[ix].dToNext - dFromLastWp)
@@ -915,15 +920,15 @@ function Course:getPositionsOnCourse(startIx, dStep, nSteps)
 		else
             d = - dFromLastWp
 			-- would step over the waypoint
-			while d < dStep and ix < #self.waypoints do
+			while d < currentStep and ix < #self.waypoints do
 				d = d + self.waypoints[ix].dToNext
 				ix = ix + 1
 			end
 			-- this is before wp ix, so negative
-			dFromLastWp = - (d - dStep)
+			dFromLastWp = - (d - currentStep)
 			d = 0
             x, y, z = self:getWaypointPosition(ix)
-			addPosition(positions, ix, x, y, z, dFromLastWp)
+			addPosition(positions, ix, x, y, z, dFromLastWp, speed)
 		end
 	end
 	return positions

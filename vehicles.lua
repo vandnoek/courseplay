@@ -1752,3 +1752,13 @@ end
 function AIDriverUtil.isRealWheel(wheel)
 	return wheel.hasTireTracks and wheel.maxLatStiffnessLoad > 0.5
 end
+
+function AIDriverUtil.isBehindOtherVehicle(vehicle, otherVehicle)
+	local _, _, dz = localToLocal(AIDriverUtil.getDirectionNode(vehicle), AIDriverUtil.getDirectionNode(otherVehicle), 0, 0, 0)
+	return dz < 0
+end
+
+function AIDriverUtil.isStopped(vehicle)
+-- giants supplied last speed is in mm/s
+	return math.abs(vehicle.lastSpeedReal) < 0.0001
+end

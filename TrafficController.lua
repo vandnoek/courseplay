@@ -28,9 +28,13 @@ function Conflict:init(vehicle1, vehicle2, triggerId, d, eta, otherD, otherEta, 
 	self.vehicle1 = vehicle1
 	self.vehicle2 = vehicle2
     self.triggers = {}
-	-- need to count them ourselves as it triggers is a hash, not an array
+	-- need to count them ourselves as the triggers table is a hash, not an array
 	self.nTriggers = 0
-	self:onDetected(triggerId, vehicle1, vehicle2, d, eta, otherD, otherEta, yRotDiff)
+	self:onDetected(vehicle1, triggerId, vehicle1, vehicle2, d, eta, otherD, otherEta, yRotDiff)
+end
+
+function Conflict:isVehicleInvolved(vehicle)
+	return vehicle == self.vehicle1 or vehicle == self.vehicle2
 end
 
 function Conflict:isBetween(vehicle1, vehicle2)
@@ -47,14 +51,19 @@ function Conflict:isCleared()
 	return self.nTriggers < 1
 end
 
-function Conflict:onDetected(triggerId, detectedBy, otherVehicle, d, eta, otherD, otherEta, yRotDiff)
+function Conflict:onDetected(vehicle, triggerId, detectedBy, otherVehicle, d, eta, otherD, otherEta, yRotDiff)
+	-- we only keep track of conflicts reported by vehicle1 as each collision between vehicle1 and vehicle2 is
+	-- reported twice (once by each vehicle)
+	if vehicle ~= self.vehicle1 then return false end
 	self.triggers[triggerId] = {detectedBy = detectedBy, otherVehicle = otherVehicle,
 								d = d, eta = eta, otherD = otherD, otherEta = otherEta,
 								yRotDiff = yRotDiff, detectedAt = g_time}
 	self:update()
 end
 
-function Conflict:onCleared(triggerId)
+function Conflict:onCleared(vehicle, triggerId)
+	if vehicle ~= self.vehicle1 then return end
+	if not self.triggers[triggerId] then return end
 	self.triggers[triggerId].timeCleared = g_time
 	self:update()
 end
@@ -86,14 +95,13 @@ function Conflict:resolve()
 		-- if we are already holding someone, keep doing so until the conflict is resolved, otherwise:
 		if not self.vehicleToHold then
 			if math.abs(self.closestTrigger.yRotDiff) < math.rad(45) then
-				-- one vehicle is behind the other
-				if self.closestTrigger.d < self.closestTrigger.otherD then
-					-- detecting vehicle is closer to the conflict, so the other is behind it
-					self.vehicleToHold = self.closestTrigger.otherVehicle
-					self.vehicleWithRightOfWay = self.closestTrigger.detectedBy
-				else
+				-- one vehicle is behind the other, hold the one behind, let the one on the front drive...
+				if AIDriverUtil.isBehindOtherVehicle(self.closestTrigger.detectedBy, self.closestTrigger.otherVehicle) then
 					self.vehicleToHold = self.closestTrigger.detectedBy
 					self.vehicleWithRightOfWay = self.closestTrigger.otherVehicle
+				else
+					self.vehicleToHold = self.closestTrigger.otherVehicle
+					self.vehicleWithRightOfWay = self.closestTrigger.detectedBy
 				end
 			else
 				-- vehicles crossing paths, decide on priority
@@ -181,7 +189,7 @@ end
 function TrafficController:onConflictDetected(vehicle, otherVehicle, triggerId, d, eta, otherD, otherEta, yRotDiff)
 	for _, conflict in ipairs(self.conflicts) do
 		if conflict:isBetween(vehicle, otherVehicle) then
-			conflict:onDetected(triggerId, vehicle, otherVehicle, d, eta, otherD, otherEta, yRotDiff)
+			conflict:onDetected(vehicle, triggerId, vehicle, otherVehicle, d, eta, otherD, otherEta, yRotDiff)
 			return
 		end
 	end
@@ -192,8 +200,19 @@ end
 function TrafficController:onConflictCleared(vehicle, otherVehicle, triggerId)
 	for i, conflict in ipairs(self.conflicts) do
 		if conflict:isBetween(vehicle, otherVehicle) then
-			conflict:onCleared(triggerId)
+			conflict:onCleared(vehicle, triggerId)
 			return
+		end
+	end
+end
+
+function TrafficController:removeAllConflictsForVehicle(vehicle)
+	self:debug('Removing all traffic conflicts for %s', nameNum(vehicle))
+	for i = #self.conflicts, 1, -1 do
+		---@type Conflict
+		local conflict = self.conflicts[i]
+		if conflict:isVehicleInvolved(vehicle) then
+			table.remove(self.conflicts, i)
 		end
 	end
 end

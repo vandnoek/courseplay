@@ -111,6 +111,12 @@ function PurePursuitController:debug(...)
 	courseplay.debugVehicle(12, self.vehicle, 'PPC: ' .. string.format( ... ))
 end
 
+function PurePursuitController:debugSparse(...)
+	if g_updateLoopIndex % 100 == 0 then
+		self:debug(...)
+	end
+end
+
 ---@param course Course
 function PurePursuitController:setCourse(course)
 	self.course = course
@@ -234,6 +240,10 @@ function PurePursuitController:getCurrentOriginalWaypointIx()
 end
 
 function PurePursuitController:update()
+	if not self.course then
+		self:debugSparse('no course set.')
+		return
+	end
 	self:switchControlledNode()
 	self:findRelevantSegment()
 	self:findGoalPoint()
@@ -541,10 +551,11 @@ end
 
 --- Should we be driving in reverse based on the current position on course
 function PurePursuitController:isReversing()
-	if not self.course then
-		printCallstack()
+	if self.course then
+		return self.course:isReverseAt(self:getCurrentWaypointIx()) or self.course:switchingToForwardAt(self:getCurrentWaypointIx())
+	else
+		return false
 	end
-	return self.course:isReverseAt(self:getCurrentWaypointIx()) or self.course:switchingToForwardAt(self:getCurrentWaypointIx())
 end
 
 function PurePursuitController:getDirection(lz)

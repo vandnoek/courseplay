@@ -295,6 +295,7 @@ function AIDriver:dismiss()
 	self:clearAllInfoTexts()
 	self:stop()
 	self.active = false
+	g_trafficController:removeAllConflictsForVehicle(self.vehicle)
 	if self.trafficConflictDetector then 
 		self.trafficConflictDetector:delete()
 		self.trafficConflictDetector = nil
@@ -836,6 +837,7 @@ function AIDriver:getDefaultStreetSpeed(ix)
 	if radius then
 		return math.max(self.vehicle.cp.speeds.turn, math.min(radius / 20 * self.vehicle.cp.speeds.street, self.vehicle.cp.speeds.street))
 	end
+	return self.vehicle.cp.speeds.street
 end
 
 function AIDriver:slowDownForWaitPoints()
@@ -916,12 +918,11 @@ function AIDriver:debugSparse(...)
 end
 
 function AIDriver:isStopped()
-	-- giants supplied last speed is in mm/s
-	return math.abs(self.vehicle.lastSpeedReal) < 0.0001
+	return AIDriverUtil.isStopped(self.vehicle)
 end
 
 function AIDriver:drawTemporaryCourse()
-	if not self.course:isTemporary() then return end
+	if not self.course or not self.course:isTemporary() then return end
 	if self.vehicle.cp.settings.enableVisualWaypointsTemporary:is(false) and
 			not courseplay.debugChannels[self.debugChannel] then
 		return
