@@ -1762,3 +1762,7 @@ function AIDriverUtil.isStopped(vehicle)
 -- giants supplied last speed is in mm/s
 	return math.abs(vehicle.lastSpeedReal) < 0.0001
 end
+
+function AIDriverUtil.isReversing(vehicle)
+	return vehicle.movingDirection == -1 and vehicle.lastSpeedReal * 3600 > 0.1
+end

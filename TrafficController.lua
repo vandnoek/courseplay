@@ -16,6 +16,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ]]
 
+--- A traffic conflict between two vehicles.
+--- A conflict is created when the collision boxes of two vehicles overlap.
 ---@class Conflict
 Conflict = CpObject()
 
@@ -24,45 +26,53 @@ Conflict.detectionThresholdMilliSec = 1000
 -- a collision trigger must be cleared for at least so many milliseconds before it is removed from a conflict
 Conflict.clearThresholdMilliSec = 1000
 
-function Conflict:init(vehicle1, vehicle2, triggerId, d, eta, otherD, otherEta, yRotDiff)
-	self.vehicle1 = vehicle1
-	self.vehicle2 = vehicle2
+function Conflict:init(vehicle, otherVehicle, triggerId, d, eta, otherD, otherEta, yRotDiff)
+	self.debugChannel = 3
+	self.vehicle = vehicle
+	self.otherVehicle = otherVehicle
     self.triggers = {}
 	-- need to count them ourselves as the triggers table is a hash, not an array
 	self.nTriggers = 0
-	self:onDetected(vehicle1, triggerId, vehicle1, vehicle2, d, eta, otherD, otherEta, yRotDiff)
+	-- we don't yet know who has the right of way in this conflict
+	self.rightOfWayEvaluated = false
+	self:onDetected(triggerId, d, eta, otherD, otherEta, yRotDiff)
+	self:evaluateRightOfWay()
+end
+
+function Conflict:debug(...)
+	courseplay.debugVehicle(self.debugChannel, self.vehicle,
+			string.format(' in conflict with %s:', nameNum(self.otherVehicle)) .. string.format(...))
 end
 
 function Conflict:isVehicleInvolved(vehicle)
-	return vehicle == self.vehicle1 or vehicle == self.vehicle2
+	return vehicle == self.vehicle or vehicle == self.otherVehicle
 end
 
-function Conflict:isBetween(vehicle1, vehicle2)
-	if vehicle1 == self.vehicle1 and vehicle2 == self.vehicle2 then
+function Conflict:isBetween(vehicle, otherVehicle)
+	if vehicle == self.vehicle and otherVehicle == self.otherVehicle then
 		return true
-	elseif vehicle1 == self.vehicle2 and vehicle2 == self.vehicle1 then
+	elseif vehicle == self.otherVehicle and otherVehicle == self.vehicle then
 		return true
 	else
 		return false
 	end
 end
 
+function Conflict:isWith(otherVehicle)
+	return self.otherVehicle == otherVehicle
+end
+
 function Conflict:isCleared()
 	return self.nTriggers < 1
 end
 
-function Conflict:onDetected(vehicle, triggerId, detectedBy, otherVehicle, d, eta, otherD, otherEta, yRotDiff)
-	-- we only keep track of conflicts reported by vehicle1 as each collision between vehicle1 and vehicle2 is
-	-- reported twice (once by each vehicle)
-	if vehicle ~= self.vehicle1 then return false end
-	self.triggers[triggerId] = {detectedBy = detectedBy, otherVehicle = otherVehicle,
-								d = d, eta = eta, otherD = otherD, otherEta = otherEta,
+function Conflict:onDetected(triggerId, d, eta, otherD, otherEta, yRotDiff)
+	self.triggers[triggerId] = {d = d, eta = eta, otherD = otherD, otherEta = otherEta,
 								yRotDiff = yRotDiff, detectedAt = g_time}
 	self:update()
 end
 
-function Conflict:onCleared(vehicle, triggerId)
-	if vehicle ~= self.vehicle1 then return end
+function Conflict:onCleared(triggerId)
 	if not self.triggers[triggerId] then return end
 	self.triggers[triggerId].timeCleared = g_time
 	self:update()
@@ -90,60 +100,74 @@ function Conflict:update()
 	end
 end
 
-function Conflict:resolve()
+function Conflict:getDistance()
 	if self.closestTrigger then
-		-- if we are already holding someone, keep doing so until the conflict is resolved, otherwise:
-		if not self.vehicleToHold then
-			if math.abs(self.closestTrigger.yRotDiff) < math.rad(45) then
-				-- one vehicle is behind the other, hold the one behind, let the one on the front drive...
-				if AIDriverUtil.isBehindOtherVehicle(self.closestTrigger.detectedBy, self.closestTrigger.otherVehicle) then
-					self.vehicleToHold = self.closestTrigger.detectedBy
-					self.vehicleWithRightOfWay = self.closestTrigger.otherVehicle
-				else
-					self.vehicleToHold = self.closestTrigger.otherVehicle
-					self.vehicleWithRightOfWay = self.closestTrigger.detectedBy
-				end
-			else
-				-- vehicles crossing paths, decide on priority
-				if self.closestTrigger.detectedBy.cp.driver:is_a(CombineUnloadAIDriver) and
-						self.closestTrigger.otherVehicle.cp.driver:is_a(CombineAIDriver) then
-					self.vehicleToHold = self.closestTrigger.detectedBy
-					self.vehicleWithRightOfWay = self.closestTrigger.otherVehicle
-				elseif self.closestTrigger.otherVehicle.cp.driver:is_a(CombineUnloadAIDriver) and
-						self.closestTrigger.detectedBy.cp.driver:is_a(CombineAIDriver) then
-					self.vehicleToHold = self.closestTrigger.otherVehicle
-					self.vehicleWithRightOfWay = self.closestTrigger.detectedBy
-				else
-					self.vehicleToHold = self.closestTrigger.otherVehicle
-					self.vehicleWithRightOfWay = self.closestTrigger.detectedBy
-				end
-			end
-		end
-		if self.vehicleToHold.cp.driver then
-			self.vehicleToHold.cp.driver:onConflict(self.vehicleWithRightOfWay,
-					self.closestTrigger.d, self.closestTrigger.eta, self.closestTrigger.yRotDiff, true)
-		end
+		return self.closestTrigger.d, self.closestTrigger.eta
 	else
-		return nil
+		return math.huge, math.huge
 	end
 end
 
-function Conflict:getClosest()
-	if self.closestTrigger then
-		return self.detectedBy, self.conflictingVehicle, self.closestTrigger.d, self.closestTrigger.eta,
-			self.closestTrigger.otherD, self.closestTrigger.otherEta, self.closestTrigger.yRotDiff
-	else
-		return nil
-	end
+function Conflict:getConflictingVehicle()
+	return self.otherVehicle
 end
 
 function Conflict:__tostring()
-	local result = string.format('Traffic conflict: %s <-> %s %d triggers', self.vehicle1:getName(), self.vehicle2:getName(), self.nTriggers)
+	local result = string.format('Traffic conflict: %s <-> %s %d triggers', self.vehicle:getName(), self.otherVehicle:getName(), self.nTriggers)
 	if self.closestTrigger then
 		result = string.format('%s, closest %.1f m %d sec %.1f° ', result, self.closestTrigger.d or -1, self.closestTrigger.eta or -1,
 				self.closestTrigger.yRotDiff and math.deg(self.closestTrigger.yRotDiff) or 0)
 	end
 	return result
+end
+
+--- Decide who has the right of way
+function Conflict:evaluateRightOfWay()
+	-- already know, never re-evaluate
+	if self.rightOfWayEvaluated == true then return end
+	if self.closestTrigger then
+		if math.abs(self.closestTrigger.yRotDiff) < math.rad(45) then
+			-- one vehicle is behind the other, hold the one behind, let the one on the front drive...
+			if AIDriverUtil.isBehindOtherVehicle(self.vehicle, self.otherVehicle) then
+				self.mustYield = true
+				self:debug('behind other vehicle, I must yield')
+			else
+				self.mustYield = false
+				self:debug('in front of other vehicle, I have right of way')
+			end
+		else
+			-- vehicles crossing paths, decide on priority
+			if self.vehicle.cp.driver:is_a(CombineUnloadAIDriver) and
+					self.otherVehicle.cp.driver:is_a(CombineAIDriver) then
+				self.mustYield = true
+				self:debug('I am unloader, other vehicle is combine, I must yield')
+			elseif self.otherVehicle.cp.driver:is_a(CombineUnloadAIDriver) and
+					self.vehicle.cp.driver:is_a(CombineAIDriver) then
+				self.mustYield = false
+				self:debug('I am combine, other vehicle is unloader, I have right of way')
+			else
+				self.mustYield = false
+				self:debug('I detected the conflict first, I have right of way')
+			end
+			if math.abs(self.closestTrigger.yRotDiff) > math.rad(135) then
+				-- head on conflict, hold the vehicle with right of way until the other one recalculates
+				self:debug('head on conflict')
+				self.headOn = true
+			end
+		end
+		if self.otherVehicle.cp.driver then
+			-- tell the other vehicle the result of our decision. Whoever gets here first, makes the decision
+			-- about the right of way for both participants of the conflict
+			self.otherVehicle.cp.driver:onRightOfWayEvaluated(self.vehicle, not self.mustYield, self.headOn)
+		end
+	end
+end
+
+-- The other vehicle in the conflict just decided who has the right of way
+function Conflict:onRightOfWayEvaluated(mustYield, headOn)
+	self.mustYield = mustYield
+	self.headOn = headOn
+	self.rightOfWayEvaluated = true
 end
 
 --- TrafficController provides a cooperative collision avoidance facility for all Courseplay driven vehicles.
@@ -155,7 +179,7 @@ TrafficController.debugChannel = 4
 function TrafficController:init()
 	---@type Conflict[]
 	self.conflicts = {}
-	self:debug('Traffic controller initialized')
+	self:debug('initialized')
 end
 
 -- This should be called once in an update cycle (globally, not vehicle specific)
@@ -165,8 +189,9 @@ function TrafficController:update()
 		---@type Conflict
 		local conflict = self.conflicts[i]
 		conflict:update()
-		conflict:resolve()
 		if conflict:isCleared() then
+			self:debug('Conflict cleared: %s', self.conflicts[i])
+			--self:notifyVehiclesOnConflictCleared()
 			table.remove(self.conflicts, i)
 		end
 	end
@@ -174,7 +199,7 @@ function TrafficController:update()
 end
 
 function TrafficController:debug(...)
-	courseplay:debug(string.format(...), self.debugChannel)
+	courseplay:debug('TrafficController: ' .. string.format(...), self.debugChannel)
 end
 
 function TrafficController:drawDebugInfo()
@@ -189,12 +214,14 @@ end
 function TrafficController:onConflictDetected(vehicle, otherVehicle, triggerId, d, eta, otherD, otherEta, yRotDiff)
 	for _, conflict in ipairs(self.conflicts) do
 		if conflict:isBetween(vehicle, otherVehicle) then
-			conflict:onDetected(vehicle, triggerId, vehicle, otherVehicle, d, eta, otherD, otherEta, yRotDiff)
+			conflict:onDetected(triggerId, d, eta, otherD, otherEta, yRotDiff)
 			return
 		end
 	end
 	-- first conflict for this vehicle pair
 	table.insert(self.conflicts, Conflict(vehicle, otherVehicle, triggerId, d, eta, otherD, otherEta, yRotDiff))
+	self:debug('Conflict added: %s', self.conflicts[#self.conflicts])
+	self.conflicts[#self.conflicts]:notifyVehiclesOnNewConflict()
 end
 
 function TrafficController:onConflictCleared(vehicle, otherVehicle, triggerId)
