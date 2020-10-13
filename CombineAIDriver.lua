@@ -1564,7 +1564,11 @@ function CombineAIDriver:createTrafficConflictDetector()
 	for cutter, _ in pairs(self.combine.attachedCutters) do
 		-- attachedCutters is indexed by the cutter, not an integer
 		self.trafficConflictDetector = TrafficConflictDetector(self.vehicle, self.course, cutter)
+		-- for now, combines ignore traffic conflicts (but still provide the detector boxes for other vehicles)
+		self.trafficConflictDetector:disableSpeedControl()
 		return
 	end
 	self.trafficConflictDetector = TrafficConflictDetector(self.vehicle, self.course)
+	-- for now, combines ignore traffic conflicts (but still provide the detector boxes for other vehicles)
+	self.trafficConflictDetector:disableSpeedControl()
 end

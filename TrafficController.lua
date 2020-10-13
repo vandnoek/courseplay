@@ -41,7 +41,7 @@ end
 
 function Conflict:debug(...)
 	courseplay.debugVehicle(self.debugChannel, self.vehicle,
-			string.format(' in conflict with %s:', nameNum(self.otherVehicle)) .. string.format(...))
+			string.format('in conflict with %s: ', nameNum(self.otherVehicle)) .. string.format(...))
 end
 
 function Conflict:isVehicleInvolved(vehicle)
@@ -221,7 +221,6 @@ function TrafficController:onConflictDetected(vehicle, otherVehicle, triggerId, 
 	-- first conflict for this vehicle pair
 	table.insert(self.conflicts, Conflict(vehicle, otherVehicle, triggerId, d, eta, otherD, otherEta, yRotDiff))
 	self:debug('Conflict added: %s', self.conflicts[#self.conflicts])
-	self.conflicts[#self.conflicts]:notifyVehiclesOnNewConflict()
 end
 
 function TrafficController:onConflictCleared(vehicle, otherVehicle, triggerId)

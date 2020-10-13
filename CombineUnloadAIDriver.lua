@@ -212,12 +212,17 @@ function CombineUnloadAIDriver:isTrafficConflictDetectionEnabled()
 			(self.state == self.states.ON_FIELD and self.onFieldState.properties.checkForTrafficConflict))
 end
 
-function CombineUnloadAIDriver:recalculatePathOnTrafficConflict()
+function CombineUnloadAIDriver:recalculatePathOnTrafficConflict(conflictingVehicle)
 	if self.state == self.states.ON_UNLOAD_COURSE then
 		self:info('recalculating path on unload course not implemented.')
 		return
 	elseif self.state == self.states.ON_FIELD then
-		self:debug('Recalculating path due to traffic conflict, state: %s', self.onFieldState.name)
+		if self.onFieldState == self.states.WAITING_FOR_PATHFINDER then
+			self:debugSparse('Already calculating a path.')
+			return
+		end
+		self:debug('Recalculating path due to traffic conflict with %s, state: %s',
+				nameNum(conflictingVehicle), self.onFieldState.name)
 		if self.onFieldState == self.states.DRIVE_TO_COMBINE or
 				self.onFieldState == self.states.DRIVE_TO_MOVING_COMBINE then
 			if self.combineToUnload.cp.driver:isChopper() then
@@ -229,10 +234,13 @@ function CombineUnloadAIDriver:recalculatePathOnTrafficConflict()
 		if self.onFieldState == self.states.DRIVE_TO_FIRST_UNLOADER then
 			self:startDrivingToChopper()
 		end
-		if self.onFieldState == self.states.DRIVE_TO_FIRST_UNLOADER then
+		if self.onFieldState == self.states.DRIVE_TO_UNLOAD_COURSE then
 			self:startUnloadCourse()
 		end
 	end
+	-- do not hold or slow down for this vehicle, we'll recalculate a course which avoids
+	-- it anyway, even if some of the collisions are still active.
+	self.trafficConflictDetector:disableSpeedControlForVehicle(conflictingVehicle)
 end
 
 

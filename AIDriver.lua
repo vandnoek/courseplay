@@ -1723,7 +1723,13 @@ function AIDriver:slowDownForTraffic(maxSpeed, allowedToDrive)
 	if maxSpeed == 0 or not allowedToDrive then
 		return maxSpeed, allowedToDrive
 	end
+	-- traffic conflict detection completely disabled
 	if not self:isTrafficConflictDetectionEnabled() then
+		return maxSpeed, allowedToDrive
+	end
+	-- traffic conflict detector enabled, so others can see where we are going and resolve conflicts with us,
+	-- but we won't slow down or hold (for example maneuvering chopper/combine uses the proximity sensor)
+	if not self.trafficConflictDetector:isSpeedControlEnabled() then
 		return maxSpeed, allowedToDrive
 	end
 	local closestConflictDistance = self.trafficConflictDetector:getClosestConflictDistance()
@@ -1733,11 +1739,9 @@ function AIDriver:slowDownForTraffic(maxSpeed, allowedToDrive)
 		self:clearInfoText('SLOWING_DOWN_FOR_TRAFFIC')
 		self:setInfoText('TRAFFIC')
 		allowedToDrive = false
-		if self.trafficConflictDetector:shouldRecalculate() and not self.recalculatingPathOnTrafficConflict then
-			self.recalculatingPathOnTrafficConflict = true
-			self:recalculatePathOnTrafficConflict()
-		else
-			self.recalculatingPathOnTrafficConflict = false
+		local shouldRecalculate, conflictingVehicle = self.trafficConflictDetector:shouldRecalculate()
+		if shouldRecalculate then
+			self:recalculatePathOnTrafficConflict(conflictingVehicle)
 		end
 	elseif self.trafficConflictDetector:shouldSlowDown() then
 		self:debugSparse('Traffic conflict with %s in %.1f m, half speed', nameNum(closestConflictingVehicle), closestConflictDistance)
@@ -1745,6 +1749,7 @@ function AIDriver:slowDownForTraffic(maxSpeed, allowedToDrive)
 		self:setInfoText('SLOWING_DOWN_FOR_TRAFFIC')
 		maxSpeed = maxSpeed / 2
 	else
+		-- no conflict anymore
 		self:clearInfoText('TRAFFIC')
 		self:clearInfoText('SLOWING_DOWN_FOR_TRAFFIC')
 	end

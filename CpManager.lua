@@ -277,7 +277,7 @@ function CpManager:update(dt)
 			self:showYesNoDialogue('Courseplay', courseplay:loc('COURSEPLAY_YES_NO_FIELDSCAN'), self.fieldScanDialogueCallback);
 		end;
 	end;
-	g_trafficController:update(dt)
+	TrafficConflictDetector.drawAllDebugInfo()
 	g_combineUnloadManager:onUpdate(dt)
 
 	-- REAL TIME 5 SECS CHANGER

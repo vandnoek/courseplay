@@ -418,8 +418,32 @@ function TrafficConflictDetector:init(vehicle, course, collisionTriggerObject)
 	self.collisionTriggerObject = collisionTriggerObject or vehicle
 	CollisionDetector.init(self, vehicle, course)
 	self:debug('TrafficConflictDetector:init()')
+	self.speedControlEnabled = true
+	self.ignoreVehicleForSpeedControl = nil
 end
 
+-- This currently does not do anything in TrafficConflictDetector, just provides a container
+-- for this property
+function TrafficConflictDetector:isSpeedControlEnabled()
+	return self.speedControlEnabled
+end
+
+function TrafficConflictDetector:enableSpeedControl()
+	self.speedControlEnabled = true
+	self.ignoreVehicleForSpeedControl = nil
+end
+
+function TrafficConflictDetector:disableSpeedControl()
+	self.speedControlEnabled = false
+end
+
+-- we'll not tell anyone to hold, slow down or recalculate for this vehicle until
+-- enableSpeedControl() is called or the conflict with this vehicle is cleared.recalculate
+-- this is to ignore a conflicting vehicle which caused a recalculation until we actually drive around
+-- it, at which point the conflict is resolved.
+function TrafficConflictDetector:disableSpeedControlForVehicle(vehicle)
+	self.ignoreVehicleForSpeedControl = vehicle
+end
 
 function TrafficConflictDetector:createTriggers()
 	if not courseplay:findAiCollisionTrigger(self.collisionTriggerObject) then return end
@@ -437,6 +461,7 @@ function TrafficConflictDetector:createTriggers()
 		setTranslation(newTrigger, x, i + y + self.baseHeight, z)
 		setRotation(newTrigger, 0, yRot, 0)
 		setUserAttribute(newTrigger, 'vehicleRootNode', 'Integer', self.vehicle.rootNode)
+		setUserAttribute(newTrigger, 'trafficConflictDetector', 'Boolean', true)
 		addTrigger(newTrigger, 'onCollision', self)
 	end
 end
@@ -542,6 +567,8 @@ function TrafficConflictDetector:isIgnored(otherId)
 end
 
 function TrafficConflictDetector:onCollision(triggerId, otherId, onEnter, onLeave, onStay, otherShapeId)
+	-- is this even a traffic conflict detector trigger?
+	if not getUserAttribute(triggerId, 'trafficConflictDetector') then return end
 	local otherVehicleRootNode = getUserAttribute(otherId, 'vehicleRootNode')
 	if otherVehicleRootNode and otherVehicleRootNode ~= self.vehicle.rootNode then
 		local otherYRot = getUserAttribute(otherId, 'yRot')
@@ -557,7 +584,7 @@ function TrafficConflictDetector:onCollision(triggerId, otherId, onEnter, onLeav
 		end
 		if onLeave then
 			self:debug('onCollision: onLeave with %s (%s with %s)', nameNum(otherVehicle), getName(triggerId), getName(otherId))
-			self:onConflictCleared(self.vehicle, otherVehicle, triggerId)
+			self:onConflictCleared(otherVehicle, triggerId)
 		end
 	elseif not otherVehicleRootNode then
 		--self:debug('onCollision: %s with %s', self.vehicle:getName(), getName(otherId))
@@ -574,7 +601,6 @@ function TrafficConflictDetector:onConflictDetected(otherVehicle, triggerId, d, 
 	-- first conflict for this vehicle pair
 	table.insert(self.conflicts, Conflict(self.vehicle, otherVehicle, triggerId, d, eta, otherD, otherEta, yRotDiff))
 	self:debug('Conflict added: %s', self.conflicts[#self.conflicts])
-	self.conflicts[#self.conflicts]:notifyVehiclesOnNewConflict()
 end
 
 function TrafficConflictDetector:onConflictCleared(otherVehicle, triggerId)
@@ -597,6 +623,9 @@ function TrafficConflictDetector:updateConflicts()
 		conflict:update()
 		if conflict:isCleared() then
 			self:debug('Conflict cleared: %s', self.conflicts[i])
+			if self.ignoreVehicleForSpeedControl == conflict:getConflictingVehicle() then
+				self.ignoreVehicleForSpeedControl = nil
+			end
 			table.remove(self.conflicts, i)
 		else
 			if conflict:getDistance() < closestConflictDistance then
@@ -606,7 +635,9 @@ function TrafficConflictDetector:updateConflicts()
 	end
 	if self.closestConflict ~= closestConflict then
 		self.closestConflict = closestConflict
-		self.closestConflict:evaluateRightOfWay()
+		if self.closestConflict then
+			self.closestConflict:evaluateRightOfWay()
+		end
 	end
 end
 
@@ -632,10 +663,10 @@ function TrafficConflictDetector:getClosestConflictingVehicle()
 end
 
 function TrafficConflictDetector:shouldRecalculate()
-	if self.closestConflict then
+	if self.closestConflict and self.ignoreVehicleForSpeedControl ~= self.closestConflict:getConflictingVehicle() then
 		-- if we must yield to the other vehicle and this is a head on conflict then we need to recalculate
 		-- our path around the other vehicle
-		return self.closestConflict.mustYield and self.closestConflict.headOn
+		return self.closestConflict.mustYield and self.closestConflict.headOn, self.closestConflict:getConflictingVehicle()
 	else
 		return false
 	end
@@ -651,7 +682,7 @@ function TrafficConflictDetector:onRightOfWayEvaluated(otherVehicle, mustYield, 
 end
 
 function TrafficConflictDetector:shouldHold()
-	if self.closestConflict then
+	if self.closestConflict and self.ignoreVehicleForSpeedControl ~= self.closestConflict:getConflictingVehicle() then
 		-- if close enough and I must yield, or there is a head on conflict
 		return (self.closestConflict.mustYield or self.closestConflict.headOn) and
 				self.closestConflict:getDistance() < TrafficConflictDetector.holdDistance
@@ -661,7 +692,7 @@ function TrafficConflictDetector:shouldHold()
 end
 
 function TrafficConflictDetector:shouldSlowDown()
-	if self.closestConflict then
+	if self.closestConflict and self.ignoreVehicleForSpeedControl ~= self.closestConflict:getConflictingVehicle() then
 		-- if close enough and I must yield
 		return self.closestConflict.mustYield and
 				self.closestConflict:getDistance() < TrafficConflictDetector.slowDownDistance
@@ -693,6 +724,27 @@ function TrafficConflictDetector:removeAllConflictsForVehicle(vehicle)
 		local conflict = self.conflicts[i]
 		if conflict:isVehicleInvolved(vehicle) then
 			table.remove(self.conflicts, i)
+		end
+	end
+end
+
+function TrafficConflictDetector:drawDebugInfo(y)
+	if not courseplay.debugChannels[self.debugChannel] then return end
+	local x, size = 0.1, 0.012
+
+	for i, conflict in ipairs(self.conflicts) do
+		renderText(x, y, size, string.format('%s', i, conflict))
+		y = y - size * 1.1
+	end
+	return y
+end
+
+function TrafficConflictDetector.drawAllDebugInfo()
+	if not courseplay.debugChannels[TrafficConflictDetector.debugChannel] then return end
+	local y = 0.1
+	for _, vehicle in pairs(g_currentMission.vehicles) do
+		if vehicle.cp and vehicle.cp.driver and vehicle.cp.driver.trafficConflictDetector then
+			y = vehicle.cp.driver.trafficConflictDetector:drawDebugInfo(y)
 		end
 	end
 end
