@@ -22,9 +22,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 Conflict = CpObject()
 
 -- a collision trigger must be present for at least so many milliseconds before it is considered for a conflict
-Conflict.detectionThresholdMilliSec = 1000
+Conflict.detectionThresholdMilliSec = 0
 -- a collision trigger must be cleared for at least so many milliseconds before it is removed from a conflict
-Conflict.clearThresholdMilliSec = 1000
+Conflict.clearThresholdMilliSecNormal = 1000
+-- if this is a head-on conflict where we must yield to the other vehicle, don't clear the conflict for quite
+-- a while, giving some time to the other vehicle to drive around us
+Conflict.clearThresholdMilliSecHeadOnYield = 30000
 
 function Conflict:init(vehicle, otherVehicle, triggerId, d, eta, otherD, otherEta, yRotDiff)
 	self.debugChannel = 3
@@ -78,6 +81,14 @@ function Conflict:onCleared(triggerId)
 	self:update()
 end
 
+function Conflict:getClearThresholdMilliSec()
+	if self.headOn and self.mustYield then
+		return Conflict.clearThresholdMilliSecHeadOnYield
+	else
+		return Conflict.clearThresholdMilliSecNormal
+	end
+end
+
 function Conflict:update()
 	local minEta = math.huge
 	self.nTriggers = 0
@@ -88,7 +99,7 @@ function Conflict:update()
 			minEta = self.closestTrigger.eta
 		end
 		self.nTriggers = self.nTriggers + 1
-		if trigger.timeCleared and g_time - trigger.timeCleared > Conflict.clearThresholdMilliSec then
+		if trigger.timeCleared and g_time - trigger.timeCleared > self:getClearThresholdMilliSec() then
 			-- been cleared long ago, mark for removal
 			table.insert(triggersToRemove, id)
 			self.nTriggers = self.nTriggers - 1
@@ -124,6 +135,7 @@ end
 --- Decide who has the right of way
 function Conflict:evaluateRightOfWay()
 	-- already know, never re-evaluate
+	self:debug('Evaluating right-of-way, closest conflict %s, evaluated %s', tostring(self), self.rightOfWayEvaluated)
 	if self.rightOfWayEvaluated == true then return end
 	if self.closestTrigger then
 		if math.abs(self.closestTrigger.yRotDiff) < math.rad(45) then

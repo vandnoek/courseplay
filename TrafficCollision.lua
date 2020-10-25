@@ -431,6 +431,7 @@ end
 function TrafficConflictDetector:enableSpeedControl()
 	self.speedControlEnabled = true
 	self.ignoreVehicleForSpeedControl = nil
+	self:debug('Traffic conflict speed control enabled')
 end
 
 function TrafficConflictDetector:disableSpeedControl()
@@ -438,10 +439,11 @@ function TrafficConflictDetector:disableSpeedControl()
 end
 
 -- we'll not tell anyone to hold, slow down or recalculate for this vehicle until
--- enableSpeedControl() is called or the conflict with this vehicle is cleared.recalculate
+-- enableSpeedControl() is called or the conflict with this vehicle is cleared.
 -- this is to ignore a conflicting vehicle which caused a recalculation until we actually drive around
 -- it, at which point the conflict is resolved.
 function TrafficConflictDetector:disableSpeedControlForVehicle(vehicle)
+	self:debug('Traffic conflict speed control disabled for %s', nameNum(vehicle))
 	self.ignoreVehicleForSpeedControl = vehicle
 end
 
@@ -682,23 +684,27 @@ function TrafficConflictDetector:onRightOfWayEvaluated(otherVehicle, mustYield, 
 end
 
 function TrafficConflictDetector:shouldHold()
-	if self.closestConflict and self.ignoreVehicleForSpeedControl ~= self.closestConflict:getConflictingVehicle() then
-		-- if close enough and I must yield, or there is a head on conflict
-		return (self.closestConflict.mustYield or self.closestConflict.headOn) and
-				self.closestConflict:getDistance() < TrafficConflictDetector.holdDistance
-	else
-		return false
+	for _, conflict in ipairs(self.conflicts) do
+		if self.ignoreVehicleForSpeedControl ~= conflict:getConflictingVehicle() then
+			-- if close enough and I must yield, or there is a head on conflict
+			if (conflict.mustYield or conflict.headOn) and conflict:getDistance() < TrafficConflictDetector.holdDistance then
+				return true
+			end
+		end
 	end
+	return false
 end
 
 function TrafficConflictDetector:shouldSlowDown()
-	if self.closestConflict and self.ignoreVehicleForSpeedControl ~= self.closestConflict:getConflictingVehicle() then
-		-- if close enough and I must yield
-		return self.closestConflict.mustYield and
-				self.closestConflict:getDistance() < TrafficConflictDetector.slowDownDistance
-	else
-		return false
+	for _, conflict in ipairs(self.conflicts) do
+		if self.ignoreVehicleForSpeedControl ~= conflict:getConflictingVehicle() then
+			-- if close enough and I must yield
+			if conflict.mustYield and conflict:getDistance() < TrafficConflictDetector.slowDownDistance then
+				return true
+			end
+		end
 	end
+	return false
 end
 
 function TrafficConflictDetector:delete()
@@ -733,7 +739,7 @@ function TrafficConflictDetector:drawDebugInfo(y)
 	local x, size = 0.1, 0.012
 
 	for i, conflict in ipairs(self.conflicts) do
-		renderText(x, y, size, string.format('%s', i, conflict))
+		renderText(x, y, size, string.format('%d %s', i, conflict))
 		y = y - size * 1.1
 	end
 	return y

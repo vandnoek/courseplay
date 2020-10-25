@@ -394,6 +394,8 @@ function CombineUnloadAIDriver:driveOnField(dt)
 
 	elseif self.onFieldState == self.states.DRIVE_TO_UNLOAD_COURSE then
 
+		self.forwardLookingProximitySensorPack:enableSpeedControl()
+
 		-- try not crashing into our combine on the way to the unload course
 		if self.combineJustUnloaded and
 				not self.combineJustUnloaded.cp.driver:isChopper() and
