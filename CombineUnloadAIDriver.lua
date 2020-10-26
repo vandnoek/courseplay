@@ -241,8 +241,8 @@ function CombineUnloadAIDriver:recalculatePathOnTrafficConflict(conflictingVehic
 	-- do not hold or slow down for this vehicle, we'll recalculate a course which avoids
 	-- it anyway, even if some of the collisions are still active.
 	self.trafficConflictDetector:disableSpeedControlForVehicle(conflictingVehicle)
+	conflictingVehicle.cp.driver:onConflictingVehicleRecalculating(self.vehicle)
 end
-
 
 function CombineUnloadAIDriver:startWaitingForCombine()
 	-- to always have a valid course (for the traffic conflict detector mainly)

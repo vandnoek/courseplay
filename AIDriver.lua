@@ -1708,6 +1708,12 @@ function AIDriver:onRightOfWayEvaluated(otherVehicle, mustYield, headOn)
 	end
 end
 
+function AIDriver:onConflictingVehicleRecalculating(otherVehicle)
+	if self.trafficConflictDetector then
+		self.trafficConflictDetector:onConflictingVehicleRecalculating(otherVehicle)
+	end
+end
+
 function AIDriver:removeAllConflictsForVehicle(otherVehicle)
 	if self.trafficConflictDetector then
 		self.trafficConflictDetector:removeAllConflictsForVehicle(otherVehicle)

@@ -406,6 +406,8 @@ TrafficConflictDetector.speedAverageCycles = 20
 TrafficConflictDetector.holdDistance = 25
 -- if a conflict is closer than this, slow down
 TrafficConflictDetector.slowDownDistance = 50
+-- maximum time to hold for another vehicle recalculating
+TrafficConflictDetector.maxHoldForRecalculationSeconds = 30
 
 --- @param vehicle table
 --- @param course Course
@@ -674,6 +676,8 @@ function TrafficConflictDetector:shouldRecalculate()
 	end
 end
 
+--- Notification from another vehicle in conflict with us that it has evaluated the conflict. This is to
+--- make sure both vehicles in a conflict agree on a resolution
 function TrafficConflictDetector:onRightOfWayEvaluated(otherVehicle, mustYield, headOn)
 	for _, conflict in ipairs(self.conflicts) do
 		if conflict:isWith(otherVehicle) then
@@ -683,7 +687,24 @@ function TrafficConflictDetector:onRightOfWayEvaluated(otherVehicle, mustYield, 
 	end
 end
 
+--- Notification from another vehicle in conflict with us that it intends to recalculate its own course to
+--- resolve this conflict. This means we have to stop moving so it can plan the course around us
+function TrafficConflictDetector:onConflictingVehicleRecalculating(otherVehicle)
+	self:debug('Hold while %s recalculating its course to avoid us', nameNum(otherVehicle))
+	self.conflictingVehicleRecalculatingStarted = g_time
+end
+
 function TrafficConflictDetector:shouldHold()
+	if self.conflictingVehicleRecalculatingStarted then
+		if (g_time - self.conflictingVehicleRecalculatingStarted) > TrafficConflictDetector.maxHoldForRecalculationSeconds then
+			-- if we someone is recalculating its course to avoid us, don't move
+			self:debugSparse('Holding for a conflicting vehicle recalculating its course for us')
+			return true
+		else
+			-- reset if it's been a long time
+			self.conflictingVehicleRecalculatingStarted = nil
+		end
+	end
 	for _, conflict in ipairs(self.conflicts) do
 		if self.ignoreVehicleForSpeedControl ~= conflict:getConflictingVehicle() then
 			-- if close enough and I must yield, or there is a head on conflict
