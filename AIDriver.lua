@@ -1296,11 +1296,10 @@ function AIDriver:onUnLoadCourse(allowedToDrive, dt)
 
 	-- tipper is not empty and tractor reaches TipTrigger
 	--if self.vehicle.cp.totalFillLevel > 0 then
-		if  self:hasTipTrigger()
-		and not self:isNearFillPoint() then
-			self:setSpeed(self.vehicle.cp.speeds.approach)
-			allowedToDrive, takeOverSteering = self:dischargeAtTipTrigger(dt)
-		end
+	if self:hasTipTrigger() and not self:isNearFillPoint() then
+		self:setSpeed(self.vehicle.cp.speeds.approach)
+		allowedToDrive, takeOverSteering = self:dischargeAtTipTrigger(dt)
+	end
 	--end
 	-- tractor reaches unloadPoint
 	if isNearUnloadPoint then
@@ -1921,24 +1920,50 @@ function AIDriver:checkSafetyConstraints(maxSpeed, allowedToDrive, moveForwards)
 	return math.min(proximityLimitedSpeed, trafficLimitedSpeed), allowedToDrive
 end
 
+function AIDriver:enableProximitySpeedControl()
+	if self.forwardLookingProximitySensorPack then self.forwardLookingProximitySensorPack:enableSpeedControl() end
+	if self.backwardLookingProximitySensorPack then self.backwardLookingProximitySensorPack:enableSpeedControl() end
+end
+
+function AIDriver:disableProximitySpeedControl()
+	if self.forwardLookingProximitySensorPack then self.forwardLookingProximitySensorPack:disableSpeedControl() end 
+	if self.backwardLookingProximitySensorPack then self.backwardLookingProximitySensorPack:disableSpeedControl() end 
+end
+
+function AIDriver:enableProximitySwerve()
+	if self.forwardLookingProximitySensorPack then self.forwardLookingProximitySensorPack:enableSwerve() end
+	if self.backwardLookingProximitySensorPack then self.backwardLookingProximitySensorPack:enableSwerve() end
+end
+
+function AIDriver:disableProximitySwerve()
+	if self.forwardLookingProximitySensorPack then self.forwardLookingProximitySensorPack:disableSwerve() end
+	if self.backwardLookingProximitySensorPack then self.backwardLookingProximitySensorPack:disableSwerve() end
+end
+
+
 function AIDriver:checkProximitySensor(maxSpeed, allowedToDrive, moveForwards)
 	if maxSpeed == 0 or not allowedToDrive then
 		-- we are not going anywhere anyway, no use of proximity sensor here
 		return maxSpeed, allowedToDrive
 	end
 	-- minimum distance from any object in the proximity sensor's range
-	local d, range = math.huge, 10
+	local d, vehicle, range, deg, swerve = math.huge, nil, 10, 0, false
 	if moveForwards then
 		if self.forwardLookingProximitySensorPack and self.forwardLookingProximitySensorPack:isSpeedControlEnabled() then
-			d = self.forwardLookingProximitySensorPack:getClosestObjectDistanceAndRootVehicle()
+			d, vehicle, deg = self.forwardLookingProximitySensorPack:getClosestObjectDistanceAndRootVehicle()
 			range = self.forwardLookingProximitySensorPack:getRange()
+			swerve = self.forwardLookingProximitySensorPack:isSwerveEnabled()
 		end
 	else
 		if self.backwardLookingProximitySensorPack and self.backwardLookingProximitySensorPack:isSpeedControlEnabled() then
-			d = self.backwardLookingProximitySensorPack:getClosestObjectDistanceAndRootVehicle()
+			d, vehicle, deg = self.backwardLookingProximitySensorPack:getClosestObjectDistanceAndRootVehicle()
 			range = self.backwardLookingProximitySensorPack:getRange()
+			swerve = self.backwardLookingProximitySensorPack:isSwerveEnabled()
 		end
 	end
+	-- we only slow down or swerve for other vehicles, if the proximity sensor hits something else, ignore (for now at least)
+	if not vehicle then return maxSpeed, allowedToDrive end
+
 	if d < AIDriver.proximityLimitLow then
 		-- too close, stop
 		self:debugSparse('proximity: d = %.1f, too close, stop.', d)
@@ -1947,12 +1972,24 @@ function AIDriver:checkProximitySensor(maxSpeed, allowedToDrive, moveForwards)
 	local normalizedD = d / (range - AIDriver.proximityLimitLow)
 	if normalizedD > 1 then
 		-- nothing in range (d is a huge number, at least bigger than range), don't change anything
+		self.course:setTemporaryOffset(0, 0)
 		return maxSpeed, allowedToDrive
 	end
 	-- something in range, reduce speed proportionally
 	local deltaV = maxSpeed - AIDriver.proximityMinLimitedSpeed
 	local newSpeed = AIDriver.proximityMinLimitedSpeed + normalizedD * deltaV
-	self:debugSparse('proximity: d = %.1f (%d %%), speed = %.1f', d, 100 * normalizedD, newSpeed)
+
+	if deg and deg >= 0 and swerve then
+		local offsetX = deg >= 0 and 3 or -3
+		self.course:setTemporaryOffset(offsetX, 0)
+		self:debugSparse('proximity: d = %.1f (%d %%), slow down, speed = %.1f, swerve = %.1f',
+				d, 100 * normalizedD, newSpeed, offsetX)
+	else
+		self.course:setTemporaryOffset(0, 0)
+		self:debugSparse('proximity: d = %.1f (%d %%), slow down, speed = %.1f, deg = %s',
+				d, 100 * normalizedD, newSpeed, tostring(deg))
+	end
+
 	return newSpeed, allowedToDrive
 end
 

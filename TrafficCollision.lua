@@ -403,9 +403,9 @@ TrafficConflictDetector.numTrafficCollisionTriggers = 20
 TrafficConflictDetector.timeScale = 2
 TrafficConflictDetector.speedAverageCycles = 20
 -- if a conflict is closer than this, hold
-TrafficConflictDetector.holdDistance = 25
+TrafficConflictDetector.holdDistance = 15
 -- if a conflict is closer than this, slow down
-TrafficConflictDetector.slowDownDistance = 50
+TrafficConflictDetector.slowDownDistance = 30
 -- maximum time to hold for another vehicle recalculating
 TrafficConflictDetector.maxHoldForRecalculationSeconds = 30
 
@@ -667,7 +667,8 @@ function TrafficConflictDetector:getClosestConflictingVehicle()
 end
 
 function TrafficConflictDetector:shouldRecalculate()
-	if self.closestConflict and self.ignoreVehicleForSpeedControl ~= self.closestConflict:getConflictingVehicle() then
+	-- TODO: no recalculation for now, we let the proximity sensors take care of this
+	if false and self.closestConflict and self.ignoreVehicleForSpeedControl ~= self.closestConflict:getConflictingVehicle() then
 		-- if we must yield to the other vehicle and this is a head on conflict then we need to recalculate
 		-- our path around the other vehicle
 		return self.closestConflict.mustYield and self.closestConflict.headOn, self.closestConflict:getConflictingVehicle()
@@ -707,8 +708,8 @@ function TrafficConflictDetector:shouldHold()
 	end
 	for _, conflict in ipairs(self.conflicts) do
 		if self.ignoreVehicleForSpeedControl ~= conflict:getConflictingVehicle() then
-			-- if close enough and I must yield, or there is a head on conflict
-			if (conflict.mustYield or conflict.headOn) and conflict:getDistance() < TrafficConflictDetector.holdDistance then
+			-- if close enough and I must yield but it is not a head on (as that is being take care by the proximity sensors)
+			if conflict.mustYield and not conflict.headOn and conflict:getDistance() < TrafficConflictDetector.holdDistance then
 				return true
 			end
 		end
@@ -720,7 +721,7 @@ function TrafficConflictDetector:shouldSlowDown()
 	for _, conflict in ipairs(self.conflicts) do
 		if self.ignoreVehicleForSpeedControl ~= conflict:getConflictingVehicle() then
 			-- if close enough and I must yield
-			if conflict.mustYield and conflict:getDistance() < TrafficConflictDetector.slowDownDistance then
+			if (conflict.mustYield or conflict.headOn) and conflict:getDistance() < TrafficConflictDetector.slowDownDistance then
 				return true
 			end
 		end

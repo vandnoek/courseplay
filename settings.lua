@@ -445,13 +445,9 @@ function courseplay:selectAssignedCombine(vehicle, changeBy)
 end;
 
 function courseplay:removeActiveCombineFromTractor(vehicle)
-	if vehicle.cp.driver.combineToUnload ~= nil then
-		local driver = vehicle.cp.driver
-		driver:releaseUnloader()
-		driver.combineToUnload = nil
-		driver:setNewOnFieldState(driver.states.WAITING_FOR_COMBINE_TO_CALL)
-	end;
-	--courseplay:removeFromVehicleLocalIgnoreList(vehicle, vehicle.cp.lastActiveCombine)
+	if vehicle.cp.driver and vehicle.cp.driver.onUserUnassignedActiveCombine then
+		vehicle.cp.driver:onUserUnassignedActiveCombine()
+	end
 	courseplay.hud:setReloadPageOrder(vehicle, 4, true);
 end;
 

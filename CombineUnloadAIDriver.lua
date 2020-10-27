@@ -60,6 +60,7 @@ CombineUnloadAIDriver.minDistanceFromWideTurnChopper = 5
 CombineUnloadAIDriver.safeManeuveringDistance = 30 -- distance to keep from a combine not ready to unload
 CombineUnloadAIDriver.unloaderFollowingDistance = 30 -- distance to keep between two unloaders assigned to the same chopper
 CombineUnloadAIDriver.pathfindingRange = 5 -- won't do pathfinding if target is closer than this
+CombineUnloadAIDriver.proximitySensorRange = 15
 
 CombineUnloadAIDriver.myStates = {
 	ON_FIELD = {},
@@ -126,6 +127,7 @@ function CombineUnloadAIDriver:start(startingPoint)
 
 	self:beforeStart()
 	self:addForwardProximitySensor()
+	self:enableProximitySwerve()
 	self:resetPathfinder()
 
 	self.state = self.states.RUNNING
@@ -185,9 +187,7 @@ function CombineUnloadAIDriver:enableFillTypeUnloading()
 end
 
 function CombineUnloadAIDriver:driveUnloadCourse(dt)
-	-- disable speed control as it messes up the speed control during unload
 	-- TODO: refactor that whole unload process, it was just copied from the legacy CP code
-	self.forwardLookingProximitySensorPack:disableSpeedControl()
 	self:searchForTipTriggers()
 	local allowedToDrive, giveUpControl = self:onUnLoadCourse(true, dt)
 	if not allowedToDrive then
@@ -217,6 +217,7 @@ function CombineUnloadAIDriver:recalculatePathOnTrafficConflict(conflictingVehic
 		self:info('recalculating path on unload course not implemented.')
 		return
 	elseif self.state == self.states.ON_FIELD then
+		conflictingVehicle.cp.driver:onConflictingVehicleRecalculating(self.vehicle)
 		if self.onFieldState == self.states.WAITING_FOR_PATHFINDER then
 			self:debugSparse('Already calculating a path.')
 			return
@@ -241,7 +242,6 @@ function CombineUnloadAIDriver:recalculatePathOnTrafficConflict(conflictingVehic
 	-- do not hold or slow down for this vehicle, we'll recalculate a course which avoids
 	-- it anyway, even if some of the collisions are still active.
 	self.trafficConflictDetector:disableSpeedControlForVehicle(conflictingVehicle)
-	conflictingVehicle.cp.driver:onConflictingVehicleRecalculating(self.vehicle)
 end
 
 function CombineUnloadAIDriver:startWaitingForCombine()
@@ -308,7 +308,8 @@ function CombineUnloadAIDriver:driveOnField(dt)
 		self:setSpeed(0)
 
 	elseif self.onFieldState == self.states.DRIVE_TO_FIRST_UNLOADER then
-		self.forwardLookingProximitySensorPack:enableSpeedControl()
+		self:enableProximitySpeedControl()
+		self:enableProximitySwerve()
 
 		-- previous first unloader not unloading anymore
 		if self:iAmFirstUnloader() then
@@ -326,7 +327,8 @@ function CombineUnloadAIDriver:driveOnField(dt)
 
 	elseif self.onFieldState == self.states.DRIVE_TO_COMBINE then
 
-		self.forwardLookingProximitySensorPack:enableSpeedControl()
+		self:enableProximitySpeedControl()
+		self:enableProximitySwerve()
 
 		courseplay:setInfoText(self.vehicle, "COURSEPLAY_DRIVE_TO_COMBINE");
 
@@ -364,7 +366,8 @@ function CombineUnloadAIDriver:driveOnField(dt)
 
 	elseif self.onFieldState == self.states.UNLOADING_MOVING_COMBINE then
 
-		self.forwardLookingProximitySensorPack:disableSpeedControl()
+		self:disableProximitySpeedControl()
+		self:disableProximitySwerve()
 
 		self:unloadMovingCombine(dt)
 
@@ -394,7 +397,8 @@ function CombineUnloadAIDriver:driveOnField(dt)
 
 	elseif self.onFieldState == self.states.DRIVE_TO_UNLOAD_COURSE then
 
-		self.forwardLookingProximitySensorPack:enableSpeedControl()
+		self:enableProximitySpeedControl()
+		self:enableProximitySwerve()
 
 		-- try not crashing into our combine on the way to the unload course
 		if self.combineJustUnloaded and
@@ -968,6 +972,12 @@ end
 
 function CombineUnloadAIDriver:getDriveOnThreshold()
 	return self.vehicle.cp.settings.driveOnAtFillLevel:get()
+end
+
+function CombineUnloadAIDriver:onUserUnassignedActiveCombine()
+	self:debug('User unassigned active combine.')
+	self:releaseUnloader()
+	self:setNewOnFieldState(self.states.WAITING_FOR_COMBINE_TO_CALL)
 end
 
 function CombineUnloadAIDriver:releaseUnloader()
@@ -1634,7 +1644,8 @@ end
 -- Drive to moving combine
 ------------------------------------------------------------------------------------------------------------------------
 function CombineUnloadAIDriver:driveToMovingCombine()
-	self.forwardLookingProximitySensorPack:enableSpeedControl()
+	self:enableProximitySpeedControl()
+	self:enableProximitySwerve()
 
 	courseplay:setInfoText(self.vehicle, "COURSEPLAY_DRIVE_TO_COMBINE");
 
@@ -1712,7 +1723,8 @@ function CombineUnloadAIDriver:unloadMovingCombine()
 
 	-- TODO: handle pipe on the left side
 	-- disable looking to the right so the proximity sensor won't slow us down while driving beside the combine
-	self.forwardLookingProximitySensorPack:disableRightSide()
+	self:disableProximityRightSide()
+	self:disableProximitySwerve()
 
 	-- allow on the fly offset changes
 	self.combineOffset = self:getPipeOffset(self.combineToUnload)
@@ -1805,7 +1817,8 @@ end
 function CombineUnloadAIDriver:handleChopperHeadlandTurn()
 
 	-- we'll take care of controlling our speed, don't need ADriver for that
-	self.forwardLookingProximitySensorPack:disableSpeedControl()
+	self:disableProximitySpeedControl()
+	self:disableProximitySwerve()
 
 	local d, _, dz = self:getDistanceFromCombine()
 	local minD = math.min(d, dz)
@@ -1852,10 +1865,12 @@ function CombineUnloadAIDriver:followChopper()
 	if self.course:isTemporary() and self.course:getDistanceToLastWaypoint(self.course:getCurrentWaypointIx()) > 5 then
 		-- have not started on the combine's fieldwork course yet (still on the temporary alignment course)
 		-- just drive the course
-		self.forwardLookingProximitySensorPack:enableSpeedControl()
+		self:enableProximitySpeedControl()
+		self:disableProximitySwerve()
 	else
 		-- we'll take care of controlling our speed, don't need ADriver for that
-		self.forwardLookingProximitySensorPack:disableSpeedControl()
+		self:disableProximitySpeedControl()
+		self:disableProximitySwerve()
 		-- when on the fieldwork course, drive behind or beside the chopper, staying in the range of the pipe
 		self.combineOffset = self:getChopperOffset(self.combineToUnload)
 		self.followCourse:setOffset(-self.combineOffset, 0)
@@ -1891,7 +1906,8 @@ function CombineUnloadAIDriver:handleChopper180Turn()
 
 	self:changeToUnloadWhenDriveOnLevelReached()
 
-	self.forwardLookingProximitySensorPack:enableSpeedControl()
+	self:enableProximitySpeedControl()
+	self:disableProximitySwerve()
 
 	if self.combineToUnload.cp.driver:isTurningButNotEndingTurn() then
 		-- move forward until we reach the turn start waypoint
@@ -1938,7 +1954,8 @@ end
 ------------------------------------------------------------------------------------------------------------------------
 function CombineUnloadAIDriver:followChopperThroughTurn()
 
-	self.forwardLookingProximitySensorPack:enableSpeedControl()
+	self:enableProximitySpeedControl()
+	self:disableProximitySwerve()
 
 	self:changeToUnloadWhenDriveOnLevelReached()
 
@@ -1971,7 +1988,8 @@ end
 ------------------------------------------------------------------------------------------------------------------------
 function CombineUnloadAIDriver:alignToChopperAfterTurn()
 
-	self.forwardLookingProximitySensorPack:enableSpeedControl()
+	self:enableProximitySpeedControl()
+	self:disableProximitySwerve()
 
 	self:setSpeed(self.vehicle.cp.speeds.turn)
 

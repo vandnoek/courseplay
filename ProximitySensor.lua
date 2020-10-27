@@ -24,6 +24,7 @@ function ProximitySensor:init(node, yRotationDeg, range, height)
     self.yRotation = math.rad(yRotationDeg)
     self.lx, self.lz = MathUtil.getDirectionFromYRotation(self.yRotation)
     self.range = range
+    self.dx, self.dz = self.lx * self.range, self.lz * self.range
     self.height = height or 0
     self.lastUpdateLoopIndex = 0
     self.enabled = true
@@ -42,7 +43,12 @@ function ProximitySensor:update()
     if g_updateLoopIndex == self.lastUpdateLoopIndex then return end
     self.lastUpdateLoopIndex = g_updateLoopIndex
     local x, y, z = getWorldTranslation(self.node)
-    local nx, ny, nz = localDirectionToWorld(self.node, self.lx, 0, self.lz)
+    -- get the terrain height at the end oef the raycast line
+    local tx, _, tz = localToWorld(self.node, self.dx, 0, self.dz)
+    local y2 = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, tx, 0, tz)
+    -- make sure the raycast line is parallel with the ground
+    local ny = (y2 - y) / self.range
+    local nx, _, nz = localDirectionToWorld(self.node, self.lx, 0, self.lz)
     self.distanceOfClosestObject = math.huge
     self.objectId = nil
     if self.enabled then
@@ -105,6 +111,7 @@ function ProximitySensorPack:init(node, range, height, directionsDeg)
     self.node = node
     self.directionsDeg = directionsDeg
     self.speedControlEnabled = true
+    self.swerveEnabled = false
     for _, deg in ipairs(self.directionsDeg) do
         self.sensors[deg] = ProximitySensor(node, deg, self.range, height)
     end
@@ -133,6 +140,19 @@ function ProximitySensorPack:isSpeedControlEnabled()
     return self.speedControlEnabled
 end
 
+function ProximitySensorPack:disableSwerve()
+    self.swerveEnabled = false
+end
+
+function ProximitySensorPack:enableSwerve()
+    self.swerveEnabled = true
+end
+
+--- Should this pack used to initiate swerving another vehicle?
+function ProximitySensorPack:isSwerveEnabled()
+    return self.swerveEnabled
+end
+
 function ProximitySensorPack:update()
     self:callForAllSensors(ProximitySensor.update)
 
@@ -151,22 +171,26 @@ function ProximitySensorPack:disable()
     self:callForAllSensors(ProximitySensor.disable)
 end
 
+
+--- @return number, table, number distance of closest object in meters, root vehicle of the closest object, sensor direction
+--- in degrees, > 0 right, < 0 left
 function ProximitySensorPack:getClosestObjectDistanceAndRootVehicle(deg)
     if deg and self.sensors[deg] then
-        return self.sensors[deg]:getClosestObjectDistance(), self.sensors[deg]:getClosestRootVehicle()
+        return self.sensors[deg]:getClosestObjectDistance(), self.sensors[deg]:getClosestRootVehicle(), deg
     else
         local closestDistance = math.huge
-        local closestRootVehicle
+        local closestRootVehicle, closestDeg
         for _, deg in ipairs(self.directionsDeg) do
             local d = self.sensors[deg]:getClosestObjectDistance()
             if d < closestDistance then
                 closestDistance = d
                 closestRootVehicle = self.sensors[deg]:getClosestRootVehicle()
+                closestDeg = deg
             end
         end
-        return closestDistance, closestRootVehicle
+        return closestDistance, closestRootVehicle, closestDeg
     end
-    return math.huge, nil
+    return math.huge, nil, deg
 end
 
 function ProximitySensorPack:disableRightSide()
@@ -189,7 +213,7 @@ end
 ForwardLookingProximitySensorPack = CpObject(ProximitySensorPack)
 
 function ForwardLookingProximitySensorPack:init(node, range, height)
-    ProximitySensorPack.init(self, node, range, height,{0, 45, 90, -45, -90})
+    ProximitySensorPack.init(self, node, range, height,{0, 15, 30, 60, -15, -30, -60})
 end
 
 

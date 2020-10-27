@@ -257,6 +257,7 @@ function Course:init(vehicle, waypoints, temporary, first, last)
 	end
 	-- offset to apply to every position
 	self.offsetX, self.offsetZ = 0, 0
+	self.temporaryOffsetX, self.temporaryOffsetZ = 0, 0
 	self.numberOfHeadlands = 0
 	self.workWidth = 0
 	-- only for logging purposes
@@ -307,7 +308,12 @@ function Course:getOffset()
 	return self.offsetX, self.offsetZ
 end
 
-	function Course:setWorkWidth(w)
+--- Temporary offset to apply. This is to use an offset temporarily without overwriting the normal offset of the course
+function Course:setTemporaryOffset(x, z)
+	self.temporaryOffsetX, self.temporaryOffsetZ = x, z
+end
+
+function Course:setWorkWidth(w)
 	self.workWidth = w
 end
 
@@ -567,13 +573,14 @@ function Course:getWaypointPosition(ix)
 		-- when calculating the offset for a turn start wp.
 		return self:getOffsetPositionWithOtherWaypointDirection(ix, ix - 1)
 	else
-		return self.waypoints[ix]:getOffsetPosition(self.offsetX, self.offsetZ)
+		return self.waypoints[ix]:getOffsetPosition(self.offsetX + self.temporaryOffsetX, self.offsetZ + self.temporaryOffsetZ)
 	end
 end
 
 ---Return the offset coordinates of waypoint ix as if it was pointing to the same direction as waypoint ixDir
 function Course:getOffsetPositionWithOtherWaypointDirection(ix, ixDir)
-	return self.waypoints[ix]:getOffsetPosition(self.offsetX, self.offsetZ, self.waypoints[ixDir].dx, self.waypoints[ixDir].dz)
+	return self.waypoints[ix]:getOffsetPosition(self.offsetX + self.temporaryOffsetX, self.offsetZ + self.temporaryOffsetZ,
+			self.waypoints[ixDir].dx, self.waypoints[ixDir].dz)
 end
 
 -- distance between (px,pz) and the ix waypoint
