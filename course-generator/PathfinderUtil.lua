@@ -193,7 +193,7 @@ function PathfinderUtil.findCollidingVehicles(myCollisionData, node, myVehicleDa
     for _, collisionData in pairs(otherVehiclesCollisionData) do
         -- check for collision with the vehicle's bounding box
         if PathfinderUtil.doRectanglesOverlap(myCollisionData.corners, collisionData.corners) then
-            if log then
+            if true or log then
                 courseplay.debugFormat(7, 'pathfinder colliding vehicle x = %.1f, z = %.1f, %s', myCollisionData.center.x, myCollisionData.center.z, collisionData.name)
             end
             -- check for collision of the individual parts
@@ -256,7 +256,7 @@ function PathfinderUtil.CollisionDetector:findCollidingShapes(node, vehicleData,
     self.collidingShapes = 0
 
     overlapBox(x, y + 1, z, 0, yRot, 0, width, 1, length, 'overlapBoxCallback', self, bitOR(AIVehicleUtil.COLLISION_MASK, 2), true, true, true)
-    if log and self.collidingShapes > 0 then
+    if true and self.collidingShapes > 0 then
         courseplay.debugFormat(7, 'pathfinder colliding shapes (%s) at x = %.1f, z = %.1f, (%.1fx%.1f)',
                 vehicleData.name, x, z, width, length)
     end

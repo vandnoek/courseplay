@@ -568,7 +568,7 @@ function HybridAStar:findPath(start, goal, turnRadius, userData, allowReverse, g
 	end
 	--self:printOpenList(openList)
 	self.path = {}
-	self:debug('No path found: iterations %d, yields %d, cost %.1f - %.1f, eltaTheta %.1f', self.iterations, self.yields,
+	self:debug('No path found: iterations %d, yields %d, cost %.1f - %.1f, deltaTheta %.1f', self.iterations, self.yields,
             self.nodes.lowestCost, self.nodes.highestCost, math.deg(self.deltaThetaGoal))
     return true, nil
 end

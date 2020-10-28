@@ -1942,6 +1942,7 @@ end
 
 
 function AIDriver:checkProximitySensor(maxSpeed, allowedToDrive, moveForwards)
+	self.course:setTemporaryOffset(0, 0)
 	if maxSpeed == 0 or not allowedToDrive then
 		-- we are not going anywhere anyway, no use of proximity sensor here
 		return maxSpeed, allowedToDrive
@@ -1972,7 +1973,6 @@ function AIDriver:checkProximitySensor(maxSpeed, allowedToDrive, moveForwards)
 	local normalizedD = d / (range - AIDriver.proximityLimitLow)
 	if normalizedD > 1 then
 		-- nothing in range (d is a huge number, at least bigger than range), don't change anything
-		self.course:setTemporaryOffset(0, 0)
 		return maxSpeed, allowedToDrive
 	end
 	-- something in range, reduce speed proportionally
