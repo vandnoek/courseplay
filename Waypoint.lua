@@ -313,6 +313,10 @@ function Course:setTemporaryOffset(x, z)
 	self.temporaryOffsetX, self.temporaryOffsetZ = x, z
 end
 
+function Course:increaseTemporaryOffset(dx)
+	self.temporaryOffsetX = self.temporaryOffsetX >= 0 and self.temporaryOffsetX + dx or self.temporaryOffsetX - dx
+end
+
 function Course:setWorkWidth(w)
 	self.workWidth = w
 end

@@ -1978,9 +1978,10 @@ function AIDriver:checkProximitySensor(maxSpeed, allowedToDrive, moveForwards)
 	-- something in range, reduce speed proportionally
 	local deltaV = maxSpeed - AIDriver.proximityMinLimitedSpeed
 	local newSpeed = AIDriver.proximityMinLimitedSpeed + normalizedD * deltaV
-
-	if deg and deg >= 0 and swerve then
-		local offsetX = deg >= 0 and 3 or -3
+	-- check for nil and NaN
+	if deg and deg == deg and deg ~= 0 and swerve then
+		local offsetX = deg >= 0 and 4 or -4
+		self:debug('deg %.1f offset %.1f', deg, offsetX)
 		self.course:setTemporaryOffset(offsetX, 0)
 		self:debugSparse('proximity: d = %.1f (%d %%), slow down, speed = %.1f, swerve = %.1f',
 				d, 100 * normalizedD, newSpeed, offsetX)

@@ -172,23 +172,29 @@ function ProximitySensorPack:disable()
 end
 
 
---- @return number, table, number distance of closest object in meters, root vehicle of the closest object, sensor direction
---- in degrees, > 0 right, < 0 left
+--- @return number, table, number distance of closest object in meters, root vehicle of the closest object, average direction
+--- of the obstacle in degrees, > 0 right, < 0 left
 function ProximitySensorPack:getClosestObjectDistanceAndRootVehicle(deg)
     if deg and self.sensors[deg] then
         return self.sensors[deg]:getClosestObjectDistance(), self.sensors[deg]:getClosestRootVehicle(), deg
     else
         local closestDistance = math.huge
-        local closestRootVehicle, closestDeg
+        local closestRootVehicle
+        -- weighted average over the different direction, weight depends on how close the closest object is
+        local totalWeight, totalDegs = 0, 0
         for _, deg in ipairs(self.directionsDeg) do
             local d = self.sensors[deg]:getClosestObjectDistance()
+            if d < self.range then
+                local weight = (self.range - d) / self.range
+                totalWeight = totalWeight + weight
+                totalDegs = totalDegs + deg
+            end
             if d < closestDistance then
                 closestDistance = d
                 closestRootVehicle = self.sensors[deg]:getClosestRootVehicle()
-                closestDeg = deg
             end
         end
-        return closestDistance, closestRootVehicle, closestDeg
+        return closestDistance, closestRootVehicle, totalDegs / totalWeight
     end
     return math.huge, nil, deg
 end
