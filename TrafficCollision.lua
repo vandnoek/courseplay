@@ -20,9 +20,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 CollisionDetector = CpObject()
 
 CollisionDetector.numTrafficCollisionTriggers = 4
+CollisionDetector.debugChannel = 3
 
 function CollisionDetector:init(vehicle, course)
-	self.debugChannel = 3
 	self.debugTicks = 100 -- show sparse debug information only at every debugTicks update
 	self.vehicle = vehicle
 	self:debug('CollisionDetector:init()')
@@ -398,6 +398,7 @@ end
 
 ---@class TrafficConflictDetector : CollisionDetector
 TrafficConflictDetector = CpObject(CollisionDetector)
+TrafficConflictDetector.debugChannel = 3
 TrafficConflictDetector.boxDistance = 4
 TrafficConflictDetector.numTrafficCollisionTriggers = 20
 TrafficConflictDetector.timeScale = 2

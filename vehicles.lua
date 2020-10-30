@@ -1766,3 +1766,13 @@ end
 function AIDriverUtil.isReversing(vehicle)
 	return vehicle.movingDirection == -1 and vehicle.lastSpeedReal * 3600 > 0.1
 end
+
+--- Get the current normalized steering angle:
+---@return number between -1 and +1, -1 full right steering, +1 full left steering
+function AIDriverUtil.getCurrentNormalizedSteeringAngle(vehicle)
+	if vehicle.rotatedTime > 0 then
+		return self.vehicle.rotatedTime / self.vehicle.maxRotTime
+	elseif self.vehicle.rotatedTime < 0 then
+		return -self.vehicle.rotatedTime / self.vehicle.minRotTime
+	end
+end

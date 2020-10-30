@@ -104,14 +104,16 @@ end
 
 ---@class ProximitySensorPack
 ProximitySensorPack = CpObject()
-function ProximitySensorPack:init(node, range, height, directionsDeg)
+function ProximitySensorPack:init(vehicle, node, range, height, directionsDeg)
     ---@type ProximitySensor[]
     self.sensors = {}
+    self.vehicle = vehicle
     self.range = range
     self.node = node
     self.directionsDeg = directionsDeg
     self.speedControlEnabled = true
     self.swerveEnabled = false
+    self.rotateWithWheels = true
     for _, deg in ipairs(self.directionsDeg) do
         self.sensors[deg] = ProximitySensor(node, deg, self.range, height)
     end
@@ -154,6 +156,12 @@ function ProximitySensorPack:isSwerveEnabled()
 end
 
 function ProximitySensorPack:update()
+
+    if self.rotateWithWheels then
+        local normalizedSteeringAngle = AIDriverUtil.getCurrentNormalizedSteeringAngle(self.vehicle)
+
+    end
+
     self:callForAllSensors(ProximitySensor.update)
 
     -- show the position of the pack
@@ -175,6 +183,8 @@ end
 --- @return number, table, number distance of closest object in meters, root vehicle of the closest object, average direction
 --- of the obstacle in degrees, > 0 right, < 0 left
 function ProximitySensorPack:getClosestObjectDistanceAndRootVehicle(deg)
+    -- make sure we have the latest info, the sensors will make sure they only raycast once per loop
+    self:update()
     if deg and self.sensors[deg] then
         return self.sensors[deg]:getClosestObjectDistance(), self.sensors[deg]:getClosestRootVehicle(), deg
     else
@@ -187,7 +197,7 @@ function ProximitySensorPack:getClosestObjectDistanceAndRootVehicle(deg)
             if d < self.range then
                 local weight = (self.range - d) / self.range
                 totalWeight = totalWeight + weight
-                totalDegs = totalDegs + deg
+                totalDegs = totalDegs + weight * deg
             end
             if d < closestDistance then
                 closestDistance = d
@@ -218,14 +228,14 @@ end
 ---@class ForwardLookingProximitySensorPack : ProximitySensorPack
 ForwardLookingProximitySensorPack = CpObject(ProximitySensorPack)
 
-function ForwardLookingProximitySensorPack:init(node, range, height)
-    ProximitySensorPack.init(self, node, range, height,{0, 15, 30, 60, -15, -30, -60})
+function ForwardLookingProximitySensorPack:init(vehicle, node, range, height)
+    ProximitySensorPack.init(self, vehicle, node, range, height,{0, 15, 30, 60, -15, -30, -60})
 end
 
 
 ---@class BackwardLookingProximitySensorPack : ProximitySensorPack
 BackwardLookingProximitySensorPack = CpObject(ProximitySensorPack)
 
-function BackwardLookingProximitySensorPack:init(node, range, height)
-    ProximitySensorPack.init(self, node, range, height,{120, 150, 180, -150, -120})
+function BackwardLookingProximitySensorPack:init(vehicle, node, range, height)
+    ProximitySensorPack.init(self, vehicle, node, range, height,{120, 150, 180, -150, -120})
 end

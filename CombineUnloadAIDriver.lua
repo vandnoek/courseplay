@@ -27,9 +27,14 @@ The ProximitySensor is a generic AIDriver feature.
 The combine has a proximity sensor on the back and will slow down and stop
 if something is in range.
 
-The unloader has a proximity sensor on the front to prevent running into the combine.
-When unloading choppers, the tractor disables the generic speed control as it has to
-drive very close to the chopper.
+The unloader has a proximity sensor on the front to prevent running into the combine
+and to swerve other vehicles in case of a head on collision for example.
+
+In some states, for instance when unloading choppers, the tractor disables the generic
+speed control as it has to drive very close to the chopper.
+
+There is an additional proximity sensor dedicated to following the chopper. This has
+all controlling features disabled.
 
 2. Turns
 
@@ -129,6 +134,7 @@ function CombineUnloadAIDriver:start(startingPoint)
 	self:addForwardProximitySensor()
 	self:enableProximitySwerve()
 	self:resetPathfinder()
+	self:addChopperProximitySensor()
 
 	self.state = self.states.RUNNING
 
@@ -204,6 +210,17 @@ function CombineUnloadAIDriver:resetPathfinder()
 	-- otherwise we'll be driving through others' fields
 	self.offFieldPenalty = 2
 	self.pathfinderFailureCount = 0
+end
+
+--- Proximity sensor to check the chopper's distance
+function CombineUnloadAIDriver:addChopperProximitySensor()
+	self:setFrontMarkerNode(self.vehicle)
+	---@type ProximitySensorPack
+	self.chopperProximitySensorPack = ProximitySensorPack.init(
+			self.vehicle, self:getFrontMarkerNode(self.vehicle), 10, 1.2, {0, 45, 90, -45, -90})
+	self.chopperProximitySensorPack:disableSpeedControl()
+	self.chopperProximitySensorPack:disableSwerve()
+	self.chopperProximitySensorPack:disableRotateWithWheels()
 end
 
 function CombineUnloadAIDriver:isTrafficConflictDetectionEnabled()
@@ -749,7 +766,7 @@ end
 
 function CombineUnloadAIDriver:getSpeedBehindChopper()
 	local distanceToChoppersBack, _, dz = self:getDistanceFromCombine()
-	local fwdDistance = self.forwardLookingProximitySensorPack:getClosestObjectDistanceAndRootVehicle()
+	local fwdDistance = self.chopperProximitySensorPack:getClosestObjectDistanceAndRootVehicle()
 	if dz < 0 then
 		-- I'm way too forward, stop here as I'm most likely beside the chopper, let it pass before
 		-- moving to the middle
@@ -769,8 +786,8 @@ end
 function CombineUnloadAIDriver:getOffsetBehindChopper()
 	local distanceToChoppersBack, dx, dz = self:getDistanceFromCombine()
 
-	local rightDistance = self.forwardLookingProximitySensorPack:getClosestObjectDistanceAndRootVehicle(-90)
-	local fwdRightDistance = self.forwardLookingProximitySensorPack:getClosestObjectDistanceAndRootVehicle(-45)
+	local rightDistance = self.chopperProximitySensorPack:getClosestObjectDistanceAndRootVehicle(-90)
+	local fwdRightDistance = self.chopperProximitySensorPack:getClosestObjectDistanceAndRootVehicle(-45)
 	local minDistance = math.min(rightDistance, fwdRightDistance / 1.4)
 
 	local currentOffsetX, _ = self.followCourse:getOffset()

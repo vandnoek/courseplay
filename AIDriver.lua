@@ -374,7 +374,7 @@ end
 
 --- Update AI driver, everything that needs to run in every loop
 function AIDriver:update(dt)
-	self:updateProximitySensors()
+	--self:updateProximitySensors()
 	self:updatePathfinding()
 	self:drive(dt)
 	self:checkIfBlocked()
@@ -1896,12 +1896,14 @@ end
 
 function AIDriver:addForwardProximitySensor()
 	self:setFrontMarkerNode(self.vehicle)
-	self.forwardLookingProximitySensorPack = ForwardLookingProximitySensorPack(self:getFrontMarkerNode(self.vehicle), self.proximitySensorRange, 1)
+	self.forwardLookingProximitySensorPack = ForwardLookingProximitySensorPack(
+			self.vehicle, self:getFrontMarkerNode(self.vehicle), self.proximitySensorRange, 1)
 end
 
 function AIDriver:addBackwardProximitySensor()
 	self:setBackMarkerNode(self.vehicle)
-	self.backwardLookingProximitySensorPack = BackwardLookingProximitySensorPack(self:getBackMarkerNode(self.vehicle), self.proximitySensorRange, 1)
+	self.backwardLookingProximitySensorPack = BackwardLookingProximitySensorPack(
+			self.vehicle, self:getBackMarkerNode(self.vehicle), self.proximitySensorRange, 1)
 end
 
 function AIDriver:updateProximitySensors()
