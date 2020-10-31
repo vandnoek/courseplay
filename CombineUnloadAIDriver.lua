@@ -216,7 +216,7 @@ end
 function CombineUnloadAIDriver:addChopperProximitySensor()
 	self:setFrontMarkerNode(self.vehicle)
 	---@type ProximitySensorPack
-	self.chopperProximitySensorPack = ProximitySensorPack.init(
+	self.chopperProximitySensorPack = ProximitySensorPack('chopper',
 			self.vehicle, self:getFrontMarkerNode(self.vehicle), 10, 1.2, {0, 45, 90, -45, -90})
 	self.chopperProximitySensorPack:disableSpeedControl()
 	self.chopperProximitySensorPack:disableSwerve()

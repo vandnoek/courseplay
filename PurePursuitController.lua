@@ -397,10 +397,10 @@ function PurePursuitController:findGoalPoint()
 		-- case i (first node outside virtual circle but not yet reached) or (not the first node but we are way off the track)
 		if (ix == self.firstIx and ix ~= self.lastPassedWaypointIx) and
 			q1 >= self.lookAheadDistance and q2 >= self.lookAheadDistance then
-			self:showGoalpointDiag(1, 'initializing, ix=%d, q1=%.1f, q2=%.1f, la=%.1f', ix, q1, q2, self.lookAheadDistance)
 			-- If we weren't on track yet (after initialization, on our way to the first/initialized waypoint)
 			-- set the goal to the relevant WP
 			self.goalWpNode:setToWaypoint(self.course, self.relevantWpNode.ix)
+			self:showGoalpointDiag(1, 'initializing, ix=%d, q1=%.1f, q2=%.1f, la=%.1f', ix, q1, q2, self.lookAheadDistance)
 			-- and also the current waypoint is now at the relevant WP
 			self:setCurrentWaypoint(self.relevantWpNode.ix)
 			break
@@ -408,7 +408,6 @@ function PurePursuitController:findGoalPoint()
 
 		-- case ii (common case)
 		if q1 <= self.lookAheadDistance and q2 >= self.lookAheadDistance then
-			self:showGoalpointDiag(2, 'common case, ix=%d, q1=%.1f, q2=%.1f la=%.1f', ix, q1, q2, self.lookAheadDistance)
 			-- in some weird cases q1 may be 0 (when we calculate a course based on the vehicle position) so fix that
 			-- to avoid a nan
 			if q1 < 0.0001 then
@@ -419,6 +418,7 @@ function PurePursuitController:findGoalPoint()
 			local gx, gy, gz = localToWorld(node1.node, 0, 0, p)
 			setTranslation(self.goalWpNode.node, gx, gy + 1, gz)
 			self.wpBeforeGoalPointIx = ix
+			self:showGoalpointDiag(2, 'common case, ix=%d, q1=%.1f, q2=%.1f la=%.1f', ix, q1, q2, self.lookAheadDistance)
 			-- current waypoint is the waypoint at the end of the path segment
 			self:setCurrentWaypoint(ix + 1)
 			--courseplay.debugVehicle(12, self.vehicle, "PPC: %d, p=%.1f", self.currentWpNode.ix, p)
@@ -431,23 +431,23 @@ function PurePursuitController:findGoalPoint()
 		if ix == self.relevantWpNode.ix and q1 >= self.lookAheadDistance and q2 >= self.lookAheadDistance then
 			if math.abs(self.crossTrackError) <= self.lookAheadDistance then
 				-- case iii (two intersection points)
-				self:showGoalpointDiag(3, 'two intersection points, ix=%d, q1=%.1f, q2=%.1f, la=%.1f, cte=%.1f', ix, q1, q2,
-					self.lookAheadDistance, self.crossTrackError)
 				local p = math.sqrt(self.lookAheadDistance * self.lookAheadDistance - self.crossTrackError * self.crossTrackError)
 				local gx, gy, gz = localToWorld(self.projectedPosNode, 0, 0, p)
 				setTranslation(self.goalWpNode.node, gx, gy + 1, gz)
 				self.wpBeforeGoalPointIx = ix
+				self:showGoalpointDiag(3, 'two intersection points, ix=%d, q1=%.1f, q2=%.1f, la=%.1f, cte=%.1f', ix, q1, q2,
+					self.lookAheadDistance, self.crossTrackError)
 				-- current waypoint is the waypoint at the end of the path segment
 				self:setCurrentWaypoint(ix + 1)
 			else
 				-- case iv (no intersection points)
 				-- case v ( goal point dead zone)
-				self:showGoalpointDiag(4, 'no intersection points, ix=%d, q1=%.1f, q2=%.1f, la=%.1f, cte=%.1f', ix, q1, q2,
-					self.lookAheadDistance, self.crossTrackError)
 				-- set the goal to the projected position
 				local gx, gy, gz = localToWorld(self.projectedPosNode, 0, 0, 0)
 				setTranslation(self.goalWpNode.node, gx, gy + 1, gz)
 				self.wpBeforeGoalPointIx = ix
+				self:showGoalpointDiag(4, 'no intersection points, ix=%d, q1=%.1f, q2=%.1f, la=%.1f, cte=%.1f', ix, q1, q2,
+					self.lookAheadDistance, self.crossTrackError)
 				-- current waypoint is the waypoint at the end of the path segment
 				self:setCurrentWaypoint(ix + 1)
 			end

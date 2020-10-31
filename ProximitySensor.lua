@@ -23,7 +23,7 @@ function ProximitySensor:init(node, yRotationDeg, range, height)
     self.node = node
     self.yRotation = math.rad(yRotationDeg)
     self.lx, self.lz = MathUtil.getDirectionFromYRotation(self.yRotation)
-    self.range = range
+    self.range = math.min(range, 3 / math.cos((math.pi / 2 - math.abs(self.yRotation))))
     self.dx, self.dz = self.lx * self.range, self.lz * self.range
     self.height = height or 0
     self.lastUpdateLoopIndex = 0
@@ -104,12 +104,31 @@ end
 
 ---@class ProximitySensorPack
 ProximitySensorPack = CpObject()
-function ProximitySensorPack:init(vehicle, node, range, height, directionsDeg)
+
+-- maximum angle we rotate the sensor pack into the direction the vehicle is turning
+ProximitySensorPack.maxRotation = math.rad(30)
+
+---@param name string a name for this sensor, when multiple sensors are attached to the same node, they need
+--- a unique name
+---@param vehicle table vehicle we attach the sensor to, used only to rotate the sensor with the steering angle
+---@param node number node (front or back) to attach the sensor to
+---@param range number range of the sensor in meters
+---@param height number height relative to the node in meters
+---@param directionsDeg table of numbers, list of angles in degrees to emit a ray to find objects, 0 is forward, >0 left, <0 right
+function ProximitySensorPack:init(name, vehicle, node, range, height, directionsDeg)
     ---@type ProximitySensor[]
     self.sensors = {}
     self.vehicle = vehicle
     self.range = range
-    self.node = node
+    self.node = getChild(node, name)
+    if self.node <= 0 then
+        -- node with this name does not yet exist
+        -- add a separate node for the proximity sensor (so we can rotate it independently from 'node'
+        self.node = courseplay.createNode(name, 0, 0, 0, node)
+    end
+    -- reset it on the parent node
+    setTranslation(self.node, 0, 0, 0)
+    setRotation(self.node, 0, 0, 0)
     self.directionsDeg = directionsDeg
     self.speedControlEnabled = true
     self.swerveEnabled = false
@@ -155,11 +174,17 @@ function ProximitySensorPack:isSwerveEnabled()
     return self.swerveEnabled
 end
 
+function ProximitySensorPack:disableRotateWithWheels()
+    self.rotateWithWheels = false
+end
+
 function ProximitySensorPack:update()
 
     if self.rotateWithWheels then
+        -- rotate the entire pack in the direction we are turning
         local normalizedSteeringAngle = AIDriverUtil.getCurrentNormalizedSteeringAngle(self.vehicle)
-
+        local _, yRot, _ = getRotation(getParent(self.node))
+        setRotation(self.node, 0, yRot + normalizedSteeringAngle * ProximitySensorPack.maxRotation, 0)
     end
 
     self:callForAllSensors(ProximitySensor.update)
@@ -167,7 +192,9 @@ function ProximitySensorPack:update()
     -- show the position of the pack
     if courseplay.debugChannels[12] then
         local x, y, z = getWorldTranslation(self.node)
-        cpDebug:drawLine(x, y, z, 0, 0, 1, x, y + 3, z)
+        local x1, y1, z1 = localToWorld(self.node, 0, 0, 0.5)
+        cpDebug:drawLine(x, y, z, 0, 0, 1, x, y + 1, z)
+        cpDebug:drawLine(x, y + 1, z, 0, 1, 0, x1, y1 + 1, z1)
     end
 end
 
@@ -229,7 +256,7 @@ end
 ForwardLookingProximitySensorPack = CpObject(ProximitySensorPack)
 
 function ForwardLookingProximitySensorPack:init(vehicle, node, range, height)
-    ProximitySensorPack.init(self, vehicle, node, range, height,{0, 15, 30, 60, -15, -30, -60})
+    ProximitySensorPack.init(self, 'forward', vehicle, node, range, height, {0, 15, 30, 60, -15, -30, -60})
 end
 
 
@@ -237,5 +264,5 @@ end
 BackwardLookingProximitySensorPack = CpObject(ProximitySensorPack)
 
 function BackwardLookingProximitySensorPack:init(vehicle, node, range, height)
-    ProximitySensorPack.init(self, vehicle, node, range, height,{120, 150, 180, -150, -120})
+    ProximitySensorPack.init(self, 'backward', vehicle, node, range, height, {120, 150, 180, -150, -120})
 end

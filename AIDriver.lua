@@ -1944,8 +1944,10 @@ end
 
 
 function AIDriver:checkProximitySensor(maxSpeed, allowedToDrive, moveForwards)
-	self.course:setTemporaryOffset(0, 0)
+	--self:debug('%.1f', self.course.temporaryOffsetX)
+
 	if maxSpeed == 0 or not allowedToDrive then
+		--self.course:setTargetTemporaryOffsetX(0)
 		-- we are not going anywhere anyway, no use of proximity sensor here
 		return maxSpeed, allowedToDrive
 	end
@@ -1965,7 +1967,10 @@ function AIDriver:checkProximitySensor(maxSpeed, allowedToDrive, moveForwards)
 		end
 	end
 	-- we only slow down or swerve for other vehicles, if the proximity sensor hits something else, ignore (for now at least)
-	if not vehicle then return maxSpeed, allowedToDrive end
+	if not vehicle then
+		self.course:setTargetTemporaryOffsetX(0)
+		return maxSpeed, allowedToDrive
+	end
 
 	if d < AIDriver.proximityLimitLow then
 		-- too close, stop
@@ -1974,6 +1979,7 @@ function AIDriver:checkProximitySensor(maxSpeed, allowedToDrive, moveForwards)
 	end
 	local normalizedD = d / (range - AIDriver.proximityLimitLow)
 	if normalizedD > 1 then
+		self.course:setTargetTemporaryOffsetX(0)
 		-- nothing in range (d is a huge number, at least bigger than range), don't change anything
 		return maxSpeed, allowedToDrive
 	end
@@ -1981,14 +1987,14 @@ function AIDriver:checkProximitySensor(maxSpeed, allowedToDrive, moveForwards)
 	local deltaV = maxSpeed - AIDriver.proximityMinLimitedSpeed
 	local newSpeed = AIDriver.proximityMinLimitedSpeed + normalizedD * deltaV
 	-- check for nil and NaN
-	if deg and deg == deg and deg ~= 0 and swerve then
-		local offsetX = deg >= 0 and 4 or -4
-		self:debug('deg %.1f offset %.1f', deg, offsetX)
-		self.course:setTemporaryOffset(offsetX, 0)
+	if deg and deg == deg and swerve then
+		local offsetX = deg >= -30 and 4 or -4
+	--	self:debug('d = %.1f, deg %.1f offset %.1f', d, deg, offsetX)
+		self.course:setTargetTemporaryOffsetX(offsetX)
 		self:debugSparse('proximity: d = %.1f (%d %%), slow down, speed = %.1f, swerve = %.1f',
 				d, 100 * normalizedD, newSpeed, offsetX)
 	else
-		self.course:setTemporaryOffset(0, 0)
+		self.course:setTargetTemporaryOffsetX(0)
 		self:debugSparse('proximity: d = %.1f (%d %%), slow down, speed = %.1f, deg = %s',
 				d, 100 * normalizedD, newSpeed, tostring(deg))
 	end
