@@ -616,6 +616,7 @@ end
 
 function courseplay:onDraw()
   courseEditor:draw(self, self.cp.directionNode)
+  courseplay.guiManager:draw()
 
 	courseplay:showAIMarkers(self)
 	courseplay:showTemporaryMarkers(self)

@@ -1347,3 +1347,14 @@ function courseplay:getClosestPolyPoint(poly, x, z)
 	return closestPointIndex;
 end;
 
+function courseplay.appendedFunction(oldFunc, newFunc, t)
+    if oldFunc ~= nil then
+        return function (s, ...)
+            local val = oldFunc(s, ...)
+			val = newFunc(t, ...)
+			return val
+        end
+    else
+        return newFunc
+    end
+end
