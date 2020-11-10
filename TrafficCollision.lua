@@ -407,6 +407,7 @@ TrafficConflictDetector.speedAverageCycles = 20
 TrafficConflictDetector.holdDistance = 15
 -- if a conflict is closer than this, slow down
 TrafficConflictDetector.slowDownDistance = 30
+TrafficConflictDetector.updatePeriodMs = 1000
 
 --- @param vehicle table
 --- @param course Course
@@ -415,7 +416,7 @@ function TrafficConflictDetector:init(vehicle, course, collisionTriggerObject)
 	---@type Conflict[]
 	self.conflicts = {}
 	self.baseHeight = 6
-    self.lastWaypointIx = 0
+    self.lastUpdatedTime = 0
 	self.collisionTriggerObject = collisionTriggerObject or vehicle
 	CollisionDetector.init(self, vehicle, course)
 	self:debug('TrafficConflictDetector:init()')
@@ -499,7 +500,9 @@ end
 ---@param directionNode number direction node of the vehicle
 function TrafficConflictDetector:updateCollisionBoxes(course, ix, nominalSpeed, moveForwards, directionNode)
 
-    if ix == self.lastWaypointIx then return end
+    if g_time - self.lastUpdatedTime < TrafficConflictDetector.updatePeriodMs then return end
+
+	self.lastUpdatedTime = g_time
 
 	local positions
 	if course then
@@ -509,28 +512,29 @@ function TrafficConflictDetector:updateCollisionBoxes(course, ix, nominalSpeed, 
 	end
 	local posIx = 1
 	local eta = 0
-    if #positions > 0 then
-        for i, trigger in ipairs(self.trafficCollisionTriggers) do
-            local d = (i - 1) * TrafficConflictDetector.boxDistance
+	self:debug('updating collision boxes at waypoint %d, have %d positions', ix, #positions)
+	if #positions > 0 then
+		for i, trigger in ipairs(self.trafficCollisionTriggers) do
+			local d = (i - 1) * TrafficConflictDetector.boxDistance
 			local speed = positions[posIx].speed or nominalSpeed
-            local metersPerSec = speed / 3.6
-            eta = d / (metersPerSec > 0 and metersPerSec or 0.001)
+			local metersPerSec = speed / 3.6
+			eta = d / (metersPerSec > 0 and metersPerSec or 0.001)
 			-- don't stack them more than baseHeight meters apart as that's how high these boxes usually are
 			-- and this way there's no gap between them
-            setTranslation(trigger,
+			setTranslation(trigger,
 					positions[posIx].x,
 					positions[posIx].y + math.min(self.baseHeight * i, eta * TrafficConflictDetector.timeScale),
 					positions[posIx].z)
-            setRotation(trigger, 0, positions[posIx].yRot, 0)
-            DebugUtil.drawDebugNode(trigger, string.format('%.1f\n%.1f s', metersPerSec * 3.6, eta))
-            setUserAttribute(trigger, 'distance', 'Integer', d)
-            setUserAttribute(trigger, 'eta', 'Integer', eta)
-            setUserAttribute(trigger, 'yRot', 'Float', positions[posIx].yRot)
-            if posIx < #positions then
-                -- if we have less positions than triggers, just use the last position for the rest of the triggers
-                posIx = posIx + 1
-            end
-        end
+			setRotation(trigger, 0, positions[posIx].yRot, 0)
+			--DebugUtil.drawDebugNode(trigger, string.format('%.1f\n%.1f s', metersPerSec * 3.6, eta))
+			setUserAttribute(trigger, 'distance', 'Integer', d)
+			setUserAttribute(trigger, 'eta', 'Integer', eta)
+			setUserAttribute(trigger, 'yRot', 'Float', positions[posIx].yRot)
+			if posIx < #positions then
+				-- if we have less positions than triggers, just use the last position for the rest of the triggers
+				posIx = posIx + 1
+			end
+		end
 	end
 end
 
@@ -701,6 +705,7 @@ function TrafficConflictDetector:shouldSlowDown()
 	return false
 end
 
+-- TODO: a lambda would be nicer for these two
 function TrafficConflictDetector:haveHeadOnConflictWith(vehicle)
 	for _, conflict in ipairs(self.conflicts) do
 		if vehicle == conflict:getConflictingVehicle() and conflict.headOn then
@@ -709,6 +714,16 @@ function TrafficConflictDetector:haveHeadOnConflictWith(vehicle)
 	end
 	return false
 end
+
+function TrafficConflictDetector:haveConflictWith(vehicle)
+	for _, conflict in ipairs(self.conflicts) do
+		if vehicle == conflict:getConflictingVehicle() then
+			return true
+		end
+	end
+	return false
+end
+
 
 function TrafficConflictDetector:delete()
 	self:removeAllConflicts()

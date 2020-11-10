@@ -27,6 +27,9 @@ Conflict.detectionThresholdMilliSec = 0
 Conflict.clearThresholdMilliSecNormal = 1000
 -- if this is a head-on conflict, don't clear the conflict while we drive around the other vehicle
 Conflict.clearThresholdMilliSecHeadOn = 12000
+-- after maxAge seconds clear every conflict, this is to clean up if something got stuck for whatever reason
+-- (like buggy programming)
+Conflict.maxTriggerAge = 30000
 
 function Conflict:init(vehicle, otherVehicle, triggerId, d, eta, otherD, otherEta, yRotDiff)
 	self.debugChannel = 3
@@ -88,18 +91,30 @@ function Conflict:getClearThresholdMilliSec()
 	end
 end
 
+function Conflict:isTriggerStale(trigger)
+	if g_time - trigger.detectedAt > Conflict.maxTriggerAge then
+		-- this has been here for a while, check if other vehicle still has a conflict with us
+		if self.otherVehicle.cp.driver and self.otherVehicle.cp.driver:haveConflictWith(self.vehicle) then
+			courseplay.infoVehicle(self.vehicle, 'removing stale conflict with %s', nameNum(self.otherVehicle))
+			return true
+		end
+	end
+	return false
+end
+
 function Conflict:update()
 	local minEta = math.huge
 	self.nTriggers = 0
 	local triggersToRemove = {}
 	for id, trigger in pairs(self.triggers) do
-		if not trigger.timeCleared and trigger.eta < minEta and g_time - trigger.detectedAt > Conflict.detectionThresholdMilliSec then
+		local stale = self:isTriggerStale(trigger)
+		if not trigger.timeCleared and not stale and trigger.eta < minEta and g_time - trigger.detectedAt > Conflict.detectionThresholdMilliSec then
 			self.closestTrigger = trigger
 			minEta = self.closestTrigger.eta
 		end
 		self.nTriggers = self.nTriggers + 1
-		if trigger.timeCleared and g_time - trigger.timeCleared > self:getClearThresholdMilliSec() then
-			-- been cleared long ago, mark for removal
+		if (trigger.timeCleared and g_time - trigger.timeCleared > self:getClearThresholdMilliSec()) or stale then
+			-- been cleared long ago or too old, mark for removal
 			table.insert(triggersToRemove, id)
 			self.nTriggers = self.nTriggers - 1
 		end

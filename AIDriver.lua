@@ -1941,6 +1941,11 @@ function AIDriver:haveHeadOnConflictWith(vehicle)
 	end
 end
 
+function AIDriver:haveConflictWith(vehicle)
+	return vehicle and self.trafficConflictDetector and
+			self.trafficConflictDetector:haveConflictWith(vehicle)
+end
+
 function AIDriver:checkProximitySensor(maxSpeed, allowedToDrive, moveForwards)
 
 	if maxSpeed == 0 or not allowedToDrive then
