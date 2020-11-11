@@ -215,6 +215,13 @@ function CombineUnloadAIDriver:resetPathfinder()
 	self.pathfinderFailureCount = 0
 end
 
+function CombineUnloadAIDriver:enableProximitySpeedControl(vehicleToIgnore)
+	if self.forwardLookingProximitySensorPack then
+		self.forwardLookingProximitySensorPack:setIgnoredVehicle(vehicleToIgnore)
+	end
+	AIDriver.enableProximitySpeedControl(self)
+end
+
 --- Proximity sensor to check the chopper's distance
 function CombineUnloadAIDriver:addChopperProximitySensor()
 	self:setFrontMarkerNode(self.vehicle)
@@ -1853,8 +1860,9 @@ function CombineUnloadAIDriver:followChopper()
 		self:enableProximitySpeedControl()
 		self:disableProximitySwerve()
 	else
-		-- we'll take care of controlling our speed, don't need ADriver for that
-		self:disableProximitySpeedControl()
+		-- The dedicated chopper proximity sensor takes care of controlling our speed, the normal one
+		-- should therefore ignore the chopper (but not others)
+		self:enableProximitySpeedControl(self.combineToUnload)
 		self:disableProximitySwerve()
 		-- when on the fieldwork course, drive behind or beside the chopper, staying in the range of the pipe
 		self.combineOffset = self:getChopperOffset(self.combineToUnload)

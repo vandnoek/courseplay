@@ -40,6 +40,10 @@ function ProximitySensor:disable()
     self.enabled = false
 end
 
+function ProximitySensor:setIgnoredVehicle(vehicle)
+    self.ignoredVehicle = vehicle
+end
+
 function ProximitySensor:update()
     -- already updated in this loop, no need to raycast again
     if g_updateLoopIndex == self.lastUpdateLoopIndex then return end
@@ -64,13 +68,18 @@ function ProximitySensor:update()
 end
 
 function ProximitySensor:raycastCallback(objectId, x, y, z, distance)
+    local object = g_currentMission:getNodeObject(objectId)
+    if object and object.getRootVehicle and object:getRootVehicle() == self.ignoredVehicle then
+        -- ignore this vehicle
+        return
+    end
     self.distanceOfClosestObject = distance
     self.objectId = objectId
     self.closestObjectX, self.closestObjectY, self.closestObjectZ = x, y, z
 end
 
 function ProximitySensor:getClosestObjectDistance()
-    self:showDebugInfo()
+--    self:showDebugInfo()
     return self.distanceOfClosestObject
 end
 
@@ -209,6 +218,9 @@ function ProximitySensorPack:disable()
     self:callForAllSensors(ProximitySensor.disable)
 end
 
+function ProximitySensorPack:setIgnoredVehicle(vehicle)
+    self:callForAllSensors(ProximitySensor.setIgnoredVehicle, vehicle)
+end
 
 --- @return number, table, number distance of closest object in meters, root vehicle of the closest object, average direction
 --- of the obstacle in degrees, > 0 right, < 0 left
