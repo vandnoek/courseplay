@@ -278,7 +278,7 @@ end
 function AIDriver:start(startingPoint)
 	self:beforeStart()
 	self.state = self.states.RUNNING
-	-- derived classes must disable collision detection if they don't need its
+	-- derived classes must disable collision detection if they don't need it
 	self:enableCollisionDetection()
 	-- for now, initialize the course with the vehicle's current course
 	-- main course is the one generated/loaded/recorded
@@ -406,7 +406,7 @@ function AIDriver:drive(dt)
 	-- update current waypoint/goal point
 	self.ppc:update()
 	-- collision detection
-	--self:detectCollision(dt)
+	self:detectCollision(dt)
 
 	self:updateInfoText()
 

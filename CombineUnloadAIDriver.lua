@@ -136,6 +136,9 @@ function CombineUnloadAIDriver:start(startingPoint)
 	self:beforeStart()
 	self:addForwardProximitySensor()
 	self:enableProximitySwerve()
+	-- disable the legacy collision detection snake
+	self:disableCollisionDetection()
+
 	self:resetPathfinder()
 	self:addChopperProximitySensor()
 
@@ -533,7 +536,6 @@ function CombineUnloadAIDriver:onLastWaypoint()
 	if self.state == self.states.ON_FIELD then
 		if self.onFieldState == self.states.DRIVE_TO_UNLOAD_COURSE then
 			self:setNewState(self.states.ON_UNLOAD_COURSE)
-			self:enableCollisionDetection()
 			courseplay:openCloseCover(self.vehicle, courseplay.CLOSE_COVERS)
 			AIDriver.onLastWaypoint(self)
 			return
@@ -2027,13 +2029,13 @@ function CombineUnloadAIDriver:onBlockingOtherVehicle(blockedVehicle)
 	if blockedVehicle.cp.driver:isChopper() then
 		-- TODO: think about how to best handle choppers, since they always stop when no trailer
 		-- is in range they always send these blocking events.
-		return
+		--return
+		self:debug('temporarily enable moving out of a chopper\'s way')
 	end
 	if self.onFieldState ~= self.states.MOVING_OUT_OF_WAY and
 			self.onFieldState ~= self.states.MOVE_BACK_FROM_REVERSING_CHOPPER and
 			self.onFieldState ~= self.states.MOVE_BACK_FROM_EMPTY_COMBINE and
 			self.onFieldState ~= self.states.HANDLE_CHOPPER_HEADLAND_TURN and
-			self.onFieldState ~= self.states.HANDLE_CHOPPER_180_TURN and
 			self.onFieldState ~= self.states.MOVE_BACK_FULL
 	then
 		-- reverse back a bit, this usually solves the problem
