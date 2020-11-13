@@ -66,6 +66,7 @@ CombineUnloadAIDriver.targetOffsetBehindChopper = 3 -- 3 m to the right
 CombineUnloadAIDriver.targetDistanceBehindReversingChopper = 2
 CombineUnloadAIDriver.minDistanceFromReversingChopper = 10
 CombineUnloadAIDriver.minDistanceFromWideTurnChopper = 5
+CombineUnloadAIDriver.minDistanceWhenMovingOutOfWay = 5
 CombineUnloadAIDriver.safeManeuveringDistance = 30 -- distance to keep from a combine not ready to unload
 CombineUnloadAIDriver.unloaderFollowingDistance = 30 -- distance to keep between two unloaders assigned to the same chopper
 CombineUnloadAIDriver.pathfindingRange = 5 -- won't do pathfinding if target is closer than this
@@ -225,12 +226,18 @@ function CombineUnloadAIDriver:enableProximitySpeedControl(vehicleToIgnore)
 	AIDriver.enableProximitySpeedControl(self)
 end
 
+function CombineUnloadAIDriver:addForwardProximitySensor()
+	self:setFrontMarkerNode(self.vehicle)
+	self.forwardLookingProximitySensorPack = WideForwardLookingProximitySensorPack(
+			self.vehicle, self:getFrontMarkerNode(self.vehicle), self.proximitySensorRange, 1, 2)
+end
+
 --- Proximity sensor to check the chopper's distance
 function CombineUnloadAIDriver:addChopperProximitySensor()
 	self:setFrontMarkerNode(self.vehicle)
 	---@type ProximitySensorPack
 	self.chopperProximitySensorPack = ProximitySensorPack('chopper',
-			self.vehicle, self:getFrontMarkerNode(self.vehicle), 10, 1.2, {0, 45, 90, -45, -90})
+			self.vehicle, self:getFrontMarkerNode(self.vehicle), 10, 1.2, {0, 45, 90, -45, -90}, {0, 0, 0, 0, 0})
 	self.chopperProximitySensorPack:disableSpeedControl()
 	self.chopperProximitySensorPack:disableSwerve()
 	self.chopperProximitySensorPack:disableRotateWithWheels()
@@ -360,7 +367,7 @@ function CombineUnloadAIDriver:driveOnField(dt)
 
 	elseif self.onFieldState == self.states.MOVING_OUT_OF_WAY then
 
-		self:setSpeed(self.vehicle.cp.speeds.reverse)
+		self:moveOutOfWay()
 
 	elseif self.onFieldState == self.states.UNLOADING_MOVING_COMBINE then
 
@@ -412,8 +419,7 @@ function CombineUnloadAIDriver:driveOnField(dt)
 		-- drive back way further if we are behind a chopper to have room
 		local dDriveBack = math.abs(dx) < 3 and 0.75 * self.vehicle.cp.turnDiameter or 0
 		if dz > dDriveBack then
-			self:releaseUnloader()
-			self:startUnloadCourse()
+			self:releaseUnloader()			self:startUnloadCourse()
 		else
 			self:holdCombine()
 		end
@@ -2040,13 +2046,33 @@ function CombineUnloadAIDriver:onBlockingOtherVehicle(blockedVehicle)
 	then
 		-- reverse back a bit, this usually solves the problem
 		-- TODO: there may be better strategies depending on the situation
-		local reverseCourse = self:getStraightReverseCourse(10)
+		local reverseCourse = self:getStraightReverseCourse(25)
 		self:startCourse(reverseCourse, 1, self.course, self.course:getCurrentWaypointIx())
 		self.stateAfterMovedOutOfWay = self.onFieldState
 		self:debug('Moving out of the way for %s', blockedVehicle:getName())
 		self:setNewOnFieldState(self.states.MOVING_OUT_OF_WAY)
+		-- this state ends when we reach the end of the course or when the combine stops reversing
 	else
 		self:debugSparse('Already busy moving out of the way')
+	end
+end
+
+------------------------------------------------------------------------------------------------------------------------
+-- Moving out of the way of a combine or chopper
+------------------------------------------------------------------------------------------------------------------------
+function CombineUnloadAIDriver:moveOutOfWay()
+	-- check both distances and use the smaller one, proximity sensor may not see the combine or
+	-- d may be big enough but parts of the combine still close
+	local d = self:getDistanceFromCombine()
+	local dProximity = self.forwardLookingProximitySensorPack:getClosestObjectDistanceAndRootVehicle()
+	local combineSpeed = (self.combineToUnload.lastSpeedReal * 3600)
+	local speed = combineSpeed +
+			MathUtil.clamp(self.minDistanceWhenMovingOutOfWay - math.min(d, dProximity), -combineSpeed, self.vehicle.cp.speeds.reverse * 1.2)
+
+	self:setSpeed(speed)
+
+	if not self:isMyCombineReversing() then
+		self:setNewOnFieldState(self.stateAfterMovedOutOfWay)
 	end
 end
 
@@ -2073,8 +2099,6 @@ function CombineUnloadAIDriver:renderText(x, y, ...)
 
 	renderText(0.6 + x, 0.2 + y, 0.018, string.format(...))
 end
-
-
 
 
 FillUnit.updateFillUnitAutoAimTarget =  Utils.overwrittenFunction(FillUnit.updateFillUnitAutoAimTarget,CombineUnloadAIDriver.updateFillUnitAutoAimTarget)

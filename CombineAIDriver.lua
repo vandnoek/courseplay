@@ -167,8 +167,11 @@ end
 
 function CombineAIDriver:start(startingPoint)
 	self:clearAllUnloaderInformation()
+	self:addForwardProximitySensor()
 	self:addBackwardProximitySensor()
 	UnloadableFieldworkAIDriver.start(self, startingPoint)
+	-- we work with the traffic conflict detector and the proximity sensors instead
+	self:disableCollisionDetection()
 	self:fixMaxRotationLimit()
 	local total, pipeInFruit = self.fieldworkCourse:setPipeInFruitMap(self.pipeOffsetX, self.vehicle.cp.workWidth)
 	local ix = self.fieldworkCourse:getStartingWaypointIx(AIDriverUtil.getDirectionNode(self.vehicle), startingPoint)
@@ -1571,4 +1574,11 @@ function CombineAIDriver:createTrafficConflictDetector()
 	self.trafficConflictDetector = TrafficConflictDetector(self.vehicle, self.course)
 	-- for now, combines ignore traffic conflicts (but still provide the detector boxes for other vehicles)
 	self.trafficConflictDetector:disableSpeedControl()
+end
+
+-- and our forward proximity sensor covers the entire working width
+function CombineAIDriver:addForwardProximitySensor()
+	self:setFrontMarkerNode(self.vehicle)
+	self.forwardLookingProximitySensorPack = WideForwardLookingProximitySensorPack(
+			self.vehicle, self:getFrontMarkerNode(self.vehicle), self.proximitySensorRange, 1, self.vehicle.cp.workWidth)
 end
