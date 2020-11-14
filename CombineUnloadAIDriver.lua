@@ -1724,6 +1724,8 @@ function CombineUnloadAIDriver:unloadMovingCombine()
 	-- TODO: handle pipe on the left side
 	-- disable looking to the right so the proximity sensor won't slow us down while driving beside the combine
 	self:disableProximityRightSide()
+	-- make sure the combine won't slow down when seeing us
+	self.combineToUnload.cp.driver:ignoreVehicleProximity(self.vehicle)
 	self:disableProximitySwerve()
 
 	-- allow on the fly offset changes
@@ -1871,6 +1873,8 @@ function CombineUnloadAIDriver:followChopper()
 		-- The dedicated chopper proximity sensor takes care of controlling our speed, the normal one
 		-- should therefore ignore the chopper (but not others)
 		self:enableProximitySpeedControl(self.combineToUnload)
+		-- make sure the chopper won't slow down when seeing us
+		self.combineToUnload.cp.driver:ignoreVehicleProximity(self.vehicle)
 		self:disableProximitySwerve()
 		-- when on the fieldwork course, drive behind or beside the chopper, staying in the range of the pipe
 		self.combineOffset = self:getChopperOffset(self.combineToUnload)

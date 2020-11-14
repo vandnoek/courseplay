@@ -376,7 +376,6 @@ end
 
 --- Update AI driver, everything that needs to run in every loop
 function AIDriver:update(dt)
-	--self:updateProximitySensors()
 	self:updatePathfinding()
 	self:drive(dt)
 	self:checkIfBlocked()
@@ -1894,15 +1893,6 @@ function AIDriver:addBackwardProximitySensor()
 			self.vehicle, self:getBackMarkerNode(self.vehicle), self.proximitySensorRange, 1)
 end
 
-function AIDriver:updateProximitySensors()
-	if self.forwardLookingProximitySensorPack then
-		self.forwardLookingProximitySensorPack:update()
-	end
-	if self.backwardLookingProximitySensorPack then
-		self.backwardLookingProximitySensorPack:update()
-	end
-end
-
 function AIDriver:checkSafetyConstraints(maxSpeed, allowedToDrive, moveForwards)
 	local proximityLimitedSpeed, trafficLimitedSpeed
 	proximityLimitedSpeed, allowedToDrive, moveForwards = self:checkProximitySensor(maxSpeed, allowedToDrive, moveForwards)
@@ -1978,7 +1968,7 @@ function AIDriver:checkProximitySensor(maxSpeed, allowedToDrive, moveForwards)
 	end
 
 	local normalizedD = d / (range - AIDriver.proximityLimitLow)
-	self:debug('prox %.1f la = %.1f, d = %.1f norm = %d', self.course.temporaryOffsetX:get(),
+	self:debugSparse('prox %.1f la = %.1f, d = %.1f norm = %d', self.course.temporaryOffsetX:get(),
 			self.ppc:getLookaheadDistance(), d, normalizedD * 100)
 
 	if d < AIDriver.proximityLimitReverse then
