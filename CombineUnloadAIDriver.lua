@@ -405,6 +405,8 @@ function CombineUnloadAIDriver:driveOnField(dt)
 		self:enableProximitySpeedControl()
 		self:enableProximitySwerve()
 
+		self:setFieldSpeed()
+
 		-- try not crashing into our combine on the way to the unload course
 		if self.combineJustUnloaded and
 				not self.combineJustUnloaded.cp.driver:isChopper() and
