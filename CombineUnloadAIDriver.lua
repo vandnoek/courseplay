@@ -421,7 +421,8 @@ function CombineUnloadAIDriver:driveOnField(dt)
 		-- drive back way further if we are behind a chopper to have room
 		local dDriveBack = math.abs(dx) < 3 and 0.75 * self.vehicle.cp.turnDiameter or 0
 		if dz > dDriveBack then
-			self:releaseUnloader()			self:startUnloadCourse()
+			self:releaseUnloader()
+			self:startUnloadCourse()
 		else
 			self:holdCombine()
 		end
@@ -1880,7 +1881,18 @@ function CombineUnloadAIDriver:followChopper()
 		self:disableProximitySwerve()
 		-- when on the fieldwork course, drive behind or beside the chopper, staying in the range of the pipe
 		self.combineOffset = self:getChopperOffset(self.combineToUnload)
-		self.followCourse:setOffset(-self.combineOffset, 0)
+
+		local dx = self:findOtherUnloaderAroundCombine(self.combineToUnload)
+		if dx then
+			-- there's another unloader around the combine, on either side
+			if math.abs(dx) > 1 then
+				-- stay behind the chopper
+				self.followCourse:setOffset(0, 0)
+			end
+		else
+			self.followCourse:setOffset(-self.combineOffset, 0)
+		end
+
 
 		if self.combineOffset ~= 0 then
 			self:driveBesideChopper()
@@ -2081,6 +2093,25 @@ function CombineUnloadAIDriver:moveOutOfWay()
 		self:setNewOnFieldState(self.stateAfterMovedOutOfWay)
 	end
 end
+
+function CombineUnloadAIDriver:findOtherUnloaderAroundCombine(combine)
+	if not combine then return nil end
+	if g_currentMission then
+		for _, vehicle in pairs(g_currentMission.vehicles) do
+			if vehicle.cp.driver and vehicle.cp.driver:is_a(CombineUnloadAIDriver) then
+				local dx, _, dz = localToLocal(vehicle.rootNode, AIDriverUtil.getDirectionNode(combine), 0, 0, 0)
+				if math.abs(dz) < 30 and math.abs(dx) <= combine.cp.workWidth then
+					-- this is another unloader not too far from my combine
+					-- which side it is?
+					self:debugSparse('There is an other unloader (%s) around my combine (%s), dx = %.1f',
+						nameNum(vehicle), nameNum(combine), dx)
+					return dx
+				end
+			end
+		end
+	end
+end
+
 
 ------------------------------------------------------------------------------------------------------------------------
 -- Debug
