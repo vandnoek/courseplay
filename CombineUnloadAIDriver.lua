@@ -324,9 +324,12 @@ function CombineUnloadAIDriver:driveOnField(dt)
 
 		self:setFieldSpeed()
 
-		local d = calcDistanceFrom(self.vehicle.rootNode, AIDriverUtil.getDirectionNode(self.firstUnloader))
-		if d < self.safeManeuveringDistance then
-			self:debug('At %d meters from first unloader %s, start following it', d, nameNum(self.firstUnloader))
+		local unloaderDirectionNode = AIDriverUtil.getDirectionNode(self.firstUnloader)
+		local _, _, dz = localToLocal(self.vehicle.rootNode, unloaderDirectionNode, 0, 0, 0)
+		local d = calcDistanceFrom(self.vehicle.rootNode, unloaderDirectionNode)
+		if d < self.safeManeuveringDistance and dz < self.safeManeuveringDistance / 2 then
+			self:debug('At %d meters (%.1f behind) from first unloader %s, start following it',
+					d, dz, nameNum(self.firstUnloader))
 			self:startFollowingFirstUnloader()
 		end
 
