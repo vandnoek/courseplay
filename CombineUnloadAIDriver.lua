@@ -1891,6 +1891,7 @@ function CombineUnloadAIDriver:followChopper()
 			if math.abs(dx) > 1 then
 				-- stay behind the chopper
 				self.followCourse:setOffset(0, 0)
+				self.combineOffset = 0
 			end
 		else
 			self.followCourse:setOffset(-self.combineOffset, 0)
@@ -2101,7 +2102,7 @@ function CombineUnloadAIDriver:findOtherUnloaderAroundCombine(combine)
 	if not combine then return nil end
 	if g_currentMission then
 		for _, vehicle in pairs(g_currentMission.vehicles) do
-			if vehicle.cp.driver and vehicle.cp.driver:is_a(CombineUnloadAIDriver) then
+			if vehicle ~= self.vehicle and vehicle.cp.driver and vehicle.cp.driver:is_a(CombineUnloadAIDriver) then
 				local dx, _, dz = localToLocal(vehicle.rootNode, AIDriverUtil.getDirectionNode(combine), 0, 0, 0)
 				if math.abs(dz) < 30 and math.abs(dx) <= combine.cp.workWidth then
 					-- this is another unloader not too far from my combine
