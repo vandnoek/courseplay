@@ -88,10 +88,10 @@ CombineUnloadAIDriver.myStates = {
 	MOVE_BACK_FROM_REVERSING_CHOPPER = {isUnloadingChopper = true},
 	MOVE_BACK_FROM_EMPTY_COMBINE = {},
 	MOVE_BACK_FULL = {},
-	HANDLE_CHOPPER_HEADLAND_TURN = {isUnloadingChopper = true},
-	HANDLE_CHOPPER_180_TURN = {isUnloadingChopper = true},
-	FOLLOW_CHOPPER_THROUGH_TURN = {isUnloadingChopper = true},
-	ALIGN_TO_CHOPPER_AFTER_TURN = {isUnloadingChopper = true},
+	HANDLE_CHOPPER_HEADLAND_TURN = {isUnloadingChopper = true, isHandlingChopperTurn = true},
+	HANDLE_CHOPPER_180_TURN = {isUnloadingChopper = true, isHandlingChopperTurn = true},
+	FOLLOW_CHOPPER_THROUGH_TURN = {isUnloadingChopper = true, isHandlingChopperTurn = true},
+	ALIGN_TO_CHOPPER_AFTER_TURN = {isUnloadingChopper = true, isHandlingChopperTurn = true},
 	MOVING_OUT_OF_WAY = {isUnloadingChopper = true},
 	WAITING_FOR_MANEUVERING_COMBINE = {},
 }
@@ -2038,7 +2038,11 @@ function CombineUnloadAIDriver:followFirstUnloader()
 	local dFromFirstUnloader = self.followCourse:getDistanceBetweenWaypoints(self:getRelevantWaypointIx(),
 			self.firstUnloader.cp.driver:getRelevantWaypointIx())
 
-	if self.firstUnloader.cp.driver:isStopped() then
+	if self.firstUnloader.cp.driver:isStopped() or self.firstUnloader.cp.driver:isReversing() then
+		self:debugSparse('holding for stopped or reversing first unloader %s', nameNum(self.firstUnloader))
+		self:setSpeed(0)
+	elseif self.firstUnloader.cp.driver.state == self.states.ON_FIELD and self.onFieldState.properties.isHandlingChopperTurn then
+		self:debugSparse('holding for first unloader %s handing the chopper turn', nameNum(self.firstUnloader))
 		self:setSpeed(0)
 	else
 		-- adjust our speed if we are too close or too far
