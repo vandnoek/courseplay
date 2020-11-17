@@ -324,12 +324,20 @@ function CombineUnloadAIDriver:driveOnField(dt)
 
 		self:setFieldSpeed()
 
-		local unloaderDirectionNode = AIDriverUtil.getDirectionNode(self.firstUnloader)
-		local _, _, dz = localToLocal(self.vehicle.rootNode, unloaderDirectionNode, 0, 0, 0)
-		local d = calcDistanceFrom(self.vehicle.rootNode, unloaderDirectionNode)
-		if d < self.safeManeuveringDistance and dz < -(self.safeManeuveringDistance / 2) then
-			self:debug('At %d meters (%.1f behind) from first unloader %s, start following it',
-					d, dz, nameNum(self.firstUnloader))
+		if self:isOkToStartFollowingFirstUnloader() then
+			self:startFollowingFirstUnloader()
+		end
+
+	elseif self.onFieldState == self.states.WAITING_FOR_FIRST_UNLOADER then
+		-- wait to become first unloader or until first unloader can be followed
+		if self:iAmFirstUnloader() then
+			-- switch to drive to chopper or following chopper
+			self:startWorking()
+		end
+
+		self:setSpeed(0)
+
+		if self:isOkToStartFollowingFirstUnloader() then
 			self:startFollowingFirstUnloader()
 		end
 
@@ -420,33 +428,18 @@ function CombineUnloadAIDriver:driveOnField(dt)
 		end
 
 	elseif self.onFieldState == self.states.MOVE_BACK_FULL then
-		local _, dx, dz = self:getDistanceFromCombine()
+		local _, dx, dz = self:getDistanceFromCombine(self.combineJustUnloaded)
 		-- drive back way further if we are behind a chopper to have room
-		local dDriveBack = math.abs(dx) < 3 and 0.75 * self.vehicle.cp.turnDiameter or 0
+		local dDriveBack = math.abs(dx) < 3 and 0.75 * self.vehicle.cp.turnDiameter or -10
 		if dz > dDriveBack then
-			self:releaseUnloader()
 			self:startUnloadCourse()
-		else
-			self:holdCombine()
-		end
-		if self:getImFirstOfTwoUnloaders() and self:getChopperOffset(self.combineToUnload) ~= 0 then
-			if not self:getCombineIsTurning() then
-				if not self.combineToUnload.cp.driver:isStopped() then
-					self:hold()
-				end
-			else
-				self:holdCombine()
-			end
 		end
 
 	elseif self.onFieldState == self.states.MOVE_BACK_FROM_EMPTY_COMBINE then
 		-- drive back until the combine is in front of us
-		local _, _, dz = self:getDistanceFromCombine()
+		local _, _, dz = self:getDistanceFromCombine(self.combineJustUnloaded)
 		if dz > 0 then
-			self:releaseUnloader()
 			self:startWaitingForCombine()
-		else
-			self:holdCombine()
 		end
 
 	elseif self.onFieldState == self.states.MOVE_BACK_FROM_REVERSING_CHOPPER then
@@ -479,11 +472,6 @@ end
 
 function CombineUnloadAIDriver:getFillLevelPercent()
 	return self.vehicle.cp.totalFillLevelPercent
-end
-
-function CombineUnloadAIDriver:holdCombine()
-	self:debugSparse('Holding combine.')
-	--self.combineToUnload.cp.driver:hold()
 end
 
 function CombineUnloadAIDriver:getNominalSpeed()
@@ -1113,6 +1101,21 @@ function CombineUnloadAIDriver:isOkToStartFollowingChopper()
 	return self.combineToUnload.cp.driver:isChopper() and self:isBehindAndAlignedToChopper() and self:iAmFirstUnloader()
 end
 
+function CombineUnloadAIDriver:isOkToStartFollowingFirstUnloader()
+	if self.firstUnloader.cp.driver.state == self.states.ON_FIELD and
+			self.firstUnloader.cp.driver.onFieldState == self.states.FOLLOW_CHOPPER then
+		local unloaderDirectionNode = AIDriverUtil.getDirectionNode(self.firstUnloader)
+		local _, _, dz = localToLocal(self.vehicle.rootNode, unloaderDirectionNode, 0, 0, 0)
+		local d = calcDistanceFrom(self.vehicle.rootNode, unloaderDirectionNode)
+		if d < self.safeManeuveringDistance and dz < -(self.safeManeuveringDistance / 2) then
+			self:debug('At %d meters (%.1f behind) from first unloader %s, start following it',
+					d, dz, nameNum(self.firstUnloader))
+			return true
+		end
+	end
+	return false
+end
+
 function CombineUnloadAIDriver:isOkToStartUnloadingCombine()
 	if self.combineToUnload.cp.driver:isChopper() then return false end
 	if self.combineToUnload.cp.driver:isReadyToUnload(self.vehicle.cp.settings.useRealisticDriving:is(true)) then
@@ -1218,7 +1221,8 @@ function CombineUnloadAIDriver:startFollowingFirstUnloader()
 		return
 	end
 
-	if self.firstUnloader.cp.driver.state == self.states.ON_FIELD and not self.onFieldState.properties.isUnloadingChopper then
+	if self.firstUnloader.cp.driver.state == self.states.ON_FIELD and
+			not self.firstUnloader.cp.driver.onFieldState.properties.isUnloadingChopper then
 			self:debug('%s is the first unloader but not following the chopper, has state %s', nameNum(self.firstUnloader),
 				self.firstUnloader.cp.driver.onFieldState.name)
 		self:startWorking()
@@ -1411,7 +1415,12 @@ function CombineUnloadAIDriver:startPathfindingToFirstUnloader(onPathfindingDone
 		self:startPathfinding(self.combineToUnload.rootNode, 0, -5, 0, {self.combineToUnload, self.firstUnloader}, onPathfindingDoneFunc)
 	else
 		self:debug('Won\'t start pathfinding to first unloader, too close?')
-		self:startFollowingFirstUnloader()
+		if self:isOkToStartFollowingFirstUnloader() then
+			self:startFollowingFirstUnloader()
+		else
+			self:setNewOnFieldState(self.states.WAITING_FOR_FIRST_UNLOADER)
+			self:debug('First unloader is not ready to be followed, waiting.')
+		end
 	end
 end
 
@@ -1564,8 +1573,9 @@ end
 --- the right side of the combine)
 --- back offset (local z) of the combine's back in the tractor's front coordinate system (positive if the tractor is behind
 --- the combine)
-function CombineUnloadAIDriver:getDistanceFromCombine()
-	local dx, _, dz = localToLocal(self:getBackMarkerNode(self.combineToUnload), self:getFrontMarkerNode(self.vehicle), 0, 0, 0)
+function CombineUnloadAIDriver:getDistanceFromCombine(combine)
+	local dx, _, dz = localToLocal(self:getBackMarkerNode(combine or self.combineToUnload),
+			self:getFrontMarkerNode(self.vehicle), 0, 0, 0)
 	return MathUtil.vector2Length(dx, dz), dx, dz
 end
 
@@ -1797,6 +1807,7 @@ end
 -- Start moving back from empty combine
 ------------------------------------------------------------------------------------------------------------------------
 function CombineUnloadAIDriver:startMovingBackFromCombine(newState)
+	self:releaseUnloader()
 	local reverseCourse = self:getStraightReverseCourse()
 	self:startCourse(reverseCourse, 1)
 	self:setNewOnFieldState(newState)
@@ -2098,7 +2109,8 @@ function CombineUnloadAIDriver:moveOutOfWay()
 	self:setSpeed(speed)
 
 	if not self:isMyCombineReversing() then
-		self:setNewOnFieldState(self.stateAfterMovedOutOfWay)
+		-- end reversing course prematurely, it'll resume previous course
+		self:onLastWaypoint()
 	end
 end
 
