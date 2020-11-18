@@ -122,6 +122,8 @@ AIDriver.proximityMinLimitedSpeed = 2
 AIDriver.proximityLimitLow = 1.5
 -- if anything closer than this, we reverse
 AIDriver.proximityLimitReverse = 1
+-- default slow down distance before last waypoint
+AIDriver.defaultSlowDownDistanceBeforeLastWaypoint = 15
 
 AIDriver.APPROACH_AUGER_TRIGGER_SPEED = 3
 AIDriver.EMERGENCY_BRAKE_FORCE = 1000000
@@ -831,7 +833,7 @@ end
 function AIDriver:getDefaultStreetSpeed(ix)
 	-- reduce speed before the end of the course
 	local dToEnd = self.course:getDistanceToLastWaypoint(ix)
-	if dToEnd < 15 then
+	if dToEnd < self:getSlowDownDistanceBeforeLastWaypoint() then
 		-- TODO make this smoother depending on the remaining distance?
 		return self.vehicle.cp.speeds.turn
 	end
@@ -840,6 +842,11 @@ function AIDriver:getDefaultStreetSpeed(ix)
 		return math.max(self.vehicle.cp.speeds.turn, math.min(radius / 20 * self.vehicle.cp.speeds.street, self.vehicle.cp.speeds.street))
 	end
 	return self.vehicle.cp.speeds.street
+end
+
+-- if closer than this to the last waypoint, start slowing down
+function AIDriver:getSlowDownDistanceBeforeLastWaypoint()
+	return AIDriver.defaultSlowDownDistanceBeforeLastWaypoint
 end
 
 function AIDriver:slowDownForWaitPoints()

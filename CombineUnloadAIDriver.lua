@@ -551,14 +551,21 @@ function CombineUnloadAIDriver:onLastWaypoint()
 	AIDriver.onLastWaypoint(self)
 end
 
+-- if closer than this to the last waypoint, start slowing down
+function CombineUnloadAIDriver:getSlowDownDistanceBeforeLastWaypoint()
+	local d = AIDriver.defaultSlowDownDistanceBeforeLastWaypoint
+	-- in some states there's no need to slow down before reaching the last waypoints
+	if self.state == self.states.ON_FIELD then
+		if self.onFieldState == self.states.DRIVE_TO_FIRST_UNLOADER then
+			d = 0
+		end
+	end
+	return d
+end
+
 function CombineUnloadAIDriver:setFieldSpeed()
 	if self.course then
-		-- slow down a bit towards the end of the course.
-		if self.course:getNumberOfWaypoints() - self.course:getCurrentWaypointIx() < 10 then
-			self:setSpeed(self.vehicle.cp.speeds.field / 2)
-		else
-			self:setSpeed(self.vehicle.cp.speeds.field)
-		end
+		self:setSpeed(self.vehicle.cp.speeds.field)
 	end
 end
 
@@ -1320,7 +1327,11 @@ function CombineUnloadAIDriver:startDrivingToChopper()
 		self:startPathfindingToCombine(self.onPathfindingDoneToCombine, nil, -15)
 	else
 		self:debug('Second unloader, start pathfinding to first unloader')
-		self:startPathfindingToFirstUnloader(self.onPathfindingDoneToFirstUnloader)
+		if self:isOkToStartFollowingFirstUnloader() then
+			self:startFollowingFirstUnloader()
+		else
+			self:startPathfindingToFirstUnloader(self.onPathfindingDoneToFirstUnloader)
+		end
 	end
 end
 
