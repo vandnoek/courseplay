@@ -1570,7 +1570,9 @@ function CombineUnloadAIDriver:changeToUnloadWhenDriveOnLevelReached()
 	if self:shouldDriveOn() then
 		self:debug('Drive on level reached, changing to unload course')
 		self:startMovingBackFromCombine(self.states.MOVE_BACK_FULL)
+		return true
 	end
+	return false
 end
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -1795,7 +1797,7 @@ function CombineUnloadAIDriver:handleChopperHeadlandTurn()
 		self:setNewOnFieldState(self.states.MOVE_BACK_FROM_REVERSING_CHOPPER )
 	end
 
-	self:changeToUnloadWhenDriveOnLevelReached()
+	if self:changeToUnloadWhenDriveOnLevelReached() then return end
 
 	--when the turn is finished, return to follow chopper
 	if not self:getCombineIsTurning() then
@@ -1879,7 +1881,7 @@ end
 ------------------------------------------------------------------------------------------------------------------------
 function CombineUnloadAIDriver:handleChopper180Turn()
 
-	self:changeToUnloadWhenDriveOnLevelReached()
+	if self:changeToUnloadWhenDriveOnLevelReached() then return end
 
 	self:enableProximitySpeedControl()
 	self:disableProximitySwerve()
@@ -1932,7 +1934,7 @@ function CombineUnloadAIDriver:followChopperThroughTurn()
 	self:enableProximitySpeedControl()
 	self:disableProximitySwerve()
 
-	self:changeToUnloadWhenDriveOnLevelReached()
+	if self:changeToUnloadWhenDriveOnLevelReached() then return end
 
 	local d = self:getDistanceFromCombine()
 	if self.combineToUnload.cp.driver:isTurning() then
