@@ -2029,7 +2029,7 @@ function AIDriver:checkProximitySensor(maxSpeed, allowedToDrive, moveForwards)
 	local deltaV = maxSpeed - AIDriver.proximityMinLimitedSpeed
 	local newSpeed = AIDriver.proximityMinLimitedSpeed + normalizedD * deltaV
 	-- check for nil and NaN
-	if deg and deg == deg and swerveEnabled and (not vehicle:getIsCourseplayDriving() or self:haveHeadOnConflictWith(vehicle)) then
+	if deg and deg == deg and swerveEnabled then
 		local dx = dAvg * math.sin(math.rad(deg))
 		-- which direction to swerve (have a little bias for right, sorry UK folks :)
 		local dir = dx > -1.2 and 1 or -1
