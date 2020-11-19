@@ -1957,7 +1957,7 @@ AIDriver.psStateStop = {name = 'stop'}
 
 function AIDriver:checkProximitySensor(maxSpeed, allowedToDrive, moveForwards)
 
-	function debug(state, ...)
+	local function debug(state, ...)
 		if state ~= self.lastProximitySensorState then
 			self.lastProximitySensorState = state
 			self:debug(string.format('psState %s: %s', state.name, string.format(...)))
