@@ -83,7 +83,7 @@ CombineUnloadAIDriver.myStates = {
 	DRIVE_TO_UNLOAD_COURSE = {checkForTrafficConflict = true},
 	UNLOADING_MOVING_COMBINE = {},
 	UNLOADING_STOPPED_COMBINE = {},
-	FOLLOW_CHOPPER = {isUnloadingChopper = true, checkForTrafficConflict = true},
+	FOLLOW_CHOPPER = {isUnloadingChopper = true},
 	FOLLOW_FIRST_UNLOADER = {checkForTrafficConflict = true},
 	MOVE_BACK_FROM_REVERSING_CHOPPER = {isUnloadingChopper = true},
 	MOVE_BACK_FROM_EMPTY_COMBINE = {},
