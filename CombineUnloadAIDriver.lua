@@ -1036,6 +1036,10 @@ function CombineUnloadAIDriver:isFollowingChopper()
 			self.onFieldState == self.states.FOLLOW_CHOPPER
 end
 
+function CombineUnloadAIDriver:isHandlingChopperTurn()
+	return self.state == self.states.ON_FIELD and self.onFieldState.properties.isHandlingChopperTurn
+end
+
 function CombineUnloadAIDriver:isOkToStartFollowingFirstUnloader()
 	if self.firstUnloader and self.firstUnloader.cp.driver:isFollowingChopper() then
 		local unloaderDirectionNode = AIDriverUtil.getDirectionNode(self.firstUnloader)
@@ -1995,7 +1999,7 @@ function CombineUnloadAIDriver:followFirstUnloader()
 	if self.firstUnloader.cp.driver:isStopped() or self.firstUnloader.cp.driver:isReversing() then
 		self:debugSparse('holding for stopped or reversing first unloader %s', nameNum(self.firstUnloader))
 		self:setSpeed(0)
-	elseif self.firstUnloader.cp.driver.state == self.states.ON_FIELD and self.onFieldState.properties.isHandlingChopperTurn then
+	elseif self.firstUnloader.cp.driver:isHandlingChopperTurn() then
 		self:debugSparse('holding for first unloader %s handing the chopper turn', nameNum(self.firstUnloader))
 		self:setSpeed(0)
 	else
