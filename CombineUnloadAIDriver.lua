@@ -83,7 +83,7 @@ CombineUnloadAIDriver.myStates = {
 	DRIVE_TO_UNLOAD_COURSE = {checkForTrafficConflict = true},
 	UNLOADING_MOVING_COMBINE = {},
 	UNLOADING_STOPPED_COMBINE = {},
-	FOLLOW_CHOPPER = {isUnloadingChopper = true},
+	FOLLOW_CHOPPER = {isUnloadingChopper = true, checkForTrafficConflict = true},
 	FOLLOW_FIRST_UNLOADER = {checkForTrafficConflict = true},
 	MOVE_BACK_FROM_REVERSING_CHOPPER = {isUnloadingChopper = true},
 	MOVE_BACK_FROM_EMPTY_COMBINE = {},
@@ -149,6 +149,10 @@ function CombineUnloadAIDriver:start(startingPoint)
 	self.ppc:setNormalLookaheadDistance()
 
 	if startingPoint:is(StartingPointSetting.START_WITH_UNLOAD) then
+		if CpManager.isDeveloper then
+			-- automatically select closest combine
+			self.assignedCombinesSetting:selectClosest()
+		end
 		self:info('Start unloading, waiting for a combine to call')
 		self:setNewState(self.states.ON_FIELD)
 		self:disableCollisionDetection()
@@ -632,87 +636,6 @@ function CombineUnloadAIDriver:getTrailersTargetNode()
 	return self.vehicle.cp.workTools[1].rootNode, allTrailersFull
 end
 
-function CombineUnloadAIDriver:getDrivingCoordsBeside()
-	-- TODO: use localToLocal
-	-- target position 5 m in front of the tractor
-	local tx, ty, tz = localToWorld(AIDriverUtil.getDirectionNode(self.vehicle), 0, 0, 5)
-	-- tractor's local position in the combine's coordinate system
-	local sideShift, _, backShift = worldToLocal(self.combineToUnload.cp.directionNode, tx, ty, tz)
-	local backDistance = self:getCombinesMeasuredBackDistance() + 3
-	-- unit vector from the combine to the target
-	local origLx, origLz = AIVehicleUtil.getDriveDirection(self.combineToUnload.cp.directionNode, tx, ty, tz)
-	local lx, lz = origLx, origLz
-	local isBeside = false
-	if self.combineOffset > 0 then
-		-- pipe on the right
-		lx = math.max(0.25, lx)
-		--if I'm on the wrong side, drive to combines back first
-		if backShift > 0 and sideShift < 0 then
-			-- front of the combine or on the left
-			lx = 0
-			lz= -1
-		end
-	else
-		lx = math.min(-0.25, lx)
-		--if I'm on the wrong side, drive to combines back first
-		if backShift > 0 and sideShift > 0 then
-			-- front of the combine or on the right
-			lx = 0
-			lz= -1
-		end
-	end
-	-- no idea how are we calculating this, especially the backDistance part does not seem to make sense with lx
-	local rayLength = (math.abs(self.combineOffset)*math.abs(lx)) + (backDistance - (backDistance * math.abs(lx)))
-	-- this is waaay too complicated, why not just use
-	local nx, _, nz = localDirectionToWorld(self.combineToUnload.cp.directionNode, lx, 0, lz)
-	local cx, cy, cz = getWorldTranslation(self.combineToUnload.cp.directionNode)
-	local x, y, z = cx + (nx * rayLength), cy, cz + (nz * rayLength)
-	local offsetDifference = self.combineOffset - sideShift
-	--self:debug('lz %.1f, lx %.1f, raylength %.1f, backdistance %.1f, sideshift %.1f, backsift %.1f', lz, lx, rayLength, backDistance, sideShift , backShift)
-	local distanceToTarget = courseplay:distance(tx, tz, x, z)
-	--we are on the correct side but not close to the target point, so got directly to the offsetTarget
-	if self.combineOffset > 0 then
-		if origLx > 0 then
-			--print("distanceToTarget: "..tostring(distanceToTarget))
-			isBeside = distanceToTarget > 4
-		end
-	else
-		if origLx < 0 then
-			--print("distanceToTarget: "..tostring(distanceToTarget))
-			isBeside = distanceToTarget > 4
-		end
-	end
-
-	isBeside = isBeside or math.abs(offsetDifference) < 0.5
-	if lz > 0 or isBeside then
-		x, y, z = localToWorld(self.combineToUnload.cp.directionNode, self.combineOffset, 0, backShift)
-		cpDebug:drawLine(cx, cy + 1, cz, 1, 0, 0, x, y + 1, z)
-	else
-		cpDebug:drawLine(cx, cy + 1, cz, 0, 1, 0, x, y + 1, z)
-	end
-	return x, y, z, isBeside
-end
-
-function CombineUnloadAIDriver:getDrivingCoordsBehindTractor(tractorToFollow)
-	local sx,sy,sz = localToWorld(self:getDirectionNode(),0,0,5)
-	local tx,ty,tz = localToWorld(tractorToFollow.cp.directionNode,0,0,math.max(-30,backShift))
-	return tx,ty,tz
-end
-
-function CombineUnloadAIDriver:getDrivingCoordsBesideTractor(tractorToFollow)
-	local offset = self:getChopperOffset(self.combineToUnload)
-	local sx,sy,sz = localToWorld(self:getDirectionNode(),0,0,5)
-	local newX = 0
-	if offset < 0 then
-		newX = - 4.5
-	else
-		newX = 4.5
-	end
-	local tx,ty,tz = localToWorld(tractorToFollow.cp.directionNode,newX,0,math.max(-20,backShift))
-	cpDebug:drawLine(sx,sy+1,sz, 100, 100, 100, tx,ty+1,tz)
-	return tx,ty,tz
-end
-
 function CombineUnloadAIDriver:getZOffsetToBehindCombine()
 	return -self:getCombinesMeasuredBackDistance() - 2
 end
@@ -1108,13 +1031,20 @@ function CombineUnloadAIDriver:isOkToStartFollowingChopper()
 	return self.combineToUnload.cp.driver:isChopper() and self:isBehindAndAlignedToChopper() and self:iAmFirstUnloader()
 end
 
+function CombineUnloadAIDriver:isFollowingChopper()
+	return self.state == self.states.ON_FIELD and
+			self.onFieldState == self.states.FOLLOW_CHOPPER
+end
+
 function CombineUnloadAIDriver:isOkToStartFollowingFirstUnloader()
-	if self.firstUnloader.cp.driver.state == self.states.ON_FIELD and
-			self.firstUnloader.cp.driver.onFieldState == self.states.FOLLOW_CHOPPER then
+	if self.firstUnloader and self.firstUnloader.cp.driver:isFollowingChopper() then
 		local unloaderDirectionNode = AIDriverUtil.getDirectionNode(self.firstUnloader)
 		local _, _, dz = localToLocal(self.vehicle.rootNode, unloaderDirectionNode, 0, 0, 0)
 		local d = calcDistanceFrom(self.vehicle.rootNode, unloaderDirectionNode)
-		if d < self.safeManeuveringDistance and dz < -(self.safeManeuveringDistance / 2) then
+		-- close enough and either in the same direction or behind
+		if d < 1.5 * self.unloaderFollowingDistance and
+				(TurnContext.isSameDirection(AIDriverUtil.getDirectionNode(self.vehicle), unloaderDirectionNode, 45) or
+						dz < -(self.safeManeuveringDistance / 2)) then
 			self:debug('At %d meters (%.1f behind) from first unloader %s, start following it',
 					d, dz, nameNum(self.firstUnloader))
 			return true
@@ -1326,6 +1256,7 @@ function CombineUnloadAIDriver:startDrivingToChopper()
 		self:debug('First unloader, start pathfinding to chopper')
 		self:startPathfindingToCombine(self.onPathfindingDoneToCombine, nil, -15)
 	else
+		self.firstUnloader = g_combineUnloadManager:getUnloaderByNumber(1, self.combineToUnload)
 		self:debug('Second unloader, start pathfinding to first unloader')
 		if self:isOkToStartFollowingFirstUnloader() then
 			self:startFollowingFirstUnloader()
@@ -1416,7 +1347,6 @@ end
 -- Pathfinding to first unloader of a chopper. This is how the second unloader gets to the chopper.
 ------------------------------------------------------------------------------------------------------------------------
 function CombineUnloadAIDriver:startPathfindingToFirstUnloader(onPathfindingDoneFunc)
-	self.firstUnloader = g_combineUnloadManager:getUnloaderByNumber(1, self.combineToUnload)
 	self:debug('Finding path to unloader %s', nameNum(self.firstUnloader))
 	-- TODO: here we may have to pass in the combine to ignore once we start driving to a moving combine, at least
 	-- when it is on the headland.

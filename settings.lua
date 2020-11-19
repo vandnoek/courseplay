@@ -3629,6 +3629,22 @@ function AssignedCombinesSetting:getData()
 	return self.table
 end
 
+function AssignedCombinesSetting:selectClosest()
+	local dMin = math.huge
+	local closestCombine
+	for _, combine in pairs(self:getPossibleCombines()) do
+		local d = calcDistanceFrom(self.vehicle.rootNode, combine.rootNode)
+		if d < dMin then
+			dMin = d
+			closestCombine = combine
+		end
+	end
+	if closestCombine then
+		self.table[closestCombine] = true
+	end
+	self.vehicle.cp.driver:refreshHUD()
+end
+
 ---@class ShowVisualWaypointsSetting : SettingList
 ShowVisualWaypointsSetting = CpObject(SettingList)
 ShowVisualWaypointsSetting.DEACTIVED = 0

@@ -122,6 +122,9 @@ AIDriver.proximityMinLimitedSpeed = 2
 AIDriver.proximityLimitLow = 1.5
 -- if anything closer than this, we reverse
 AIDriver.proximityLimitReverse = 1
+-- an obstacle is considered ahead of us if the reported angle is less then this
+-- (and we won't stop or reverse if the angle is higher than this, thus obstacles to the left or right)
+AIDriver.proximityAngleAheadDeg = 45
 -- default slow down distance before last waypoint
 AIDriver.defaultSlowDownDistanceBeforeLastWaypoint = 15
 
@@ -1943,11 +1946,28 @@ function AIDriver:haveConflictWith(vehicle)
 			self.trafficConflictDetector:haveConflictWith(vehicle)
 end
 
+AIDriver.psStateNotMoving = {name = 'not moving'}
+AIDriver.psStateNoObstacle = {name = 'no obstacle'}
+AIDriver.psStateNoVehicle = {name = 'no vehicle'}
+AIDriver.psStateReverse = {name = 'reverse'}
+AIDriver.psStateSwerve = {name = 'swerve'}
+AIDriver.psStateSlowDown = {name = 'slow down'}
+AIDriver.psStateReverse = {name = 'reverse'}
+AIDriver.psStateStop = {name = 'stop'}
+
 function AIDriver:checkProximitySensor(maxSpeed, allowedToDrive, moveForwards)
+
+	function debug(state, ...)
+		if state ~= self.lastProximitySensorState then
+			self.lastProximitySensorState = state
+			self:debug(string.format('psState %s: %s', state.name, string.format(...)))
+		end
+	end
 
 	if maxSpeed == 0 or not allowedToDrive then
 		--self.course:setTargetTemporaryOffsetX(0)
 		-- we are not going anywhere anyway, no use of proximity sensor here
+		debug(AIDriver.psStateNotMoving, '')
 		return maxSpeed, allowedToDrive, moveForwards
 	end
 
@@ -1966,40 +1986,43 @@ function AIDriver:checkProximitySensor(maxSpeed, allowedToDrive, moveForwards)
 			swerveEnabled = self.backwardLookingProximitySensorPack:isSwerveEnabled()
 		end
 	end
+
 	-- we only slow down or swerve for other vehicles, if the proximity sensor hits something else, ignore (for now at least)
 	if not vehicle then
 		self:clearInfoText('SLOWING_DOWN_FOR_TRAFFIC')
 		self:clearInfoText('TRAFFIC')
-		self.course:setTemporaryOffset(0, 0, 4000)
+		self.course:setTemporaryOffset(0, 0, 8000)
+		debug(AIDriver.psStateNoVehicle, '')
 		return maxSpeed, allowedToDrive, moveForwards
 	end
 
 	local normalizedD = d / (range - AIDriver.proximityLimitLow)
-	self:debugSparse('prox %.1f la = %.1f, d = %.1f norm = %d', self.course.temporaryOffsetX:get(),
-			self.ppc:getLookaheadDistance(), d, normalizedD * 100)
 
-	if d < AIDriver.proximityLimitReverse then
+	local obstacleAhead = math.abs(deg) < AIDriver.proximityAngleAheadDeg
+
+	if d < AIDriver.proximityLimitReverse and obstacleAhead then
 		-- too close, reverse
 		self:clearInfoText('SLOWING_DOWN_FOR_TRAFFIC')
 		self:setInfoText('TRAFFIC')
 		self:setSpeed(self.vehicle.cp.speeds.reverse)
-		self:debugSparse('proximity: d = %.1f, way too close, reversing.', d)
+		debug(AIDriver.psStateReverse, 'd = %.1f, deg = %.1f, way too close, reversing.', d, deg)
 		return maxSpeed, allowedToDrive, false
 	end
 
-	if d < AIDriver.proximityLimitLow then
+	if d < AIDriver.proximityLimitLow and obstacleAhead then
 		-- too close, stop
 		self:clearInfoText('SLOWING_DOWN_FOR_TRAFFIC')
 		self:setInfoText('TRAFFIC')
-		self:debugSparse('proximity: d = %.1f, too close, stop.', d)
+		debug(AIDriver.psStateStop, 'd = %.1f, deg = %.1f, too close, stop.', d, deg)
 		return maxSpeed, false, moveForwards
 	end
 
 	if normalizedD > 1 then
 		self:clearInfoText('SLOWING_DOWN_FOR_TRAFFIC')
 		self:clearInfoText('TRAFFIC')
-		self.course:setTemporaryOffset(0, 0, 4000)
+		self.course:setTemporaryOffset(0, 0, 8000)
 		-- nothing in range (d is a huge number, at least bigger than range), don't change anything
+		debug(AIDriver.psStateNoObstacle, '')
 		return maxSpeed, allowedToDrive, moveForwards
 	end
 	-- something in range, reduce speed proportionally
@@ -2017,13 +2040,13 @@ function AIDriver:checkProximitySensor(maxSpeed, allowedToDrive, moveForwards)
 		local error = setPoint - dx
 		local offsetChange = 0.5 * error
 		self.course:changeTemporaryOffsetX(offsetChange, 1000)
-		self:debugSparse('proximity: dAvg = %.1f (%d), slow down, speed = %.1f, swerve dx = %.1f, setPoint = %.1f, error = %.1f, offsetChange = %.1f',
+		debug(AIDriver.psStateSwerve, 'dAvg = %.1f (%d), slow down, speed = %.1f, swerve dx = %.1f, setPoint = %.1f, error = %.1f, offsetChange = %.1f',
 				dAvg, 100 * normalizedD, newSpeed, dx, setPoint, error, offsetChange)
 	else
 		self:setInfoText('SLOWING_DOWN_FOR_TRAFFIC')
-		self.course:setTemporaryOffset(0, 0, 4000)
-		self:debugSparse('proximity: d = %.1f (%d), slow down, speed = %.1f, deg = %s',
-				d, 100 * normalizedD, newSpeed, tostring(deg))
+		self.course:setTemporaryOffset(0, 0, 6000)
+		debug(AIDriver.psStateSlowDown, 'proximity: d = %.1f (%d), slow down, speed = %.1f, deg = %.1f',
+				d, 100 * normalizedD, newSpeed, deg)
 	end
 	return newSpeed, allowedToDrive, moveForwards
 end
