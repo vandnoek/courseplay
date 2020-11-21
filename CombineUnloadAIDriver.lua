@@ -74,7 +74,8 @@ CombineUnloadAIDriver.proximitySensorRange = 15
 
 CombineUnloadAIDriver.myStates = {
 	ON_FIELD = {},
-	ON_UNLOAD_COURSE = {},
+	ON_UNLOAD_COURSE =
+		{checkForTrafficConflict = true, enableProximitySpeedControl = true, enableProximitySwerve = true},
 	WAITING_FOR_COMBINE_TO_CALL ={},
 	WAITING_FOR_PATHFINDER= {},
 	DRIVE_TO_COMBINE =
@@ -146,7 +147,6 @@ function CombineUnloadAIDriver:start(startingPoint)
 
 	self:beforeStart()
 	self:addForwardProximitySensor()
-	self:enableProximitySwerve()
 	-- disable the legacy collision detection snake
 	self:disableCollisionDetection()
 
@@ -236,7 +236,7 @@ end
 function CombineUnloadAIDriver:addForwardProximitySensor()
 	self:setFrontMarkerNode(self.vehicle)
 	self.forwardLookingProximitySensorPack = WideForwardLookingProximitySensorPack(
-			self.vehicle, self:getFrontMarkerNode(self.vehicle), self.proximitySensorRange, 1, 2)
+			self.vehicle, self.ppc, self:getFrontMarkerNode(self.vehicle), self.proximitySensorRange, 1, 2)
 end
 
 --- Proximity sensor to check the chopper's distance
@@ -244,22 +244,24 @@ function CombineUnloadAIDriver:addChopperProximitySensor()
 	self:setFrontMarkerNode(self.vehicle)
 	---@type ProximitySensorPack
 	self.chopperProximitySensorPack = ProximitySensorPack('chopper',
-			self.vehicle, self:getFrontMarkerNode(self.vehicle), 10, 1.2, {0, 45, 90, -45, -90}, {0, 0, 0, 0, 0})
-	self.chopperProximitySensorPack:disableRotateWithWheels()
+			self.vehicle, self.ppc, self:getFrontMarkerNode(self.vehicle), 10, 1.2, {0, 45, 90, -45, -90}, {0, 0, 0, 0, 0})
+	self.chopperProximitySensorPack:disableRotateToGoalPoint()
 end
 
 function CombineUnloadAIDriver:isTrafficConflictDetectionEnabled()
 	return self.trafficConflictDetectionEnabled and
-			(self.state == self.states.ON_UNLOAD_COURSE or
-			(self.state == self.states.ON_FIELD and self.onFieldState.properties.checkForTrafficConflict))
+			(self.state == self.states.ON_UNLOAD_COURSE and self.state.properties.checkForTrafficConflict) or
+			(self.state == self.states.ON_FIELD and self.onFieldState.properties.checkForTrafficConflict)
 end
 
 function CombineUnloadAIDriver:isProximitySwerveEnabled()
-	return self.state == self.states.ON_FIELD and self.onFieldState.properties.enableProximitySwerve
+	return (self.state == self.states.ON_UNLOAD_COURSE and self.state.properties.enableProximitySwerve) or
+			(self.state == self.states.ON_FIELD and self.onFieldState.properties.enableProximitySwerve)
 end
 
 function CombineUnloadAIDriver:isProximitySpeedControlEnabled()
-	return self.state == self.states.ON_FIELD and self.onFieldState.properties.enableProximitySpeedControl
+	return (self.state == self.states.ON_UNLOAD_COURSE and self.state.properties.enableProximitySpeedControl) or
+			(self.state == self.states.ON_FIELD and self.onFieldState.properties.enableProximitySpeedControl)
 end
 
 function CombineUnloadAIDriver:startWaitingForCombine()

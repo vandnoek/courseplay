@@ -1581,5 +1581,5 @@ end
 function CombineAIDriver:addForwardProximitySensor()
 	self:setFrontMarkerNode(self.vehicle)
 	self.forwardLookingProximitySensorPack = WideForwardLookingProximitySensorPack(
-			self.vehicle, self:getFrontMarkerNode(self.vehicle), self.proximitySensorRange, 1, self.vehicle.cp.workWidth)
+			self.vehicle, self.ppc, self:getFrontMarkerNode(self.vehicle), self.proximitySensorRange, 1, self.vehicle.cp.workWidth)
 end

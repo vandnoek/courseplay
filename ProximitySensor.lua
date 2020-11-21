@@ -31,7 +31,7 @@ function ProximitySensor:init(node, yRotationDeg, range, height, xOffset)
     self.height = height or 0
     self.lastUpdateLoopIndex = 0
     self.enabled = true
-    -- vehicles can only be ingnored temporarily
+    -- vehicles can only be ignored temporarily
     self.ignoredVehicle = CpTemporaryObject()
 end
 
@@ -128,15 +128,17 @@ ProximitySensorPack.maxRotation = math.rad(30)
 ---@param name string a name for this sensor, when multiple sensors are attached to the same node, they need
 --- a unique name
 ---@param vehicle table vehicle we attach the sensor to, used only to rotate the sensor with the steering angle
+---@param ppc PurePursuitController PPC of the vehicle, used only to rotate the sensor towards the goal point
 ---@param node number node (front or back) to attach the sensor to
 ---@param range number range of the sensor in meters
 ---@param height number height relative to the node in meters
 ---@param directionsDeg table of numbers, list of angles in degrees to emit a ray to find objects, 0 is forward, >0 left, <0 right
 ---@param xOffsets table of numbers, left/right offset of the corresponding sensor in meters, left > 0, right < 0
-function ProximitySensorPack:init(name, vehicle, node, range, height, directionsDeg, xOffsets)
+function ProximitySensorPack:init(name, vehicle, ppc, node, range, height, directionsDeg, xOffsets)
     ---@type ProximitySensor[]
     self.sensors = {}
     self.vehicle = vehicle
+    self.ppc = ppc
     self.range = range
     self.node = getChild(node, name)
     if self.node <= 0 then
@@ -149,7 +151,7 @@ function ProximitySensorPack:init(name, vehicle, node, range, height, directions
     setRotation(self.node, 0, 0, 0)
     self.directionsDeg = directionsDeg
     self.xOffsets = xOffsets
-    self.rotateWithWheels = true
+    self.rotateToGoalPoint = true
     self.rotation = 0
     for i, deg in ipairs(self.directionsDeg) do
         self.sensors[deg] = ProximitySensor(self.node, deg, self.range, height, xOffsets[i] or 0)
@@ -166,16 +168,17 @@ function ProximitySensorPack:callForAllSensors(func, ...)
     end
 end
 
-function ProximitySensorPack:disableRotateWithWheels()
-    self.rotateWithWheels = false
+function ProximitySensorPack:disableRotateToGoalPoint()
+    self.rotateToGoalPoint = false
 end
 
 function ProximitySensorPack:update()
 
-    if self.rotateWithWheels then
-        -- rotate the entire pack in the direction we are turning
-        local normalizedSteeringAngle = AIDriverUtil.getCurrentNormalizedSteeringAngle(self.vehicle)
-        self.rotation = normalizedSteeringAngle * ProximitySensorPack.maxRotation
+    if self.rotateToGoalPoint then
+        -- rotate the entire pack in the direction of the goal point
+        local dx, dz = self.ppc:getGoalPointDirection()
+        local yRot = MathUtil.getYRotationFromDirection(dx, dz)
+        self.rotation = MathUtil.clamp(yRot, -ProximitySensorPack.maxRotation, ProximitySensorPack.maxRotation)
         setRotation(self.node, 0, self.rotation, 0)
     end
 
@@ -254,18 +257,17 @@ end
 ForwardLookingProximitySensorPack = CpObject(ProximitySensorPack)
 
 --- Pack looking forward, all sensors are in the middle of the vehicle
-function ForwardLookingProximitySensorPack:init(vehicle, node, range, height)
-    ProximitySensorPack.init(self, 'forward', vehicle, node, range, height,
+function ForwardLookingProximitySensorPack:init(vehicle, ppc, node, range, height)
+    ProximitySensorPack.init(self, 'forward', vehicle, ppc, node, range, height,
             {0, 15, 30, 60, 80, -15, -30, -60, -80},
             {0,  0,  0,  0,  0,   0,   0,   0,  0})
-    self:disableRotateWithWheels()
 end
 
 ---@class WideForwardLookingProximitySensorPack : ProximitySensorPack
 WideForwardLookingProximitySensorPack = CpObject(ProximitySensorPack)
 
 --- Pack looking forward, but sensors distributed evenly through the width of the vehicle
-function WideForwardLookingProximitySensorPack:init(vehicle, node, range, height, width)
+function WideForwardLookingProximitySensorPack:init(vehicle, ppc, node, range, height, width)
     local directionsDeg = {80, 60, 30, 15, 0, -15, -30, -60, -80}
     local xOffsets = {}
     -- spread them out evenly across the width
@@ -273,17 +275,15 @@ function WideForwardLookingProximitySensorPack:init(vehicle, node, range, height
     for xOffset = width / 2 - dx / 2, - width / 2 + dx / 2 - 0.1, - dx do
         table.insert(xOffsets, xOffset)
     end
-    ProximitySensorPack.init(self, 'wideForward', vehicle, node, range, height,
+    ProximitySensorPack.init(self, 'wideForward', vehicle, ppc, node, range, height,
             directionsDeg, xOffsets)
-    self:disableRotateWithWheels()
 end
 
 ---@class BackwardLookingProximitySensorPack : ProximitySensorPack
 BackwardLookingProximitySensorPack = CpObject(ProximitySensorPack)
 
-function BackwardLookingProximitySensorPack:init(vehicle, node, range, height)
-    ProximitySensorPack.init(self, 'backward', vehicle, node, range, height,
+function BackwardLookingProximitySensorPack:init(vehicle, ppc, node, range, height)
+    ProximitySensorPack.init(self, 'backward', vehicle, ppc, node, range, height,
             {120, 150, 180, -150, -120},
             {0,     0,   0,    0,    0})
-    self:disableRotateWithWheels()
 end

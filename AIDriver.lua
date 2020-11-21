@@ -1894,13 +1894,13 @@ end
 function AIDriver:addForwardProximitySensor()
 	self:setFrontMarkerNode(self.vehicle)
 	self.forwardLookingProximitySensorPack = ForwardLookingProximitySensorPack(
-			self.vehicle, self:getFrontMarkerNode(self.vehicle), self.proximitySensorRange, 1)
+			self.vehicle, self.ppc, self:getFrontMarkerNode(self.vehicle), self.proximitySensorRange, 1)
 end
 
 function AIDriver:addBackwardProximitySensor()
 	self:setBackMarkerNode(self.vehicle)
 	self.backwardLookingProximitySensorPack = BackwardLookingProximitySensorPack(
-			self.vehicle, self:getBackMarkerNode(self.vehicle), self.proximitySensorRange, 1)
+			self.vehicle, self.ppc, self:getBackMarkerNode(self.vehicle), self.proximitySensorRange, 1)
 end
 
 function AIDriver:checkSafetyConstraints(maxSpeed, allowedToDrive, moveForwards)
