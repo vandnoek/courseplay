@@ -31,6 +31,8 @@ function ProximitySensor:init(node, yRotationDeg, range, height, xOffset)
     self.height = height or 0
     self.lastUpdateLoopIndex = 0
     self.enabled = true
+    -- vehicles can only be ingnored temporarily
+    self.ignoredVehicle = CpTemporaryObject()
 end
 
 function ProximitySensor:enable()
@@ -41,8 +43,10 @@ function ProximitySensor:disable()
     self.enabled = false
 end
 
-function ProximitySensor:setIgnoredVehicle(vehicle)
-    self.ignoredVehicle = vehicle
+---@param vehicle table vehicle to ignore
+---@param ttlMs number milliseconds to ignore this vehicle. After ttlMs ms it won't be ignored.
+function ProximitySensor:setIgnoredVehicle(vehicle, ttlMs)
+    self.ignoredVehicle:set(vehicle, ttlMs)
 end
 
 function ProximitySensor:update()
@@ -71,7 +75,7 @@ end
 
 function ProximitySensor:raycastCallback(objectId, x, y, z, distance)
     local object = g_currentMission:getNodeObject(objectId)
-    if object and object.getRootVehicle and object:getRootVehicle() == self.ignoredVehicle then
+    if object and object.getRootVehicle and object:getRootVehicle() == self.ignoredVehicle:get() then
         -- ignore this vehicle
         return
     end
@@ -145,8 +149,6 @@ function ProximitySensorPack:init(name, vehicle, node, range, height, directions
     setRotation(self.node, 0, 0, 0)
     self.directionsDeg = directionsDeg
     self.xOffsets = xOffsets
-    self.speedControlEnabled = true
-    self.swerveEnabled = false
     self.rotateWithWheels = true
     self.rotation = 0
     for i, deg in ipairs(self.directionsDeg) do
@@ -162,32 +164,6 @@ function ProximitySensorPack:callForAllSensors(func, ...)
     for _, deg in ipairs(self.directionsDeg) do
         func(self.sensors[deg], ...)
     end
-end
-
-function ProximitySensorPack:disableSpeedControl()
-    self.speedControlEnabled = false
-end
-
-function ProximitySensorPack:enableSpeedControl()
-    self.speedControlEnabled = true
-end
-
---- Should this pack used to control the speed of the vehicle (or just delivers info about proximity)
-function ProximitySensorPack:isSpeedControlEnabled()
-    return self.speedControlEnabled
-end
-
-function ProximitySensorPack:disableSwerve()
-    self.swerveEnabled = false
-end
-
-function ProximitySensorPack:enableSwerve()
-    self.swerveEnabled = true
-end
-
---- Should this pack used to initiate swerving another vehicle?
-function ProximitySensorPack:isSwerveEnabled()
-    return self.swerveEnabled
 end
 
 function ProximitySensorPack:disableRotateWithWheels()
@@ -222,8 +198,8 @@ function ProximitySensorPack:disable()
     self:callForAllSensors(ProximitySensor.disable)
 end
 
-function ProximitySensorPack:setIgnoredVehicle(vehicle)
-    self:callForAllSensors(ProximitySensor.setIgnoredVehicle, vehicle)
+function ProximitySensorPack:setIgnoredVehicle(vehicle, ttlMs)
+    self:callForAllSensors(ProximitySensor.setIgnoredVehicle, vehicle, ttlMs)
 end
 
 --- @return number, table, number distance of closest object in meters, root vehicle of the closest object, average direction

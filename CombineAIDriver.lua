@@ -194,7 +194,6 @@ end
 function CombineAIDriver:drive(dt)
 	-- handle the pipe in any state
 	self:handlePipe()
-	self:updateProximitySensors()
 	-- the rest is the same as the parent class
 	UnloadableFieldworkAIDriver.drive(self, dt)
 end
@@ -1583,17 +1582,4 @@ function CombineAIDriver:addForwardProximitySensor()
 	self:setFrontMarkerNode(self.vehicle)
 	self.forwardLookingProximitySensorPack = WideForwardLookingProximitySensorPack(
 			self.vehicle, self:getFrontMarkerNode(self.vehicle), self.proximitySensorRange, 1, self.vehicle.cp.workWidth)
-end
-
--- tell the front proximity sensor to temporary ignore a vehicle. Called by the unloader
--- periodically when driving beside the chopper/combine, so it won't slow down when the
--- unloader gets in range
-function CombineAIDriver:ignoreVehicleProximity(vehicle)
-	-- let it expire after 3 s, the unloader will have to renew as long as needed
-	self.vehicleIgnoredByFrontProximitySensor:set(vehicle, 3000)
-end
-
--- this is to remove an expired ignored vehicle
-function CombineAIDriver:updateProximitySensors()
-	self.forwardLookingProximitySensorPack:setIgnoredVehicle(self.vehicleIgnoredByFrontProximitySensor:get())
 end

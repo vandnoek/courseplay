@@ -1911,23 +1911,34 @@ function AIDriver:checkSafetyConstraints(maxSpeed, allowedToDrive, moveForwards)
 end
 
 function AIDriver:enableProximitySpeedControl()
-	if self.forwardLookingProximitySensorPack then self.forwardLookingProximitySensorPack:enableSpeedControl() end
-	if self.backwardLookingProximitySensorPack then self.backwardLookingProximitySensorPack:enableSpeedControl() end
+	self.proximitySpeedControlEnabled = true
 end
 
 function AIDriver:disableProximitySpeedControl()
-	if self.forwardLookingProximitySensorPack then self.forwardLookingProximitySensorPack:disableSpeedControl() end 
-	if self.backwardLookingProximitySensorPack then self.backwardLookingProximitySensorPack:disableSpeedControl() end 
+	self.proximitySpeedControlEnabled = false
+end
+
+function AIDriver:isProximitySpeedControlEnabled()
+	return self.proximitySpeedControlEnabled
 end
 
 function AIDriver:enableProximitySwerve()
-	if self.forwardLookingProximitySensorPack then self.forwardLookingProximitySensorPack:enableSwerve() end
-	if self.backwardLookingProximitySensorPack then self.backwardLookingProximitySensorPack:enableSwerve() end
+	self.proximitySwerveEnabled = true
 end
 
 function AIDriver:disableProximitySwerve()
-	if self.forwardLookingProximitySensorPack then self.forwardLookingProximitySensorPack:disableSwerve() end
-	if self.backwardLookingProximitySensorPack then self.backwardLookingProximitySensorPack:disableSwerve() end
+	self.proximitySwerveEnabled = false
+end
+
+function AIDriver:isProximitySwerveEnabled()
+	return self.proximitySwerveEnabled
+end
+
+--- Temporarily ignore vehicle for the forward proximity sensor
+function AIDriver:ignoreVehicleProximity(vehicleToIgnore, ttlMs)
+	if self.forwardLookingProximitySensorPack then
+		self.forwardLookingProximitySensorPack:setIgnoredVehicle(vehicleToIgnore, ttlMs or 2000)
+	end
 end
 
 function AIDriver:haveHeadOnConflictWith(vehicle)
@@ -1972,19 +1983,11 @@ function AIDriver:checkProximitySensor(maxSpeed, allowedToDrive, moveForwards)
 	end
 
 	-- d is minimum distance from any object in the proximity sensor's range
-	local d, vehicle, range, deg, dAvg, swerveEnabled = math.huge, nil, 10, 0, math.huge, false
-	if moveForwards then
-		if self.forwardLookingProximitySensorPack and self.forwardLookingProximitySensorPack:isSpeedControlEnabled() then
-			d, vehicle, deg, dAvg = self.forwardLookingProximitySensorPack:getClosestObjectDistanceAndRootVehicle()
-			range = self.forwardLookingProximitySensorPack:getRange()
-			swerveEnabled = self.forwardLookingProximitySensorPack:isSwerveEnabled()
-		end
-	else
-		if self.backwardLookingProximitySensorPack and self.backwardLookingProximitySensorPack:isSpeedControlEnabled() then
-			d, vehicle, deg, dAvg = self.backwardLookingProximitySensorPack:getClosestObjectDistanceAndRootVehicle()
-			range = self.backwardLookingProximitySensorPack:getRange()
-			swerveEnabled = self.backwardLookingProximitySensorPack:isSwerveEnabled()
-		end
+	local d, vehicle, range, deg, dAvg = math.huge, nil, 10, 0
+	local pack = moveForwards and self.forwardLookingProximitySensorPack or self.backwardLookingProximitySensorPack
+	if pack and self:isProximitySpeedControlEnabled() then
+		d, vehicle, deg, dAvg = pack:getClosestObjectDistanceAndRootVehicle()
+		range = pack:getRange()
 	end
 
 	-- we only slow down or swerve for other vehicles, if the proximity sensor hits something else, ignore (for now at least)
@@ -2029,7 +2032,7 @@ function AIDriver:checkProximitySensor(maxSpeed, allowedToDrive, moveForwards)
 	local deltaV = maxSpeed - AIDriver.proximityMinLimitedSpeed
 	local newSpeed = AIDriver.proximityMinLimitedSpeed + normalizedD * deltaV
 	-- check for nil and NaN
-	if deg and deg == deg and swerveEnabled then
+	if deg and deg == deg and self:isProximitySwerveEnabled() then
 		local dx = dAvg * math.sin(math.rad(deg))
 		-- which direction to swerve (have a little bias for right, sorry UK folks :)
 		local dir = dx > -1.2 and 1 or -1

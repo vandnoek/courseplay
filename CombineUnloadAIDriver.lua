@@ -77,21 +77,31 @@ CombineUnloadAIDriver.myStates = {
 	ON_UNLOAD_COURSE = {},
 	WAITING_FOR_COMBINE_TO_CALL ={},
 	WAITING_FOR_PATHFINDER= {},
-	DRIVE_TO_COMBINE = {checkForTrafficConflict = true},
-	DRIVE_TO_MOVING_COMBINE = {checkForTrafficConflict = true},
-	DRIVE_TO_FIRST_UNLOADER= {checkForTrafficConflict = true},
-	DRIVE_TO_UNLOAD_COURSE = {checkForTrafficConflict = true},
+	DRIVE_TO_COMBINE =
+		{checkForTrafficConflict = true, enableProximitySpeedControl = true, enableProximitySwerve = true},
+	DRIVE_TO_MOVING_COMBINE =
+		{checkForTrafficConflict = true, enableProximitySpeedControl = true, enableProximitySwerve = true},
+	DRIVE_TO_FIRST_UNLOADER =
+		{checkForTrafficConflict = true, enableProximitySpeedControl = true, enableProximitySwerve = true},
+	DRIVE_TO_UNLOAD_COURSE =
+		{checkForTrafficConflict = true, enableProximitySpeedControl = true, enableProximitySwerve = true},
 	UNLOADING_MOVING_COMBINE = {},
 	UNLOADING_STOPPED_COMBINE = {},
-	FOLLOW_CHOPPER = {isUnloadingChopper = true},
-	FOLLOW_FIRST_UNLOADER = {checkForTrafficConflict = true},
-	MOVE_BACK_FROM_REVERSING_CHOPPER = {isUnloadingChopper = true},
+	FOLLOW_CHOPPER =
+		{isUnloadingChopper = true, enableProximitySpeedControl = true},
+	FOLLOW_FIRST_UNLOADER =
+		{checkForTrafficConflict = true},
+	MOVE_BACK_FROM_REVERSING_CHOPPER =
+		{isUnloadingChopper = true},
 	MOVE_BACK_FROM_EMPTY_COMBINE = {},
 	MOVE_BACK_FULL = {},
 	HANDLE_CHOPPER_HEADLAND_TURN = {isUnloadingChopper = true, isHandlingChopperTurn = true},
-	HANDLE_CHOPPER_180_TURN = {isUnloadingChopper = true, isHandlingChopperTurn = true},
-	FOLLOW_CHOPPER_THROUGH_TURN = {isUnloadingChopper = true, isHandlingChopperTurn = true},
-	ALIGN_TO_CHOPPER_AFTER_TURN = {isUnloadingChopper = true, isHandlingChopperTurn = true},
+	HANDLE_CHOPPER_180_TURN =
+		{isUnloadingChopper = true, isHandlingChopperTurn = true, enableProximitySpeedControl = true},
+	FOLLOW_CHOPPER_THROUGH_TURN =
+		{isUnloadingChopper = true, isHandlingChopperTurn = true, enableProximitySpeedControl = true},
+	ALIGN_TO_CHOPPER_AFTER_TURN =
+		{isUnloadingChopper = true, isHandlingChopperTurn = true, enableProximitySpeedControl = true},
 	MOVING_OUT_OF_WAY = {isUnloadingChopper = true},
 	WAITING_FOR_MANEUVERING_COMBINE = {},
 }
@@ -223,13 +233,6 @@ function CombineUnloadAIDriver:resetPathfinder()
 	self.pathfinderFailureCount = 0
 end
 
-function CombineUnloadAIDriver:enableProximitySpeedControl(vehicleToIgnore)
-	if self.forwardLookingProximitySensorPack then
-		self.forwardLookingProximitySensorPack:setIgnoredVehicle(vehicleToIgnore)
-	end
-	AIDriver.enableProximitySpeedControl(self)
-end
-
 function CombineUnloadAIDriver:addForwardProximitySensor()
 	self:setFrontMarkerNode(self.vehicle)
 	self.forwardLookingProximitySensorPack = WideForwardLookingProximitySensorPack(
@@ -242,8 +245,6 @@ function CombineUnloadAIDriver:addChopperProximitySensor()
 	---@type ProximitySensorPack
 	self.chopperProximitySensorPack = ProximitySensorPack('chopper',
 			self.vehicle, self:getFrontMarkerNode(self.vehicle), 10, 1.2, {0, 45, 90, -45, -90}, {0, 0, 0, 0, 0})
-	self.chopperProximitySensorPack:disableSpeedControl()
-	self.chopperProximitySensorPack:disableSwerve()
 	self.chopperProximitySensorPack:disableRotateWithWheels()
 end
 
@@ -251,6 +252,14 @@ function CombineUnloadAIDriver:isTrafficConflictDetectionEnabled()
 	return self.trafficConflictDetectionEnabled and
 			(self.state == self.states.ON_UNLOAD_COURSE or
 			(self.state == self.states.ON_FIELD and self.onFieldState.properties.checkForTrafficConflict))
+end
+
+function CombineUnloadAIDriver:isProximitySwerveEnabled()
+	return self.state == self.states.ON_FIELD and self.onFieldState.properties.enableProximitySwerve
+end
+
+function CombineUnloadAIDriver:isProximitySpeedControlEnabled()
+	return self.state == self.states.ON_FIELD and self.onFieldState.properties.enableProximitySpeedControl
 end
 
 function CombineUnloadAIDriver:startWaitingForCombine()
@@ -317,8 +326,6 @@ function CombineUnloadAIDriver:driveOnField(dt)
 		self:setSpeed(0)
 
 	elseif self.onFieldState == self.states.DRIVE_TO_FIRST_UNLOADER then
-		self:enableProximitySpeedControl()
-		self:enableProximitySwerve()
 
 		-- previous first unloader not unloading anymore
 		if self:iAmFirstUnloader() then
@@ -346,9 +353,6 @@ function CombineUnloadAIDriver:driveOnField(dt)
 		end
 
 	elseif self.onFieldState == self.states.DRIVE_TO_COMBINE then
-
-		self:enableProximitySpeedControl()
-		self:enableProximitySwerve()
 
 		courseplay:setInfoText(self.vehicle, "COURSEPLAY_DRIVE_TO_COMBINE");
 
@@ -416,9 +420,6 @@ function CombineUnloadAIDriver:driveOnField(dt)
 		self:followChopperThroughTurn()
 
 	elseif self.onFieldState == self.states.DRIVE_TO_UNLOAD_COURSE then
-
-		self:enableProximitySpeedControl()
-		self:enableProximitySwerve()
 
 		self:setFieldSpeed()
 
@@ -1607,8 +1608,6 @@ end
 -- Drive to moving combine
 ------------------------------------------------------------------------------------------------------------------------
 function CombineUnloadAIDriver:driveToMovingCombine()
-	self:enableProximitySpeedControl()
-	self:enableProximitySwerve()
 
 	courseplay:setInfoText(self.vehicle, "COURSEPLAY_DRIVE_TO_COMBINE");
 
@@ -1685,10 +1684,9 @@ end
 function CombineUnloadAIDriver:unloadMovingCombine()
 
 	-- ignore combine for the proximity sensor
-	self:enableProximitySpeedControl(self.combineToUnload)
+	self:ignoreVehicleProximity(self.combineToUnload, 3000)
 	-- make sure the combine won't slow down when seeing us
-	self.combineToUnload.cp.driver:ignoreVehicleProximity(self.vehicle)
-	self:disableProximitySwerve()
+	self.combineToUnload.cp.driver:ignoreVehicleProximity(self.vehicle, 3000)
 
 	-- allow on the fly offset changes
 	self.combineOffset = self:getPipeOffset(self.combineToUnload)
@@ -1830,15 +1828,12 @@ function CombineUnloadAIDriver:followChopper()
 	if self.course:isTemporary() and self.course:getDistanceToLastWaypoint(self.course:getCurrentWaypointIx()) > 5 then
 		-- have not started on the combine's fieldwork course yet (still on the temporary alignment course)
 		-- just drive the course
-		self:enableProximitySpeedControl()
-		self:disableProximitySwerve()
 	else
 		-- The dedicated chopper proximity sensor takes care of controlling our speed, the normal one
 		-- should therefore ignore the chopper (but not others)
-		self:enableProximitySpeedControl(self.combineToUnload)
+		self:ignoreVehicleProximity(self.combineToUnload, 3000)
 		-- make sure the chopper won't slow down when seeing us
-		self.combineToUnload.cp.driver:ignoreVehicleProximity(self.vehicle)
-		self:disableProximitySwerve()
+		self.combineToUnload.cp.driver:ignoreVehicleProximity(self.vehicle, 3000)
 		-- when on the fieldwork course, drive behind or beside the chopper, staying in the range of the pipe
 		self.combineOffset = self:getChopperOffset(self.combineToUnload)
 
@@ -1886,9 +1881,6 @@ function CombineUnloadAIDriver:handleChopper180Turn()
 
 	if self:changeToUnloadWhenDriveOnLevelReached() then return end
 
-	self:enableProximitySpeedControl()
-	self:disableProximitySwerve()
-
 	if self.combineToUnload.cp.driver:isTurningButNotEndingTurn() then
 		-- move forward until we reach the turn start waypoint
 		local _, _, d = self.turnContext:getLocalPositionFromWorkEnd(self:getFrontMarkerNode(self.vehicle))
@@ -1934,9 +1926,6 @@ end
 ------------------------------------------------------------------------------------------------------------------------
 function CombineUnloadAIDriver:followChopperThroughTurn()
 
-	self:enableProximitySpeedControl()
-	self:disableProximitySwerve()
-
 	if self:changeToUnloadWhenDriveOnLevelReached() then return end
 
 	local d = self:getDistanceFromCombine()
@@ -1967,9 +1956,6 @@ end
 -- about in the same direction
 ------------------------------------------------------------------------------------------------------------------------
 function CombineUnloadAIDriver:alignToChopperAfterTurn()
-
-	self:enableProximitySpeedControl()
-	self:disableProximitySwerve()
 
 	self:setSpeed(self.vehicle.cp.speeds.turn)
 
