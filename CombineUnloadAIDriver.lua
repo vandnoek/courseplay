@@ -1684,9 +1684,8 @@ end
 ------------------------------------------------------------------------------------------------------------------------
 function CombineUnloadAIDriver:unloadMovingCombine()
 
-	-- TODO: handle pipe on the left side
-	-- disable looking to the right so the proximity sensor won't slow us down while driving beside the combine
-	self:disableProximityRightSide()
+	-- ignore combine for the proximity sensor
+	self:enableProximitySpeedControl(self.combineToUnload)
 	-- make sure the combine won't slow down when seeing us
 	self.combineToUnload.cp.driver:ignoreVehicleProximity(self.vehicle)
 	self:disableProximitySwerve()
