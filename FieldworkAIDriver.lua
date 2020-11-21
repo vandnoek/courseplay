@@ -27,18 +27,21 @@ add adjustment course if needed.
 FieldworkAIDriver = CpObject(AIDriver)
 
 FieldworkAIDriver.myStates = {
+	-- main states
 	ON_FIELDWORK_COURSE = {},
-	WORKING = {},
 	ON_UNLOAD_OR_REFILL_COURSE = {},
 	RETURNING_TO_FIRST_POINT = {},
+	ON_UNLOAD_OR_REFILL_WITH_AUTODRIVE = {},
+	-- ON_FIELDWORK_COURSE substates
+	WORKING = {},
 	UNLOAD_OR_REFILL_ON_FIELD = {},
 	WAITING_FOR_UNLOAD_OR_REFILL ={}, -- while on the field
 	ON_CONNECTING_TRACK = {},
 	WAITING_FOR_LOWER = {},
 	WAITING_FOR_LOWER_DELAYED = {},
 	WAITING_FOR_STOP = {},
-	ON_UNLOAD_OR_REFILL_WITH_AUTODRIVE = {},
 	TURNING = {},
+	TEMPORARY = {},
 }
 
 -- Our class implementation does not call the constructor of base classes
@@ -145,6 +148,18 @@ function FieldworkAIDriver.register()
 			if superFunc ~= nil and self.cp.settings.keepCurrentSteering:is(false) then superFunc(self) end
 	end)
 
+end
+
+--- Enable speed control and swerve on unload/refill course and when returning to the first point
+function FieldworkAIDriver:isProximitySpeedControlEnabled()
+	return self.state == self.states.ON_UNLOAD_OR_REFILL_COURSE or
+		self.state == self.states.RETURNING_TO_FIRST_POINT or
+		self.state == self.states.ON_FIELDWORK_COURSE
+end
+
+function FieldworkAIDriver:isProximitySwerveEnabled()
+	return self.state == self.states.ON_UNLOAD_OR_REFILL_COURSE or
+			self.state == self.states.RETURNING_TO_FIRST_POINT
 end
 
 --- Start the course and turn on all implements when needed

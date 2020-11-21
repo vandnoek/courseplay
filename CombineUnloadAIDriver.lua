@@ -146,7 +146,6 @@ end
 function CombineUnloadAIDriver:start(startingPoint)
 
 	self:beforeStart()
-	self:addForwardProximitySensor()
 	-- disable the legacy collision detection snake
 	self:disableCollisionDetection()
 

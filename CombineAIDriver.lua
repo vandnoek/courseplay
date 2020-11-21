@@ -168,7 +168,6 @@ end
 
 function CombineAIDriver:start(startingPoint)
 	self:clearAllUnloaderInformation()
-	self:addForwardProximitySensor()
 	self:addBackwardProximitySensor()
 	UnloadableFieldworkAIDriver.start(self, startingPoint)
 	-- we work with the traffic conflict detector and the proximity sensors instead

@@ -276,6 +276,10 @@ function AIDriver:beforeStart()
 	end
 	self.triggerHandler:onStart()
 	self:createTrafficConflictDetector()
+	-- add a proximity sensor to the front by default
+	self:addForwardProximitySensor()
+	self:enableProximitySpeedControl()
+	self:enableProximitySwerve()
 end
 
 --- Start driving
