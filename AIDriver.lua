@@ -1998,7 +1998,7 @@ function AIDriver:checkProximitySensor(maxSpeed, allowedToDrive, moveForwards)
 	if not vehicle then
 		self:clearInfoText('SLOWING_DOWN_FOR_TRAFFIC')
 		self:clearInfoText('TRAFFIC')
-		self.course:setTemporaryOffset(0, 0, 8000)
+		self.course:setTemporaryOffset(0, 0, 4000)
 		debug(AIDriver.psStateNoVehicle, '')
 		return maxSpeed, allowedToDrive, moveForwards
 	end
@@ -2027,7 +2027,7 @@ function AIDriver:checkProximitySensor(maxSpeed, allowedToDrive, moveForwards)
 	if normalizedD > 1 then
 		self:clearInfoText('SLOWING_DOWN_FOR_TRAFFIC')
 		self:clearInfoText('TRAFFIC')
-		self.course:setTemporaryOffset(0, 0, 8000)
+		self.course:setTemporaryOffset(0, 0, 4000)
 		-- nothing in range (d is a huge number, at least bigger than range), don't change anything
 		debug(AIDriver.psStateNoObstacle, '')
 		return maxSpeed, allowedToDrive, moveForwards
