@@ -151,7 +151,7 @@ function ProximitySensorPack:init(name, vehicle, ppc, node, range, height, direc
     setRotation(self.node, 0, 0, 0)
     self.directionsDeg = directionsDeg
     self.xOffsets = xOffsets
-    self.rotateToGoalPoint = true
+    self.rotateToGoalPoint = false
     self.rotation = 0
     for i, deg in ipairs(self.directionsDeg) do
         self.sensors[deg] = ProximitySensor(self.node, deg, self.range, height, xOffsets[i] or 0)
