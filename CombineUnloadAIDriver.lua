@@ -2020,6 +2020,7 @@ function CombineUnloadAIDriver:onBlockingOtherVehicle(blockedVehicle)
 		self:startCourse(reverseCourse, 1, self.course, self.course:getCurrentWaypointIx())
 		self.stateAfterMovedOutOfWay = self.onFieldState
 		self:debug('Moving out of the way for %s', blockedVehicle:getName())
+		self.blockedVehicle = blockedVehicle
 		self:setNewOnFieldState(self.states.MOVING_OUT_OF_WAY)
 		-- this state ends when we reach the end of the course or when the combine stops reversing
 	else
@@ -2033,7 +2034,7 @@ end
 function CombineUnloadAIDriver:moveOutOfWay()
 	-- check both distances and use the smaller one, proximity sensor may not see the combine or
 	-- d may be big enough but parts of the combine still close
-	local d = self:getDistanceFromCombine()
+	local d = self:getDistanceFromCombine(self.blockedVehicle)
 	local dProximity = self.forwardLookingProximitySensorPack:getClosestObjectDistanceAndRootVehicle()
 	local combineSpeed = (self.combineToUnload.lastSpeedReal * 3600)
 	local speed = combineSpeed +
