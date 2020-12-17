@@ -30,6 +30,7 @@ CombineAIDriver.myStates = {
 	REVERSING_TO_MAKE_A_POCKET = {},
 	MAKING_POCKET = {},
 	WAITING_FOR_UNLOAD_IN_POCKET = {},
+	WAITING_FOR_UNLOAD_BEFORE_STARTING_NEXT_ROW = {},
 	WAITING_FOR_UNLOAD_AFTER_FIELDWORK_ENDED = {},
 	WAITING_FOR_UNLOADER_TO_LEAVE = {},
 	RETURNING_FROM_POCKET = {},
@@ -325,11 +326,23 @@ function CombineAIDriver:driveFieldwork(dt)
 				self:debugSparse('Slow down around the unloader rendezvous waypoint %d to let the unloader catch up',
 					self.agreedUnloaderRendezvousWaypointIx)
 				self:setSpeed(self:getWorkSpeed() / 2)
+				local dToTurn = self.fieldworkCourse:getDistanceToNextTurn(self.agreedUnloaderRendezvousWaypointIx)
+				if dToTurn < 20 then
+					self:debug('Unloader rendezvous waypoint %d is before a turn, waiting for the unloader here',
+							self.agreedUnloaderRendezvousWaypointIx)
+					self:startWaitingForUnloadBeforeNextRow()
+				end
 			end
 		end
 	end
 	self:checkBlockingUnloader()
 	return UnloadableFieldworkAIDriver.driveFieldwork(self, dt)
+end
+
+function CombineAIDriver:startWaitingForUnloadBeforeNextRow()
+	self:debug('Waiting for unload before starting the next row')
+	self.fieldworkState = self.states.UNLOAD_OR_REFILL_ON_FIELD
+	self.fieldworkUnloadOrRefillState = self.states.WAITING_FOR_UNLOAD_BEFORE_STARTING_NEXT_ROW
 end
 
 --- Stop for unload/refill while driving the fieldwork course
@@ -351,7 +364,8 @@ function CombineAIDriver:driveFieldworkUnloadOrRefill()
 	elseif self.fieldworkUnloadOrRefillState == self.states.RETURNING_FROM_PULL_BACK then
 		self:setSpeed(self.vehicle.cp.speeds.turn)
 	elseif self.fieldworkUnloadOrRefillState == self.states.WAITING_FOR_UNLOAD_IN_POCKET or
-			self.fieldworkUnloadOrRefillState == self.states.WAITING_FOR_UNLOAD_AFTER_PULLED_BACK then
+			self.fieldworkUnloadOrRefillState == self.states.WAITING_FOR_UNLOAD_AFTER_PULLED_BACK or
+			self.fieldworkUnloadOrRefillState == self.states.WAITING_FOR_UNLOAD_BEFORE_STARTING_NEXT_ROW then
 		if self:unloadFinished() then
 			-- reset offset to return to the original up/down row after we unloaded in the pocket
 			self.aiDriverOffsetX = 0
@@ -392,6 +406,9 @@ function CombineAIDriver:driveFieldworkUnloadOrRefill()
 			elseif self.stateBeforeWaitingForUnloaderToLeave == self.states.WAITING_FOR_UNLOAD_IN_POCKET then
 				self:debug('Unloading in pocket finished, returning to fieldwork')
 				self.fillLevelFullPercentage = self.normalFillLevelFullPercentage
+				self:changeToFieldwork()
+			elseif self.stateBeforeWaitingForUnloaderToLeave == self.states.WAITING_FOR_UNLOAD_BEFORE_STARTING_NEXT_ROW then
+				self:debug('Unloading before next row finished, returning to fieldwork')
 				self:changeToFieldwork()
 			end
 		end

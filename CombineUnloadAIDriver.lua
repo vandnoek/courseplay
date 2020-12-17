@@ -1683,14 +1683,9 @@ function CombineUnloadAIDriver:unloadMovingCombine()
 
 	if self:changeToUnloadWhenFull() then return end
 
-	if self:canDriveBesideCombine(self.combineToUnload) or (self.combineToUnload.cp.driver and self.combineToUnload.cp.driver:isWaitingInPocket()) then
+	if self:canDriveBesideCombine(self.combineToUnload) or
+			(self.combineToUnload.cp.driver and self.combineToUnload.cp.driver:isWaitingInPocket()) then
 		self:driveBesideCombine()
-	else
-		self:debugSparse('Can\'t drive beside combine as probably fruit under the pipe but ignore that for now and continue unloading.')
-		self:driveBesideCombine()
-		--self:releaseUnloader()
-		--self:startWaitingForCombine()
-		--return
 	end
 
 	--when the combine is empty, stop and wait for next combine
