@@ -369,6 +369,8 @@ function CombineAIDriver:driveFieldworkUnloadOrRefill()
 		if self:unloadFinished() then
 			-- reset offset to return to the original up/down row after we unloaded in the pocket
 			self.aiDriverOffsetX = 0
+			-- rendezvous is over
+			self.agreedUnloaderRendezvousWaypointIx = nil
 			self:clearInfoText(self:getFillLevelInfoText())
 			-- wait a bit after the unload finished to give a chance to the unloader to move away
 			self.stateBeforeWaitingForUnloaderToLeave = self.fieldworkUnloadOrRefillState
@@ -1427,13 +1429,15 @@ function CombineAIDriver:initUnloadStates()
 		self.states.WAITING_FOR_UNLOAD_AFTER_FIELDWORK_ENDED,
 		self.states.WAITING_FOR_UNLOAD_OR_REFILL,
 		self.states.WAITING_FOR_UNLOAD_AFTER_PULLED_BACK,
-		self.states.WAITING_FOR_UNLOAD_IN_POCKET
+		self.states.WAITING_FOR_UNLOAD_IN_POCKET,
+		self.states.WAITING_FOR_UNLOAD_BEFORE_STARTING_NEXT_ROW
 	}
 
 	self.willWaitForUnloadToFinishFieldworkStates = {
 		self.states.WAITING_FOR_UNLOAD_AFTER_PULLED_BACK,
 		self.states.WAITING_FOR_UNLOAD_IN_POCKET,
 		self.states.WAITING_FOR_UNLOAD_AFTER_FIELDWORK_ENDED,
+		self.states.WAITING_FOR_UNLOAD_BEFORE_STARTING_NEXT_ROW
 	}
 end
 

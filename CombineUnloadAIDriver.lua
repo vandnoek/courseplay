@@ -403,7 +403,6 @@ function CombineUnloadAIDriver:driveOnField(dt)
 		self:moveOutOfWay()
 
 	elseif self.onFieldState == self.states.UNLOADING_MOVING_COMBINE then
-
 		self:disableProximitySpeedControl()
 		self:disableProximitySwerve()
 
