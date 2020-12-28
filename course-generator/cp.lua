@@ -113,7 +113,6 @@ function courseGenerator.generate( vehicle )
 			vehicle.cp.oldCourseGeneratorSettings.startingLocationWorldPos.z)
 	end
 
-	local extendTracks = 0
 	local minDistanceBetweenPoints = 0.5
 	local doSmooth = true
 	local roundCorners = false
@@ -173,10 +172,10 @@ function courseGenerator.generate( vehicle )
 	end
 	local status, ok = xpcall( generateCourseForField, function(err) printCallstack(); return err end,
 		field, workWidth, headlandSettings,
-		extendTracks, minDistanceBetweenPoints,
+		minDistanceBetweenPoints,
 		minSmoothAngle, maxSmoothAngle, doSmooth,
 		roundCorners, turnRadiusAdjustedForMultiTool,
-		vehicle.cp.endWorkAtSetting, courseGenerator.pointsToXy( islandNodes ),
+		courseGenerator.pointsToXy( islandNodes ),
 		vehicle.cp.oldCourseGeneratorSettings.islandBypassMode, centerSettings
 	)
 
@@ -226,8 +225,14 @@ function courseGenerator.generate( vehicle )
 	vehicle.cp.course2dUpdateDrawData = true;
 
 	if CpManager.isMP then
-	--	CourseplayEvent.sendEvent(vehicle, "setVehicleWaypoints", vehicle.Waypoints);
 		CourseEvent.sendEvent(vehicle,vehicle.Waypoints)
+		CourseplayEvent.sendEvent(vehicle, "self.cp.multiTools", vehicle.cp.multiTools) -- need a setting for this one
+		CourseplayEvent.sendEvent(vehicle, "self.cp.courseWorkWidth", vehicle.cp.courseWorkWidth) -- need a setting for this one
+		CourseplayEvent.sendEvent(vehicle, "self.cp.workWidth", vehicle.cp.workWidth) -- need a setting for this one
+		CourseplayEvent.sendEvent(vehicle, "self.cp.laneNumber", vehicle.cp.laneNumber) -- need a setting for this one
+		CourseplayEvent.sendEvent(vehicle, "self.cp.toolOffsetX", vehicle.cp.toolOffsetX) -- need a setting for this one
+		CourseplayEvent.sendEvent(vehicle, "self.cp.toolOffsetZ", vehicle.cp.toolOffsetZ) -- need a setting for this one
+		--setMultiTools
 	end
 	
 	return status, ok

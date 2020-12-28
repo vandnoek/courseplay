@@ -133,9 +133,10 @@ function CpManager:loadMap(name)
 	-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	-- TRAFFIC
 	self.trafficCollisionIgnoreList = {};
-
+	
 	-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	-- MISCELLANEOUS
+	self.validModeSetupHandler = ValidModeSetupHandler()
 end;
 
 function CpManager:deleteMap()
@@ -162,18 +163,19 @@ function CpManager:deleteMap()
 	end;
 
 	-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	--delete globalInfoText overlays
-	for i,button in pairs(self.globalInfoText.buttons) do
-		button:deleteOverlay();
+	if self.globalInfoText and self.globalInfoText.buttons then
+		--delete globalInfoText overlays
+		for i,button in pairs(self.globalInfoText.buttons) do
+			button:deleteOverlay();
 
-		if self.globalInfoText.overlays[i] then
-			local ovl = self.globalInfoText.overlays[i];
-			if ovl.overlayId ~= nil and ovl.delete ~= nil then
-				ovl:delete();
+			if self.globalInfoText.overlays[i] then
+				local ovl = self.globalInfoText.overlays[i];
+				if ovl.overlayId ~= nil and ovl.delete ~= nil then
+					ovl:delete();
+				end;
 			end;
 		end;
-	end;
-
+	end
 	-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	-- delete waypoint signs and protoTypes
 	for section,signDatas in pairs(courseplay.signs.buffer) do
@@ -193,15 +195,6 @@ function CpManager:deleteMap()
 	courseplay.fields.curFieldScanIndex = 0;
 	courseplay.fields.allFieldsScanned = false;
 	courseplay.fields.ingameDataSetUp = false;
-	if courseplay.fields.seedUsageCalculator.fruitTypes then
-		for i,fruitData in pairs(courseplay.fields.seedUsageCalculator.fruitTypes) do
-			if fruitData.overlay then
-				fruitData.overlay:delete();
-			end;
-		end;
-	end
-	courseplay.fields.seedUsageCalculator = {};
-	courseplay.fields.seedUsageCalculator.fieldsWithoutSeedData = {};
 
 	-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	-- delete help menu mouse overlay
@@ -276,7 +269,7 @@ function CpManager:update(dt)
 			self:showYesNoDialogue('Courseplay', courseplay:loc('COURSEPLAY_YES_NO_FIELDSCAN'), self.fieldScanDialogueCallback);
 		end;
 	end;
-	g_trafficController:update(dt)
+	TrafficConflictDetector.drawAllDebugInfo()
 	g_combineUnloadManager:onUpdate(dt)
 
 	-- REAL TIME 5 SECS CHANGER
@@ -454,6 +447,7 @@ function CpManager.saveXmlSettings(self)
 		setXMLFloat(cpSettingsXml, key .. '#opacity',	CpManager.course2dPdaMapOpacity);
 
 		courseplay.globalSettings:saveToXML(cpSettingsXml, 'CPSettings')
+		courseplay.globalCourseGeneratorSettings:saveToXML(cpSettingsXml, 'CPSettings.courseGenerator')
 
 		saveXMLFile(cpSettingsXml);
 		delete(cpSettingsXml);
@@ -481,9 +475,12 @@ end;
 function CpManager:devAddMoney()
 	if g_server ~= nil then
 		g_currentMission:addMoney(5000000,1, MoneyType.OTHER,true);
-		return ('Added %s to your bank account'):format(g_i18n:formatMoney(5000000));
-	end;
+	else 
+		CommandEvents.sendEvent("devAddMoney")
+	end
+	return ('Added %s to your bank account'):format(g_i18n:formatMoney(5000000));
 end;
+
 function CpManager:devAddFillLevels()
 	--[[ Ryan TODO FillUtil.NUM_FILLTYPES doesn't have exist in g_fillTypeManager. Also the set and get functions might not exist there any more 
 	if g_server ~= nil then
@@ -498,14 +495,19 @@ function CpManager:devStopAll()
 		for _,vehicle in pairs (self.activeCoursePlayers) do
 			courseplay:stop(vehicle);
 		end
-		
-		return ('stopped all Courseplayers');
-	end;
+	else
+		CommandEvents.sendEvent("devStopAll")
+	end
+	return ('stopped all Courseplayers');
 end;
 
 function CpManager:devSaveAllFields()
-  courseplay.fields.saveAllFields()
-  return( 'All fields saved' )
+	if g_server then
+		courseplay.fields.saveAllFields()
+	else 
+		CommandEvents.sendEvent("devSaveAllFields")
+	end
+	return( 'All fields saved' )
 end
 
 --- Print a global variable
@@ -671,15 +673,25 @@ function CpManager:loadAIDriver()
 end
 
 function CpManager:saveVehiclePositions()
-	DevHelper.saveAllVehiclePositions()
+	if g_server then 
+		DevHelper.saveAllVehiclePositions()
+	else 
+		CommandEvents.sendEvent("saveVehiclePositions")
+	end
 end
 
 function CpManager:restoreVehiclePositions()
-	DevHelper.restoreAllVehiclePositions()
+	if g_server then 
+		DevHelper.restoreAllVehiclePositions()
+	else
+		CommandEvents.sendEvent("restoreVehiclePositions")
+	end
 end
 
 function CpManager:restartSaveGame(saveGameNumber)
-	restartApplication(" -autoStartSavegameId " .. saveGameNumber)
+	if g_server then
+		restartApplication(" -autoStartSavegameId " .. saveGameNumber)
+	end
 end
 
 function CpManager:showCombineUnloadManagerStatus()
@@ -687,12 +699,17 @@ function CpManager:showCombineUnloadManagerStatus()
 end
 
 function CpManager:setLookaheadDistance(d)
-	local vehicle = g_currentMission.controlledVehicle
-	if vehicle and vehicle.cp and vehicle.cp.ppc then
-		vehicle.cp.ppc:setLookaheadDistance(d)
-		print('Look ahead distance for ' .. vehicle.name .. ' changed to ' .. tostring(d))
-	else
-		print('No vehicle or has no PPC.')	
+	if g_server then
+		local vehicle = g_currentMission.controlledVehicle
+		if vehicle and vehicle.cp and vehicle.cp.ppc then
+			vehicle.cp.ppc:setLookaheadDistance(d)
+			print('Look ahead distance for ' .. vehicle.name .. ' changed to ' .. tostring(d))
+		else
+			print('No vehicle or has no PPC.')	
+		end
+	else 
+		CommandEvents.sendEvent("setLookaheadDistance",d)
+		print('trying to change LookaheadDistance.')
 	end
 end
 
@@ -810,49 +827,10 @@ function CpManager.drawMouseButtonHelp(self, posY, txt)
 	renderText(xLeft, posY, g_currentMission.helpBoxTextSize, courseplay.inputBindings.mouse.secondaryTextI18n);
 end;
 
-function CpManager:severCombineTractorConnection(vehicle, callDelete)
-	if vehicle.cp then
-		-- VEHICLE IS COMBINE
-		if vehicle.cp.isCombine or vehicle.cp.isChopper or vehicle.cp.isHarvesterSteerable or vehicle.cp.isSugarBeetLoader or courseplay:isSpecialChopper(vehicle) then
-			courseplay:debug(('BaseMission:removeVehicle() -> severCombineTractorConnection(%q, %s) [VEHICLE IS COMBINE]'):format(nameNum(vehicle), tostring(callDelete)), 4);
-			local combine = vehicle;
-			-- remove this combine as savedCombine from all tractors
-			for i,tractor in pairs(g_currentMission.enterables) do
-				if tractor.hasCourseplaySpec and tractor.cp.savedCombine and tractor.cp.savedCombine == combine then
-					courseplay:debug(('\ttractor %q: savedCombine=%q --> removeSavedCombineFromTractor()'):format(nameNum(tractor), nameNum(combine)), 4);
-					courseplay:removeSavedCombineFromTractor(tractor);
-				end;
-			end;
-
-			-- unregister all tractors from this combine (activeCombine)
-			if combine.courseplayers ~= nil then
-				courseplay:debug(('\t.courseplayers ~= nil (%d courseplayers)'):format(#combine.courseplayers), 4);
-				if #combine.courseplayers > 0 then
-					for i,tractor in pairs(combine.courseplayers) do
-						courseplay:debug(('\t\t%q: removeActiveCombineFromTractor(), removeSavedCombineFromTractor()'):format(nameNum(tractor)), 4);
-						courseplay:removeActiveCombineFromTractor(tractor);
-						courseplay:removeSavedCombineFromTractor(tractor); --TODO (Jakob): unnecessary, as done above in enterables table already?
-						tractor.cp.reachableCombines = nil;
-					end;
-					courseplay:debug(('\t-> now has %d courseplayers'):format(#combine.courseplayers), 4);
-				end;
-			end;
-
-		-- VEHICLE IS TRACTOR
-		elseif vehicle.cp.activeCombine ~= nil or vehicle.cp.lastActiveCombine ~= nil or vehicle.cp.savedCombine ~= nil then
-			courseplay:debug(('BaseMission:removeVehicle() -> severCombineTractorConnection(%q, %s) [VEHICLE IS TRACTOR]'):format(nameNum(vehicle), tostring(callDelete)), 4);
-			courseplay:debug(('\tactiveCombine=%q, lastActiveCombine=%q, savedCombine=%q -> removeActiveCombineFromTractor(), removeSavedCombineFromTractor()'):format(nameNum(vehicle.cp.activeCombine), nameNum(vehicle.cp.lastActiveCombine), nameNum(vehicle.cp.savedCombine)), 4);
-			courseplay:removeActiveCombineFromTractor(vehicle);
-			courseplay:removeSavedCombineFromTractor(vehicle);
-			courseplay:debug(('\t-> activeCombine=%q, lastActiveCombine=%q, savedCombine=%q'):format(nameNum(vehicle.cp.activeCombine), nameNum(vehicle.cp.lastActiveCombine), nameNum(vehicle.cp.savedCombine)), 4);
-		end;
-	end;
-end;
-BaseMission.removeVehicle = Utils.prependedFunction(BaseMission.removeVehicle, CpManager.severCombineTractorConnection);
-
 function CpManager:minuteChanged()
 end;
 
+--FieldScan startup dialog and github info
 function CpManager:showYesNoDialogue(title, text, callbackFn)
 	-- don't show anything if the tutorial dialog is open (it takes a while until is isOpen shows true after startup, hence the clock)
 	--courseplay.debugFormat(12, "clock %d %s", courseplay.clock, tostring(g_gui.guis.YesNoDialog.target and g_gui.guis.YesNoDialog.target.isOpen))
@@ -860,6 +838,7 @@ function CpManager:showYesNoDialogue(title, text, callbackFn)
 		return
 	end
 	--courseplay.debugFormat(12, text)
+	local text =string.format("%s\n %s",courseplay:loc('COURSEPLAY_YES_NO_FIELDSCAN'),courseplay:loc('COURSEPLAY_SUPPORT_INFO')) 
 	g_gui:showYesNoDialog({text=text, title=title, callback=callbackFn, target=self})
 end;
 
@@ -941,6 +920,7 @@ function CpManager:setupGlobalInfoText()
 		SLIPPING_1							= { level = -1, text = 'COURSEPLAY_SLIPPING_WARNING' };
 		SLIPPING_2							= { level = -2, text = 'COURSEPLAY_SLIPPING_WARNING' };
 		TRAFFIC								= { level = -1, text = 'COURSEPLAY_IS_IN_TRAFFIC' };
+		SLOWING_DOWN_FOR_TRAFFIC			= { level =  0, text = 'COURSEPLAY_SLOWING_DOWN_FOR_TRAFFIC' };
 		UNLOADING_BALE						= { level =  0, text = 'COURSEPLAY_UNLOADING_BALES' };
 		WAIT_POINT							= { level =  0, text = 'COURSEPLAY_REACHED_WAITING_POINT' };
 		WATER								= { level = -2, text = 'COURSEPLAY_WATER_WARNING' };
@@ -952,6 +932,8 @@ function CpManager:setupGlobalInfoText()
 		REACHED_REFILLING_POINT				= { level =  0, text = 'COURSEPLAY_REACHED_REFILL_POINT' };
 		WRONG_FILLTYPE_FOR_TRIGGER			= { level =  0, text = 'COURSEPLAY_WRONG_FILLTYPE_FOR_TRIGGER' };
 		RUNCOUNTER_ERROR_FOR_TRIGGER		= { level =  0, text = 'COURSEPLAY_RUNCOUNTER_ERROR_FOR_TRIGGER' };
+		WAITING_FOR_UNLOADERS				= { level =  0, text = 'COURSEPLAY_WAITING_FOR_UNLOADERS' };
+		WAITING_FOR_LEVELCOMPACTAIDRIVER	= { level =  0, text = 'COURSEPLAY_WAITING_FOR_LEVELCOMPACTAIDRIVER' };
 	};
 end;
 
@@ -1189,6 +1171,8 @@ function CpManager:loadXmlSettings()
 		self.course2dPlotField.y = self.course2dPlotPosY;
 
 		courseplay.globalSettings:loadFromXML(cpSettingsXml, 'CPSettings')
+		courseplay.globalCourseGeneratorSettings:loadFromXML(cpSettingsXml, 'CPSettings.courseGenerator')
+
 		--------------------------------------------------
 		delete(cpSettingsXml);
 	end;

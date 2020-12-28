@@ -38,6 +38,7 @@ function FillableFieldworkAIDriver:init(vehicle)
 	self:initStates(FillableFieldworkAIDriver.myStates)
 	self.mode = courseplay.MODE_SEED_FERTILIZE
 	self.refillState = self.states.TO_BE_REFILLED
+	self.lastTotalFillLevel = math.huge
 end
 
 function FillableFieldworkAIDriver:setHudContent()
@@ -115,18 +116,16 @@ function FillableFieldworkAIDriver:fillAtWaitPoint()
 	end
 	self:setSpeed(0)
 	local minFillLevelIsOk = true
-	local newTotalFillLevel = 0
 	for _,data in ipairs(fillTypeData) do 
 		for fillType, info in pairs(fillLevelInfo) do
 			if data.fillType == fillType then
-				newTotalFillLevel = newTotalFillLevel+info.fillLevel
 				if info.fillLevel/info.capacity*100 < data.minFillLevel then 
 					minFillLevelIsOk = false
 				end
 			end
 		end
 	end
-	if self:levelDidNotChange(newTotalFillLevel) and self:areFillLevelsOk(fillLevelInfo) and minFillLevelIsOk then 
+	if g_updateLoopIndex % 5 == 0 and self:areFillLevelsOk(fillLevelInfo,true) and minFillLevelIsOk then 
 		self:continue()
 	end
 	self:setInfoText('REACHED_REFILLING_POINT')
@@ -157,14 +156,15 @@ end
 
 -- is the fill level ok to continue? With fillable tools we need to stop working when we are out
 -- of material (seed, fertilizer, etc.)
-function FillableFieldworkAIDriver:areFillLevelsOk(fillLevelInfo)
+function FillableFieldworkAIDriver:areFillLevelsOk(fillLevelInfo,isWaitingForRefill)
 	local allOk = true
 	local hasSeeds, hasNoFertilizer = false, false
+	local liquidFertilizerFillLevel,herbicideFillLevel = 0, 0
 	if self.vehicle.cp.settings.sowingMachineFertilizerEnabled:is(false) and AIDriverUtil.hasAIImplementWithSpecialization(self.vehicle, FertilizingCultivator) then
 		courseplay:setInfoText(self.vehicle, "skipping loading Seeds/Fertilizer and continue with Cultivator !!!")
 		return true
 	end
-	
+	local totalFillLevel = 0
 	for fillType, info in pairs(fillLevelInfo) do
 		if info.treePlanterSpec then -- is TreePlanter
 			--check fillLevel of pallet on top of treePlanter or if their is one pallet
@@ -178,13 +178,27 @@ function FillableFieldworkAIDriver:areFillLevelsOk(fillLevelInfo)
 			else
 				if fillType == FillType.SEEDS then hasSeeds = true end
 			end		
-		end	
+			if fillType == FillType.LIQUIDFERTILIZER then liquidFertilizerFillLevel = info.fillLevel end
+			if fillType == FillType.HERBICIDE then  herbicideFillLevel = info.fillLevel end
+		end
+		totalFillLevel = totalFillLevel + info.fillLevel
+	end
+	-- special handling for extra frontTanks as they seems to change their fillType random
+	-- if we don't have a seeds and either liquidFertilizer or herbicide just continue until both are empty
+	if not allOk and not fillLevelInfo[FillType.SEEDS] and(liquidFertilizerFillLevel > 0 or herbicideFillLevel > 0) then 
+		self:debugSparse('we probably have an empty front Tank')
+		allOk = true
 	end
 	-- special handling for sowing machines with fertilizer
 	if not allOk and self.vehicle.cp.settings.sowingMachineFertilizerEnabled:is(false) and hasNoFertilizer and hasSeeds then
 		self:debugSparse('Has no fertilizer but has seeds so keep working.')
 		allOk = true
 	end
+	--check if fillLevel changed, refill on Field
+	if isWaitingForRefill then
+		allOk = allOk and self.lastTotalFillLevel >= totalFillLevel
+	end
+	self.lastTotalFillLevel = totalFillLevel
 	return allOk
 end
 
@@ -236,8 +250,7 @@ function FillableFieldworkAIDriver:helperBuysThisFillType(fillType)
 			return true
 		end
 	end
-	if g_currentMission.missionInfo.helperBuyFuel and
-		(fillType == FillType.DIESEL or fillType == FillType.FUEL) then
+	if g_currentMission.missionInfo.helperBuyFuel and self:isValidFuelType(self.vehicle,fillType) then
 		return true
 	end
 	return false

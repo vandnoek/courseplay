@@ -36,6 +36,7 @@
 		<text name="COURSEPLAY_CLEAR_COURSE" 								text="Útvonalat alaphelyzetbe" />
 		<text name="COURSEPLAY_DRIVE_NOW" 									text="Indítás azonnal (Nem vár a töltésre)" />
 		<text name="COURSEPLAY_DRIVE_ON_AT" 								text="Elszállítás:" />
+		<text name="COURSEPLAY_MOVE_ON_AT" 									text="Drive on at less then:" />
 		<text name="UNKNOWN" 												text="Ismeretlen" />
 		<text name="COURSEPLAY_HEADLAND_DIRECTION"							text="Fordulósáv irány"/>
 		<text name="COURSEPLAY_HEADLAND_BEFORE_AFTER"						text="Fordulósáv útvonal elején/végén" />
@@ -71,6 +72,7 @@
 		<text name="COURSEPLAY_NEEDS_REFILLING" 							text=": A munkaeszközt újra kell tölteni." />
 		<text name="COURSEPLAY_UNLOADING_BALES" 							text="kirakja a bálákat." />
 		<text name="COURSEPLAY_IS_IN_TRAFFIC" 								text="dugóban van (forgalomban)" />
+		<text name="COURSEPLAY_SLOWING_DOWN_FOR_TRAFFIC" 					text="slowing down for traffic" />
 		<text name="COURSEPLAY_TIPTRIGGER_REACHED" 							text="Elérte a triggert" />
 		<text name="COURSEPLAY_LAST_VAILD_TIP_DIST" 						text="Távolság az ürítési pontig (tolatáskor)" />
 		<text name="COURSEPLAY_LOADING_AMOUNT" 								text="Töltés: %d -ból %d" />
@@ -164,6 +166,8 @@
 		<text name="COURSEPLAY_ENDING_LOCATION" 							text="Végpont" />
 		<text name="COURSEPLAY_STARTING_DIRECTION" 							text="Művelés kezdő iránya:" />
 		<text name="COURSEPLAY_RETURN_TO_FIRST_POINT" 						text="Vissza az első pontra" />
+		<text name="COURSEPLAY_RETURN_TO_FIRST_POINT_RELEASE_DRIVER"		text="deactivated and release CP Driver" />
+		<text name="COURSEPLAY_RETURN_TO_FIRST_POINT_RETURN_TO_START_AND_RELEASE_DRIVER"	text="activated and release CP Driver" />
 		<text name="COURSEPLAY_CORNER_1" 									text="Dél/Nyugat" />
 		<text name="COURSEPLAY_CORNER_2" 									text="Észak/Nyugat" />
 		<text name="COURSEPLAY_CORNER_3" 									text="Észak/Kelet" />
@@ -249,6 +253,8 @@
 		<text name="COURSEPLAY_CONVOY_MIN_DISTANCE"						 	text="minimális távolság" /> <!-- TODO: translate -->
 		<text name="COURSEPLAY_COMBINE_IN_FRUIT"							text="A kombájn csöve termény felett van" /> <!-- TODO: this is the local InfoText in mode2 with pathfinding active when the combines pipe is in fruit -->
 		<text name="COURSEPLAY_MODESPECIFIC_SETTINGS"						text="mód specifikus beállítások" /> <!-- TODO: translate -->
+    <text name="COURSEPLAY_KEEP_CURRENT_STEERING" 			    text="Keep Current Steering" />
+		<text name="COURSEPLAY_KEEP_CURRENT_STEERING_TOOLTIP "		text="Courseplay won't change the current crab steering setting of the vehicle" />
 		
 		<!-- shovel stuff -->
 		<text name="COURSEPLAY_SHOVEL_NOT_FOUND" 							text="Kanál nem található" />
@@ -267,6 +273,7 @@
 		<text name="COURSEPLAY_SHOVEL_MOVE_TO_PRE_UNLOADING_POSITION" 		text="Mozgatás a kirakodást előkészítő pozícióba" />
 		<text name="COURSEPLAY_SHOVEL_MOVE_TO_UNLOADING_POSITION" 			text="Mozgatás a kirakási pozícióba" />
 		<text name="COURSEPLAY_SHOVEL_STOP_AND_GO" 							text="Kirak és indul tölteni" />
+		<text name="COURSEPLAY_SHOVEL_TRIGGERHANDLER_IS_ACTIVE"				text="shovel trigger mode"/>
 
 		<text name="COURSEPLAY_START_AT_POINT" 								text="Útvonal kezdése:" />
 		<text name="COURSEPLAY_NEAREST_POINT" 								text="legközelebbi útpont" />
@@ -326,7 +333,7 @@
 		<text name="COURSEPLAY_DRIVECONTROL_MODE_3" 						text="állandó 4WD &amp; hátsó diff.zár be" />
 		<text name="COURSEPLAY_DRIVECONTROL_MODE_4" 						text="állandó 4WD &amp; mindkét diff.zár be" />
 		<text name="COURSEPLAY_YES_NO_FIELDSCAN" 							text="Szeretnéd, hogy a mezők adatait automatikusan beolvassa?" />
-		<text name="COURSEPLAY_YES_NO_WAGES" 								text="Szeretnéd, hogy a munkásod bért kapjon?" />
+		<text name="COURSEPLAY_SUPPORT_INFO" 								text="Have you found a bug or need help with courseplay, then please have a look at: https://github.com/Courseplay/courseplay" />
 		<text name="COURSEPLAY_SEEDUSAGECALCULATOR" 						text="Vetőmag szükséglet számítás" />
 		<text name="COURSEPLAY_SEEDUSAGECALCULATOR_FIELD" 					text="Terület: %d (%s %s)" />
 		<text name="COURSEPLAY_SEEDUSAGECALCULATOR_SEEDTYPE" 				text="Vetőmag típusa: %s" />
@@ -351,7 +358,7 @@
 		<text name="input_COURSEPLAY_SHOVEL_MOVE_TO_PRE_UNLOADING_POSITION"	text="Vezetősegéd: Mozgatás a kirakodást előkészítő pozícióba" />
 		<text name="input_COURSEPLAY_SHOVEL_MOVE_TO_UNLOADING_POSITION"		text="Vezetősegéd: Mozgatás a kirakási pozícióba" />
 		
-    <text name="input_COURSEPLAY_EDITOR_TOGGLE"							text="Courseplay Editor: Toggle course editor" />
+   		<text name="input_COURSEPLAY_EDITOR_TOGGLE"							text="Courseplay Editor: Toggle course editor" />
 		<text name="input_COURSEPLAY_EDITOR_UNDO"							text="Courseplay Editor: Undo last course edit" />
 		<text name="input_COURSEPLAY_EDITOR_SAVE"							text="Courseplay Editor: Save course changes" />
 		<text name="input_COURSEPLAY_EDITOR_SPEED_INCREASE"							text="Courseplay Editor: Increase waypoint speed" />
@@ -386,11 +393,12 @@
 		<text name="COURSEPLAY_VISUALWAYPOINTS_CROSSING"					text="Elágazási pontok megjelenítése/elrejtése" />
 	
 		<text name="COURSEPLAY_MODE10_MODE" 								text="üzemmód" />
-		<text name="COURSEPLAY_MODE10_MODE_LEVELING" 						text="szintezés és tömörítés" />
-		<text name="COURSEPLAY_MODE10_MODE_BUILDUP"							text="feltöltés" />
-		<text name="COURSEPLAY_MODE10_SEARCH_MODE" 							text="automatikus stop" />
-		<text name="COURSEPLAY_MODE10_SEARCH_MODE_CP" 						text="másik vezetősegédeknek" />
-		<text name="COURSEPLAY_MODE10_SEARCH_MODE_ALL" 						text="mindenkinek járó motorral" />
+		<text name="COURSEPLAY_MODE10_MODE_LEVELING"                   		text="Leveling" />
+		<text name="COURSEPLAY_MODE10_MODE_BUILDUP"                     	text="feltöltés" />
+		<text name="COURSEPLAY_MODE10_MODE_COMPACTING"                		text="Compacting" />
+		<text name="COURSEPLAY_MODE10_SEARCH_MODE"                     		text="Automaticly stop for" />
+		<text name="COURSEPLAY_MODE10_SEARCH_MODE_CP"                   	text="Just courseplayer/autodrive driver" />
+		<text name="COURSEPLAY_MODE10_SEARCH_MODE_ALL"                  	text="All player controlled unloaders" />
 		<text name="COURSEPLAY_MODE10_SEARCHRADIUS" 						text="traktorkereső hatótávolsága " />
 		<text name="COURSEPLAY_MODE10_MAX_BUNKERSPEED" 						text="max tolósebesség" />
 		<text name="COURSEPLAY_MODE10_BLADE_HEIGHT" 						text="tolólap magasság" />
@@ -433,7 +441,6 @@
 		<text name="COURSEPLAY_USE_AI_TURNS"				   				text="AI fordulómanőver használata" />
 		<text name="COURSEPLAY_USE_AI_TURNS_TOOLTIP"						text="AI fordulómanőver használata kiszámított pályák helyett" />
 		<text name="COURSEPLAY_AUTO_FIELD_SCAN"				   				text="Mezők automatikus beolvasása" />
-		<text name="COURSEPLAY_EARN_WAGES"					   				text="Courseplay munkások bérezése" />
 		<text name="COURSEPLAY_CLICK_TO_SWITCH"					   			text="Kattintással váltás" />
 		<text name="COURSEPLAY_YES_NO_CLICK_TO_SWITCH"					   	text="Kattints egy járműre az arra való átváltáshoz" />
 		<text name="COURSEPLAY_PIPE_ALWAYS_UNFOLD"					   		text="Cső mindig nyitva" />
@@ -466,6 +473,8 @@
 		<text name="COURSEPLAY_IMPLEMENT_RAISE_TIME_TOOLTIP"				text="Munkagépek emelése a sor végén, vagy fordulómanőver kezdetekor." />
 		<text name="COURSEPLAY_IMPLEMENT_LOWER_TIME"					   	text="Munkagépek leeresztése" />
 		<text name="COURSEPLAY_IMPLEMENT_LOWER_TIME_TOOLTIP"				text="Munkagépek leeresztése a sor elején, vagy fordulómanőver után." />
+		<text name="COURSEPLAY_SHOULD_FOLD_IMPLEMENT"						text="Fold Implement" />
+		<text name="COURSEPLAY_SHOULD_FOLD_IMPLEMENT_TOOLTIP"				text="Turn on/off if the Implement should be folded when work is done" />
 
 		<text name="COURSEPLAY_USE_PATHFINDING_IN_TURNS"				   	text="Útkeresés használata kanyarokban" />
 		<text name="COURSEPLAY_USE_PATHFINDING_IN_TURNS_TOOLTIP"			text="Útkeresés használata kanyarokban furcsa alakú mezőkön, például a mező szélén, a következő sorhoz való vezetéskor" />
@@ -488,6 +497,9 @@
         <text name="COURSEPLAY_LOADING_SEPERATE_FILLTYPES_TRAILERS"         text="Seperate Trailers:" />
 		<text name="COURSEPLAY_UNLOADING_AMOUNT"							text="Unloading amount %d of %d" />
 		<text name="COURSEPLAY_MANUAL_LOADING"								text="manual Loading" />
+
+		<text name="COURSEPLAY_WAITING_FOR_UNLOADERS"						text="waiting for unloaders" />
+		<text name="COURSEPLAY_WAITING_FOR_LEVELCOMPACTAIDRIVER"			text="waiting for Siloworker" />
 		<!-- Replace marker, do not remove! -->
 </texts>
 </l10n>

@@ -35,13 +35,8 @@ function courseplay:onLoad(savegame)
 	self.cp.isSugarBeetLoader = courseplay:isSpecialCombine(self, "sugarBeetLoader");
 	self.cp.hasHarvesterAttachable = false;
 	self.cp.hasSpecialChopper = false;
-	if self.cp.isCombine or self.cp.isHarvesterSteerable then
-		self.cp.mode7Unloading = false
-	end
-	self.cp.speedDebugLine = "no speed info"
 
-	-- GIANT DLC
-	self.cp.haveInversedRidgeMarkerState = nil; --bool
+	self.cp.speedDebugLine = "no speed info"
 
 	--turn maneuver
 	self.cp.waitForTurnTime = 0.00   --float
@@ -55,10 +50,7 @@ function courseplay:onLoad(savegame)
 
 	self.cp.combineOffsetAutoMode = true
 	self.cp.isDriving = false;
-	self.cp.runOnceStartCourse = false;
-	self.cp.stopAtEndMode1 = false;
-	self.cp.calculatedCourseToCombine = false
-
+	
 	self.cp.waypointIndex = 1;
 	self.cp.previousWaypointIndex = 1;
 	self.cp.recordingTimer = 1
@@ -82,12 +74,6 @@ function courseplay:onLoad(savegame)
 	self.cp.numCrossingPoints = 0;
 
 
-	self.cp.hasHazardLights = self.spec_lights.turnLightState ~= nil and self.setTurnLightState ~= nil;
-
-
-	-- saves the shortest distance to the next waypoint (for recocnizing circling)
-	self.cp.shortestDistToWp = nil
-
 	self.Waypoints = {}
 	self.cp.canDrive = false --can drive course (has >4 waypoints, is not recording)
 	self.cp.coursePlayerNum = nil;
@@ -106,10 +92,6 @@ function courseplay:onLoad(savegame)
 	self.cp.mode = courseplay.MODE_TRANSPORT;
 	--courseplay:setNextPrevModeVars(self);
 	self.cp.modeState = 0
-	self.cp.mode2nextState = nil;
-	self.cp.heapStart = nil
-	self.cp.heapStop = nil
-	self.cp.makeHeaps = false
 	-- for modes 4 and 6, this the index of the waypoint where the work begins
 	self.cp.startWork = nil
 	-- for modes 4 and 6, this the index of the waypoint where the work ends
@@ -121,55 +103,13 @@ function courseplay:onLoad(savegame)
 	self.cp.wait = true;
 	self.cp.waitTimer = nil;
 	self.cp.canSwitchMode = false;
-	self.cp.tipperLoadMode = 0;
-	self.cp.easyFillTypeList = {};
-	self.cp.siloSelectedEasyFillType = 1;
 	self.cp.slippingStage = 0;
-	self.cp.isTipping = false;
-	self.cp.hasPlow = false;
-	self.cp.rotateablePlow = nil;
 	self.cp.saveFuel = false;
 	self.cp.hasAugerWagon = false;
-	self.cp.hasSugarCaneAugerWagon = false
-	self.cp.hasSugarCaneTrailer = false
 	self.cp.generationPosition = {}
 	self.cp.generationPosition.hasSavedPosition = false
 
-	-- ai mode 9: shovel
-	self.cp.shovelEmptyPoint = nil;
-	self.cp.shovelFillStartPoint = nil;
-	self.cp.shovelFillEndPoint = nil;
-	self.cp.shovelState = 1;
-	self.cp.shovel = {};
-	self.cp.shovelStopAndGo = true;
-	self.cp.shovelLastFillLevel = nil;
-	self.cp.shovelStatePositions = {};
-	self.cp.hasShovelStatePositions = {};
-	self.cp.manualShovelPositionOrder = nil;
-	for i=2,5 do
-		self.cp.hasShovelStatePositions[i] = false;
-	end;
-	self.cp.shovelPositionFromKey = false;
-	
-	--ai mode 10 : bunkersilo
-	self.cp.mode10 = {}
-	self.cp.mode10.stoppedCourseplayers = {}
-	self.cp.mode10.alphaList = {}		
-	self.cp.mode10.leveling = true
-	self.cp.mode10.automaticHeigth = true
-	self.cp.mode10.searchRadius = 50
-	self.cp.mode10.searchCourseplayersOnly = false
-	self.cp.mode10.shieldHeight = 0.3
-	self.cp.mode10.levelerIsFrontAttached = false
- 	self.cp.mode10.jumpsPerRun = 0
-	self.cp.mode10.automaticSpeed = true
-	self.cp.mode10.lowestAlpha = 99
-	self.cp.mode10.lastTargetLine = 99
-	self.cp.mode10.deadline = nil
-	self.cp.mode10.firstLine = 0
-	self.cp.mode10.bladeOffset = 0
-	self.cp.mode10.drivingThroughtLoading = false
-	
+
 	-- Visual i3D waypoint signs
 	self.cp.signs = {
 		crossing = {};
@@ -267,7 +207,6 @@ function courseplay:onLoad(savegame)
 	self.findSpecialTriggerCallback = courseplay.findSpecialTriggerCallback;
 	self.findFuelTriggerCallback = courseplay.findFuelTriggerCallback;
 	self.cp.hasRunRaycastThisLoop = {};
-	-- self.findTrafficCollisionCallback = courseplay.findTrafficCollisionCallback;		-- ??? not used anywhere
 	self.findBlockingObjectCallbackLeft = courseplay.findBlockingObjectCallbackLeft;
 	self.findBlockingObjectCallbackRight = courseplay.findBlockingObjectCallbackRight;
 	self.findVehicleHeights = courseplay.findVehicleHeights; 
@@ -290,30 +229,10 @@ function courseplay:onLoad(savegame)
 	end;
 
 	-- traffic collision
-	self.cpOnTrafficCollisionTrigger = courseplay.cpOnTrafficCollisionTrigger;
-	-- self.cp.tempCollis = {}								-- ??? not used anywhere
 	self.cpTrafficCollisionIgnoreList = {};
-	self.cp.TrafficBrake = false
-	self.cp.inTraffic = false
-
 	if self.trafficCollisionIgnoreList == nil then
 		self.trafficCollisionIgnoreList = {}
 	end
-	-- if self.numCollidingVehicles == nil then				-- ??? not used anywhere
-		-- self.numCollidingVehicles = {};
-	-- end
-
-	self.cp.collidingVehicleId = nil		-- on load game assume no colliding vehicle is detected
-	self.cp.numTrafficCollisionTriggers = 4;		-- single point of definition of the number of traffic collision boxes in front of a vehicle
-	self.cp.trafficCollisionTriggers = {};
-	self.cp.trafficCollisionTriggers[1] = nil;		-- LegacyCollisionTriggers not created
-	self.cp.trafficCollisionTriggerToTriggerIndex = {};
-	self.cp.collidingObjects = {
-		all = {};
-	};
-	-- self.cp.numCollidingObjects = {							-- ??? not used anywhere
-		-- all = 0;
-	-- };
 
 	--aiTrafficCollisionTrigger
 	self.aiTrafficCollisionTrigger = nil
@@ -335,33 +254,18 @@ function courseplay:onLoad(savegame)
 	self.cp.workTools = {};
 	self.cp.numWorkTools = 0;
 	self.cp.workToolAttached = false;
-	self.cp.currentTrailerToFill = nil;
-	self.cp.trailerFillDistance = nil;
 	self.cp.prevTrailerDistance = 100.00;
-	self.cp.isUnloaded = false;
 	self.cp.totalFillLevel = nil;
 	self.cp.totalCapacity = nil;
 	self.cp.totalFillLevelPercent = 0;
 	self.cp.prevFillLevelPct = nil;
 	self.cp.tipRefOffset = 0;
-	self.cp.isReverseBGATipping = nil; -- Used for reverse BGA tipping
-	self.cp.isBGATipping = false; -- Used for BGA tipping
-	self.cp.BGASectionInverted = false; -- Used for BGA tipping
-	self.cp.inversedRearTipNode = nil; -- Used for BGA tipping
-	self.cp.tipperHasCover = false;
-	self.cp.tippersWithCovers = {};
-
-	-- combines
-	self.cp.reachableCombines = {};
-	self.cp.activeCombine = nil;
 
 	self.cp.offset = nil --self = combine [flt]
 	self.cp.combineOffset = 0.0
 	self.cp.tipperOffset = 0.0
 
 	self.cp.forcedSide = nil
-	
-	self.cp.allowFollowing = false
 	
 	self.cp.vehicleTurnRadius = courseplay:getVehicleTurnRadius(self);
 	self.cp.turnDiameter = self.cp.vehicleTurnRadius * 2;
@@ -380,8 +284,8 @@ function courseplay:onLoad(savegame)
 
 	self.cp.workWidth = 3
 
+	--old code ??
 	self.cp.searchCombineAutomatically = true;
-	self.cp.savedCombine = nil
 	self.cp.selectedCombineNumber = 0
 
 	--Copy course
@@ -403,7 +307,6 @@ function courseplay:onLoad(savegame)
 	self.cp.isNewCourseGenSelected = function()
 		return self.cp.hasStartingCorner and self.cp.startingCorner > courseGenerator.STARTING_LOCATION_SE_LEGACY
 	end
-	self.cp.returnToFirstPoint = false;
 	self.cp.hasGeneratedCourse = false;
 	self.cp.hasValidCourseGenerationData = false;
 	-- TODO: add all old course gen settings to a SettingsContainer
@@ -518,6 +421,7 @@ function courseplay:onLoad(savegame)
 	self.cp.settings:addSetting(SymmetricLaneChangeSetting, self)
 	self.cp.settings:addSetting(PipeAlwaysUnfoldSetting, self)
 	self.cp.settings:addSetting(RidgeMarkersAutomatic, self)
+  	self.cp.settings:addSetting(KeepCurrentSteering, self)
 	self.cp.settings:addSetting(StopForUnloadSetting, self)
 	self.cp.settings:addSetting(StrawSwathSetting, self)
 	self.cp.settings:addSetting(AllowUnloadOnFirstHeadlandSetting, self)
@@ -542,7 +446,10 @@ function courseplay:onLoad(savegame)
 	self.cp.settings:addSetting(GrainTransportDriver_SiloSelectedFillTypeSetting, self)
 	self.cp.settings:addSetting(FillableFieldWorkDriver_SiloSelectedFillTypeSetting, self)
 	self.cp.settings:addSetting(FieldSupplyDriver_SiloSelectedFillTypeSetting, self)
+	self.cp.settings:addSetting(ShovelModeDriver_SiloSelectedFillTypeSetting, self)
+	self.cp.settings:addSetting(ShovelModeAIDriverTriggerHandlerIsActive, self)
 	self.cp.settings:addSetting(DriveOnAtFillLevelSetting, self)
+	self.cp.settings:addSetting(MoveOnAtFillLevelSetting, self)
 	self.cp.settings:addSetting(RefillUntilPctSetting, self)
 	self.cp.settings:addSetting(FollowAtFillLevelSetting,self)
 	self.cp.settings:addSetting(ForcedToStopSetting,self)
@@ -551,13 +458,23 @@ function courseplay:onLoad(savegame)
 	self.cp.settings:addSetting(TurnSpeedSetting, self)
 	self.cp.settings:addSetting(FieldSpeedSettting,self)
 	self.cp.settings:addSetting(StreetSpeedSetting,self)
-	self.cp.settings:addSetting(BunkerSpeedSetting,self)
 	self.cp.settings:addSetting(ShowVisualWaypointsSetting,self)
 	self.cp.settings:addSetting(ShowVisualWaypointsCrossPointSetting,self)
 	self.cp.settings:addSetting(OppositeTurnModeSetting,self)
+	self.cp.settings:addSetting(FoldImplementAtEndSetting, self)
 	self.cp.settings:addSetting(ConvoyActiveSetting,self)
 	self.cp.settings:addSetting(ConvoyMinDistanceSetting,self)
 	self.cp.settings:addSetting(ConvoyMaxDistanceSetting,self) -- do we need this one ?
+	self.cp.settings:addSetting(FrontloaderToolPositionsSetting,self)
+	self.cp.settings:addSetting(AugerPipeToolPositionsSetting,self)
+	self.cp.settings:addSetting(ShovelStopAndGoSetting,self)
+	self.cp.settings:addSetting(LevelCompactModeSetting,self)
+	self.cp.settings:addSetting(LevelCompactSearchOnlyAutomatedDriverSetting,self)
+	self.cp.settings:addSetting(LevelCompactSearchRadiusSetting,self)
+	self.cp.settings:addSetting(LevelCompactShieldHeightSetting,self)
+	self.cp.settings:addSetting(BunkerSpeedSetting,self)
+	
+	
 	---@type SettingsContainer
 	self.cp.courseGeneratorSettings = SettingsContainer("courseGeneratorSettings")
 	self.cp.courseGeneratorSettings:addSetting(CenterModeSetting, self)
@@ -634,81 +551,12 @@ function courseplay:onDraw()
 			end			
 			renderText(0.2, 0.045, 0.02, string.format("mode[%s] speed: %s",mode,tostring(speed)));
 		end	
-		if (self.cp.mode == 2 or self.cp.mode ==3) and self.cp.activeCombine ~= nil then
-			local combine = self.cp.activeCombine	
-			renderText(0.2,0.165,0.02,string.format("combine.lastSpeedReal: %.6f ",combine.lastSpeedReal*3600))
-			renderText(0.2,0.135,0.02,"combineIsTurning: "..tostring(self.cp.mode2DebugTurning ))
-		end	
 	end
 	if self.cp.isCombine and courseplay.debugChannels[4] then
 		--renderText(0.2,0.165,0.02,string.format("time till full: %s s  ", (self:getFillUnitCapacity(self.spec_combine.fillUnitIndex) - self:getFillUnitFillLevel(self.spec_combine.fillUnitIndex))/self.cp.fillLitersPerSecond))
 		--renderText(0.2,0.135,0.02,"self.cp.fillLitersPerSecond: "..tostring(self.cp.fillLitersPerSecond))
 	end
-	
-	
-	if courseplay.debugChannels[10] and self.cp.BunkerSiloMap ~= nil and self.cp.actualTarget ~= nil then
-
-		local fillUnit = self.cp.BunkerSiloMap[self.cp.actualTarget.line][self.cp.actualTarget.column]
-		--print(string.format("fillUnit %s; self.cp.actualTarget.line %s; self.cp.actualTarget.column %s",tostring(fillUnit),tostring(self.cp.actualTarget.line),tostring(self.cp.actualTarget.column)))
-		local sx,sz = fillUnit.sx,fillUnit.sz
-		local wx,wz = fillUnit.wx,fillUnit.wz
-		local bx,bz = fillUnit.bx,fillUnit.bz
-		local hx,hz = fillUnit.hx +(fillUnit.wx-fillUnit.sx) ,fillUnit.hz +(fillUnit.wz-fillUnit.sz)
-		local y = 0
-		local height = fillUnit.height or 0.5;
-		if self.cp.mode10.leveling then
-			if self.cp.mode10.automaticHeigth then
-				y = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, sx, 1, sz)+ height;
-			else
-				y = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, sx, 1, sz) + self.cp.mode10.shieldHeight + self.cp.tractorHeight ;
-			end
-		else
-			y = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, sx, 1, sz) + 0.5;
-		end
-		cpDebug:drawLine(sx, y, sz, 1, 0, 0, wx, y, wz);
-		cpDebug:drawLine(wx, y, wz, 1, 0, 0, hx, y, hz);
-		cpDebug:drawLine(fillUnit.hx, y, fillUnit.hz, 1, 0, 0, sx, y, sz);
-		--drawDebugLine(fillUnit.cx, y, fillUnit.cz, 1, 0, 1, bx, y, bz, 1, 0, 0); -- Have gradiant color. new draw line cant do that
-		cpDebug:drawLine(fillUnit.cx, y, fillUnit.cz, 1, 0, 1, bx, y, bz);
-		cpDebug:drawPoint(fillUnit.cx, y, fillUnit.cz, 1, 1 , 1);
-		if self.cp.mode == 9 then
-			renderText(0.2,0.225,0.02,"unit.fillLevel: "..tostring(fillUnit.fillLevel))
-			if self.cp.mode9SavedLastFillLevel ~= nil then
-				renderText(0.2,0.195,0.02,"SavedLastFillLevel: "..tostring(self.cp.mode9SavedLastFillLevel))
-				renderText(0.2,0.165,0.02,"triesTheSameFillUnit: "..tostring(self.cp.mode9triesTheSameFillUnit))
-			end
-		elseif self.cp.mode == 10 then
-
-			--renderText(0.2,0.395,0.02,"numStoppedCPs: "..tostring(#self.cp.mode10.stoppedCourseplayers ))
-			--renderText(0.2,0.365,0.02,"shieldHeight: "..tostring(self.cp.mode10.shieldHeight))
-			--renderText(0.2,0.335,0.02,"lowestAlpha: "..tostring(self.cp.mode10.lowestAlpha))
-			--renderText(0.2,0.305,0.02,"speeds.bunkerSilo: "..tostring(self.cp.speeds.bunkerSilo))
-			--renderText(0.2,0.275,0.02,"jumpsPerRun: "..tostring(self.cp.mode10.jumpsPerRun))
-			--renderText(0.2,0.245,0.02,"bladeOffset: "..tostring(self.cp.mode10.bladeOffset))
-			--renderText(0.2,0.215,0.02,"diffY: "..tostring(self.cp.diffY ))
-			--renderText(0.2,0.195,0.02,"tractorHeight: "..tostring(self.cp.tractorHeight ))
-			--renderText(0.2,0.165,0.02,"shouldBHeight: "..tostring(self.cp.shouldBHeight ))
-			--renderText(0.2,0.135,0.02,"targetHeigth: "..tostring(self.cp.mode10.targetHeigth))
-			--renderText(0.2,0.105,0.02,"height: "..tostring(self.cp.currentHeigth))
-		end
-	end
-	
-	if courseplay.debugChannels[10] and self.cp.tempMOde9PointX ~= nil then
-		local x,y,z = getWorldTranslation(self.cp.directionNode)
-		cpDebug:drawLine(self.cp.tempMOde9PointX2,self.cp.tempMOde9PointY2+2,self.cp.tempMOde9PointZ2, 1, 0, 0, self.cp.tempMOde9PointX,self.cp.tempMOde9PointY+2,self.cp.tempMOde9PointZ);
-		local bunker = self.cp.mode9TargetSilo
-		if bunker ~= nil then
-			local sx,sz = bunker.bunkerSiloArea.sx,bunker.bunkerSiloArea.sz
-			local wx,wz = bunker.bunkerSiloArea.wx,bunker.bunkerSiloArea.wz
-			local hx,hz = bunker.bunkerSiloArea.hx,bunker.bunkerSiloArea.hz
-			cpDebug:drawLine(sx,y+2,sz, 0, 0, 1, wx,y+2,wz);
-			--drawDebugLine(sx,y+2,sz, 0, 0, 1, hx,y+2,hz, 0, 1, 0);
-			--drawDebugLine(wx,y+2,wz, 0, 0, 1, hx,y+2,hz, 0, 1, 0);
-			cpDebug:drawLine(sx,y+2,sz, 0, 0, 1, hx,y+2,hz);
-			cpDebug:drawLine(wx,y+2,wz, 0, 0, 1, hx,y+2,hz);
-		end
-	end
-	
+			
 	
 	--DEBUG SHOW DIRECTIONNODE
 	if courseplay.debugChannels[12] then
@@ -768,18 +616,21 @@ function courseplay:onDraw()
 				else
 					g_currentMission:addHelpButtonText(courseplay:loc('COURSEPLAY_START_COURSE'), InputBinding.COURSEPLAY_START_STOP, nil, GS_PRIO_HIGH);
 					--g_gui.inputManager:setActionEventTextVisibility(courseplay.inputActionEventIds['COURSEPLAY_START_STOP'], true)
-					if self.cp.hasShovelStatePositions[2] and InputBinding.COURSEPLAY_SHOVELPOSITION_LOAD ~= nil then
-						g_currentMission:addHelpButtonText(courseplay:loc('COURSEPLAY_SHOVELPOSITION_LOAD'). InputBinding.COURSEPLAY_SHOVELPOSITION_LOAD, nil, GS_PRIO_HIGH);
-					end;
-					if self.cp.hasShovelStatePositions[3] and InputBinding.COURSEPLAY_SHOVELPOSITION_TRANSPORT ~= nil then
-						g_currentMission:addHelpButtonText(courseplay:loc('COURSEPLAY_SHOVELPOSITION_TRANSPORT'). InputBinding.COURSEPLAY_SHOVELPOSITION_TRANSPORT, nil, GS_PRIO_HIGH);
-					end;
-					if self.cp.hasShovelStatePositions[4] and InputBinding.COURSEPLAY_SHOVELPOSITION_PREUNLOAD ~= nil then
-						g_currentMission:addHelpButtonText(courseplay:loc('COURSEPLAY_SHOVELPOSITION_PREUNLOAD'). InputBinding.COURSEPLAY_SHOVELPOSITION_PREUNLOAD, nil, GS_PRIO_HIGH);
-					end;
-					if self.cp.hasShovelStatePositions[5] and InputBinding.COURSEPLAY_SHOVELPOSITION_UNLOAD ~= nil then
-						g_currentMission:addHelpButtonText(courseplay:loc('COURSEPLAY_SHOVELPOSITION_UNLOAD'). InputBinding.COURSEPLAY_SHOVELPOSITION_UNLOAD, nil, GS_PRIO_HIGH);
-					end;
+					
+					--new ShovelPositions still need info text!
+					
+					-- if self.cp.hasShovelStatePositions[2] and InputBinding.COURSEPLAY_SHOVELPOSITION_LOAD ~= nil then
+						-- g_currentMission:addHelpButtonText(courseplay:loc('COURSEPLAY_SHOVELPOSITION_LOAD'). InputBinding.COURSEPLAY_SHOVELPOSITION_LOAD, nil, GS_PRIO_HIGH);
+					-- end;
+					-- if self.cp.hasShovelStatePositions[3] and InputBinding.COURSEPLAY_SHOVELPOSITION_TRANSPORT ~= nil then
+						-- g_currentMission:addHelpButtonText(courseplay:loc('COURSEPLAY_SHOVELPOSITION_TRANSPORT'). InputBinding.COURSEPLAY_SHOVELPOSITION_TRANSPORT, nil, GS_PRIO_HIGH);
+					-- end;
+					-- if self.cp.hasShovelStatePositions[4] and InputBinding.COURSEPLAY_SHOVELPOSITION_PREUNLOAD ~= nil then
+						-- g_currentMission:addHelpButtonText(courseplay:loc('COURSEPLAY_SHOVELPOSITION_PREUNLOAD'). InputBinding.COURSEPLAY_SHOVELPOSITION_PREUNLOAD, nil, GS_PRIO_HIGH);
+					-- end;
+					-- if self.cp.hasShovelStatePositions[5] and InputBinding.COURSEPLAY_SHOVELPOSITION_UNLOAD ~= nil then
+						-- g_currentMission:addHelpButtonText(courseplay:loc('COURSEPLAY_SHOVELPOSITION_UNLOAD'). InputBinding.COURSEPLAY_SHOVELPOSITION_UNLOAD, nil, GS_PRIO_HIGH);
+					-- end;
 					--end;
 				end;
 			else
@@ -908,10 +759,6 @@ function courseplay:drawWaypointsLines(vehicle)
 end;
 
 function courseplay:onUpdate(dt)	
-	if g_server == nil and self.isPostSynced == nil then 
-		self.cp.driver:postSync()
-		self.isPostSynced=true
-	end
 
 	if self.cp.infoText ~= nil then
 		self.cp.infoText = nil
@@ -925,6 +772,8 @@ function courseplay:onUpdate(dt)
 	if self.cp.isRecording then
 		courseplay:record(self);
 	end;
+
+	CombineUnloadAIDriver.disableProximitySensorForNonCourseplayDriver(self)
 
 	-- we are in drive mode and single player /MP server
 	if self.cp.isDriving and g_server ~= nil then
@@ -968,27 +817,12 @@ function courseplay:onUpdate(dt)
 		self.cp.fieldEdge.selectedField.fieldNum = 0;
 	end	
 	
-	-- MODE 9: move shovel to positions (manually)
-	if (self.cp.mode == courseplay.MODE_SHOVEL_FILL_AND_EMPTY or self.cp.shovelPositionFromKey) and self.cp.manualShovelPositionOrder ~= nil and self.cp.movingToolsPrimary then
-		if courseplay:checkAndSetMovingToolsPosition(self, self.cp.movingToolsPrimary, self.cp.movingToolsSecondary, self.cp.shovelStatePositions[ self.cp.manualShovelPositionOrder ], dt) or courseplay:timerIsThrough(self, 'manualShovelPositionOrder') then
-			courseplay:resetManualShovelPositionOrder(self);
-				self:setCpVar('shovelPositionFromKey', false, courseplay.isClient);
-		end;
-	end;
-	-- MODE 3: move pipe to positions (manually)
-	if (self.cp.mode == courseplay.MODE_OVERLOADER or self.cp.mode == courseplay.MODE_GRAIN_TRANSPORT) and self.cp.manualPipePositionOrder ~= nil and self.cp.pipeWorkToolIndex then
-		local workTool = self.attachedImplements[self.cp.pipeWorkToolIndex].object
-		if courseplay:checkAndSetMovingToolsPosition(self, workTool.spec_cylindered.movingTools, nil, self.cp.pipePositions, dt , self.cp.pipeIndex ) or courseplay:timerIsThrough(self, 'manualPipePositionOrder') then
-			courseplay:resetManualPipePositionOrder(self);
-		end;
-	end;	
-	--sugarCaneTrailer update tipping function. Moved here so it only runs once. To ensure we start closed or open
-	if self.cp.hasSugarCaneTrailer then
-		courseplay:updateSugarCaneTrailerTipping(self,dt)
-	end
 	-- this really should be only done in one place.
 	self.cp.curSpeed = self.lastSpeedReal * 3600;
 	
+	--updateFunction for play testing workingToolPostions(manually)
+	self.cp.settings.frontloaderToolPositions:updatePositions(dt)
+	self.cp.settings.augerPipeToolPositions:updatePositions(dt)
 
 end; --END update()
 
@@ -1044,9 +878,6 @@ function courseplay:onDelete()
 		self.cp.driver.collisionDetector:deleteTriggers()
 	end
 
-	local ret_removeLegacyCollisionTriggers = false
-	ret_removeLegacyCollisionTriggers = courseplay:removeLegacyCollisionTriggers(self);
-
 	if self.cp ~= nil then
 		if self.cp.headland and self.cp.headland.tg then
 			unlink(self.cp.headland.tg);
@@ -1059,9 +890,6 @@ function courseplay:onDelete()
 		end;
 		if self.cp.hud.bgWithModeButtons ~= nil then
 			self.cp.hud.bgWithModeButtons:delete();
-		end;
-		if self.cp.hud.suc ~= nil then
-			self.cp.hud.suc:delete();
 		end;
 		if self.cp.directionArrowOverlay ~= nil then
 			self.cp.directionArrowOverlay:delete();
@@ -1195,21 +1023,6 @@ function courseplay:onReadStream(streamId, connection)
 	if copyCourseFromDriverId then
 		self.cp.copyCourseFromDriver = NetworkUtil.getObject(copyCourseFromDriverId) 
 	end
-		
-	local savedCombineId = streamDebugReadInt32(streamId)
-	if savedCombineId then
-		self.cp.savedCombine = NetworkUtil.getObject(savedCombineId)
-	end
-
-	local activeCombineId = streamDebugReadInt32(streamId)
-	if activeCombineId then
-		self.cp.activeCombine = NetworkUtil.getObject(activeCombineId)
-	end
-
-	local current_trailer_id = streamDebugReadInt32(streamId)
-	if current_trailer_id then
-		self.cp.currentTrailerToFill = NetworkUtil.getObject(current_trailer_id)
-	end
 
 	courseplay.courses:reinitializeCourses()
 
@@ -1244,8 +1057,16 @@ function courseplay:onReadStream(streamId, connection)
 		courseplay:toggleDebugChannel(self, k, v == 'true');
 	end;
 		
+	if streamReadBool(streamId) then 
+		self.cp.timeRemaining = streamReadFloat32(streamId)
+	end		
+	
+	if streamReadBool(streamId) then 
+		self.cp.infoText = streamReadString(streamId)
+	end
 	--Make sure every vehicle has same AIDriver as the Server
 	courseplay:setAIDriver(self, self.cp.mode)
+	self.cp.driver:onReadStream(streamId)
 	
 	courseplay:debug("id: "..tostring(self.id).."  base: readStream end", 5)
 end
@@ -1271,25 +1092,6 @@ function courseplay:onWriteStream(streamId, connection)
 	end
 	streamDebugWriteInt32(streamId, copyCourseFromDriverID)
 	
-	
-	local savedCombineId;
-	if self.cp.savedCombine ~= nil then
-		savedCombineId = NetworkUtil.getObjectId(self.cp.savedCombine)
-	end
-	streamDebugWriteInt32(streamId, savedCombineId)
-
-	local activeCombineId;
-	if self.cp.activeCombine ~= nil then
-		activeCombineId = NetworkUtil.getObjectId(self.cp.activeCombine)
-	end
-	streamDebugWriteInt32(streamId, activeCombineId)
-
-	local current_trailer_id;
-	if self.cp.currentTrailerToFill ~= nil then
-		current_trailer_id = NetworkUtil.getObjectId(self.cp.currentTrailerToFill)
-	end
-	streamDebugWriteInt32(streamId, current_trailer_id)
-
 	local loadedCourses;
 	if #self.cp.loadedCourses then
 		loadedCourses = table.concat(self.cp.loadedCourses, ",")
@@ -1310,6 +1112,22 @@ function courseplay:onWriteStream(streamId, connection)
 	local debugChannelsString = table.concat(table.map(courseplay.debugChannels, tostring), ",");
 	streamDebugWriteString(streamId, debugChannelsString) 
 		
+	if self.cp.timeRemaining then 
+		streamWriteBool(streamId,true)
+		streamWriteFloat32(streamId,self.cp.timeRemaining)
+	else 
+		streamWriteBool(streamId,false)
+	end
+	
+	if self.cp.infoText then 
+		streamWriteBool(streamId,true)
+		streamWriteString(streamId,self.cp.infoText)
+	else 
+		streamWriteBool(streamId,false)
+	end
+	
+	self.cp.driver:onWriteStream(streamId)
+	
 	courseplay:debug("id: "..tostring(NetworkUtil.getObjectId(self)).."  base: write stream end", 5)
 end
 
@@ -1325,26 +1143,30 @@ function courseplay:onReadUpdateStream(streamId, timestamp, connection)
 			if streamReadBool(streamId) then 
 				self.cp.waypointIndex = streamReadInt32(streamId)
 			else 
-				self.cp.waypointIndex = nil
+				self.cp.waypointIndex = 0
 			end
-			if streamReadBool(streamId) then 
-				self.cp.infoText = streamReadString(streamId)
+			if streamReadBool(streamId) then -- is infoText~=nil ?
+				if streamReadBool(streamId) then -- has infoText changed
+					self.cp.infoText = streamReadString(streamId)
+				end
 			else 
 				self.cp.infoText = nil
 			end
-			if streamReadBool(streamId) then 
-				self.cp.currentCourseName = streamReadString(streamId)
+			if streamReadBool(streamId) then -- is currentCourseName~=nil ?
+				if streamReadBool(streamId) then -- has currentCourseName changed
+					self.cp.currentCourseName = streamReadString(streamId)
+				end
 			else 
 				self.cp.currentCourseName = nil
 			end
-			
-		--	streamWriteInt32(streamId,self.cp.numWaypoints)
-		--	streamWriteBool(streamId,self.cp.isDriving)
-			--distanceCheck
-			--canDrive
-			--isRecording ??
-			--currentCourseName
-			--gitAdditionalText
+			if streamReadBool(streamId) then -- is timeRemaining~=nil ?
+				if streamReadBool(streamId) then -- has timeRemaining changed
+					self.cp.timeRemaining = streamReadFloat32(streamId)
+				end
+			else 
+				self.cp.timeRemaining = nil
+			end
+			--gitAdditionalText ?
 		end 
 	end
 end
@@ -1361,24 +1183,43 @@ function courseplay:onWriteUpdateStream(streamId, connection, dirtyMask)
 			else 
 				streamWriteBool(streamId,false)
 			end
-			if self.cp.infoText then
+			if self.cp.infoText then --is infoText~=nil ?
 				streamWriteBool(streamId,true)
-				streamWriteString(streamId,self.cp.infoText)
+				if self.cp.infoText~=self.cp.infoTextSend then -- has infoText changed
+					streamWriteBool(streamId,true)
+					streamWriteString(streamId,self.cp.infoText)
+					self.cp.infoTextSend = self.cp.infoText
+				else 
+					streamWriteBool(streamId,false)
+				end
 			else 
 				streamWriteBool(streamId,false)
 			end
-			if self.cp.currentCourseName then
+			if self.cp.currentCourseName then -- is currentCourseName~=nil ?
 				streamWriteBool(streamId,true)
-				streamWriteString(streamId,self.cp.currentCourseName)
+				if self.cp.currentCourseName~=self.cp.currentCourseNameSend then -- has currentCourseName changed
+					streamWriteBool(streamId,true)
+					streamWriteString(streamId,self.cp.currentCourseName)
+					self.cp.currentCourseNameSend = self.cp.currentCourseName
+				else 
+					streamWriteBool(streamId,false)
+				end
 			else 
 				streamWriteBool(streamId,false)
 			end
-			--globalInfoText!!
-			--distanceCheck
-			--canDrive
-			--isRecording ??
-			--currentCourseName
-			--gitAdditionalText
+			if self.cp.timeRemaining then -- is timeRemaining~=nil ?
+				streamWriteBool(streamId,true)
+				if self.cp.timeRemaining~=self.cp.timeRemainingSend then -- has timeRemaining changed
+					streamWriteBool(streamId,true)
+					streamWriteFloat32(streamId,self.cp.timeRemaining)
+					self.cp.timeRemainingSend = self.cp.timeRemaining
+				else 
+					streamWriteBool(streamId,false)
+				end
+			else 
+				streamWriteBool(streamId,false)
+			end
+			--gitAdditionalText ?
 		end 
 	end
 end
@@ -1444,64 +1285,7 @@ function courseplay:loadVehicleCPSettings(xmlFile, key, resetVehicles)
 		courseplay:changeLoadUnloadOffsetZ(self, nil, tonumber(offsetData[6]));
 		if offsetData[7] ~= nil then self.cp.laneNumber = tonumber(offsetData[7]) end;
 
-		-- SHOVEL POSITIONS
-		curKey = key .. '.courseplay.shovel';
-		local shovelRots = getXMLString(xmlFile, curKey .. '#rot');
-		local shovelTrans = getXMLString(xmlFile, curKey .. '#trans');
-		self.cp.shovelStopAndGo = Utils.getNoNil(getXMLBool(xmlFile, curKey .. '#shovelStopAndGo'), true);
-		courseplay:debug(tableShow(self.cp.shovelStatePositions, nameNum(self) .. ' shovelStatePositions (before loading)', 10), 10);
-		if shovelRots and shovelTrans then
-			self.cp.shovelStatePositions = {};
-			shovelRots = StringUtil.splitString(';', shovelRots);
-			shovelTrans = StringUtil.splitString(';', shovelTrans);
-			if #shovelRots == 4 and #shovelTrans == 4 then
-				for state=2, 5 do
-					local shovelRotsSplit = table.map(StringUtil.splitString(' ', shovelRots[state-1]), tonumber);
-					local shovelTransSplit = table.map(StringUtil.splitString(' ', shovelTrans[state-1]), tonumber);
-					if shovelRotsSplit and shovelTransSplit then
-						self.cp.shovelStatePositions[state] = {
-							rot = shovelRotsSplit,
-							trans = shovelTransSplit
-						};
-					end;
-					self.cp.hasShovelStatePositions[state] = self.cp.shovelStatePositions[state] ~= nil and self.cp.shovelStatePositions[state].rot ~= nil and self.cp.shovelStatePositions[state].trans ~= nil;
-				end;
-			end;
-		end;
-		courseplay:debug(tableShow(self.cp.shovelStatePositions, nameNum(self) .. ' shovelStatePositions (after loading)', 10), 10);
-		--courseplay.buttons:setActiveEnabled(self, 'shovel');
-
-	
-
-		--overLoaderPipe
-		curKey = key .. '.courseplay.overLoaderPipe';
-		local rot =  getXMLFloat(xmlFile, curKey .. '#rot')
-		local trans = getXMLFloat(xmlFile, curKey .. '#trans')
-		local pipeIndex =  getXMLInt(xmlFile, curKey .. '#pipeIndex')
-		local pipeWorkToolIndex = getXMLInt(xmlFile, curKey .. '#pipeWorkToolIndex')
 		
-		if rot and trans and pipeIndex and pipeWorkToolIndex then
-			self.cp.pipePositions = {}
-			self.cp.pipePositions.rot = {}
-			self.cp.pipePositions.trans={}
-			table.insert(self.cp.pipePositions.rot,rot)
-			table.insert(self.cp.pipePositions.trans,trans)
-
-			self.cp.pipeIndex =  pipeIndex
-			self.cp.pipeWorkToolIndex = pipeWorkToolIndex
-		end
-	
-		--mode10
-		curKey = key .. '.courseplay.mode10';
-		self.cp.mode10.leveling =  Utils.getNoNil( getXMLBool(xmlFile, curKey .. '#leveling'), true);
-		self.cp.mode10.searchCourseplayersOnly = Utils.getNoNil( getXMLBool(xmlFile, curKey .. '#CourseplayersOnly'), true);
-		self.cp.mode10.searchRadius = Utils.getNoNil( getXMLInt(xmlFile, curKey .. '#searchRadius'), 50);
-		self.cp.mode10.shieldHeight = Utils.getNoNil( getXMLFloat(xmlFile, curKey .. '#shieldHeight'), 0.3);
-		self.cp.mode10.automaticSpeed =  Utils.getNoNil( getXMLBool(xmlFile, curKey .. '#automaticSpeed'), true);
-		self.cp.mode10.automaticHeigth = Utils.getNoNil( getXMLBool(xmlFile, curKey .. '#automaticHeight'), true);
-		self.cp.mode10.bladeOffset = Utils.getNoNil( getXMLFloat(xmlFile, curKey .. '#bladeOffset'), 0);
-		self.cp.mode10.drivingThroughtLoading = Utils.getNoNil( getXMLBool(xmlFile, curKey .. '#drivingThroughtLoading'), false);
-
 		self.cp.settings:loadFromXML(xmlFile, key .. '.courseplay')
 
 		courseplay:validateCanSwitchMode(self);
@@ -1563,66 +1347,7 @@ function courseplay:saveToXMLFile(xmlFile, key, usedModNames)
 	setXMLString(xmlFile, newKey..".fieldWork #savedPositionZ", string.format("%.1f",Utils.getNoNil(self.cp.generationPosition.z,0)))
 	setXMLString(xmlFile, newKey..".fieldWork #savedFieldNum", string.format("%.1f",Utils.getNoNil(self.cp.generationPosition.fieldNum,0)))
 
-	--LevlingAndCompactingSettings
-	setXMLBool(xmlFile, newKey..".mode10 #leveling", self.cp.mode10.leveling)
-	setXMLBool(xmlFile, newKey..".mode10 #CourseplayersOnly", self.cp.mode10.searchCourseplayersOnly)
-	setXMLInt(xmlFile, newKey..".mode10 #searchRadius", self.cp.mode10.searchRadius)
-	setXMLString(xmlFile, newKey..".mode10 #shieldHeight", string.format("%.1f",self.cp.mode10.shieldHeight))
-	setXMLBool(xmlFile, newKey..".mode10 #automaticSpeed", self.cp.mode10.automaticSpeed)
-	setXMLBool(xmlFile, newKey..".mode10 #automaticHeight", self.cp.mode10.automaticHeigth)
-	setXMLString(xmlFile, newKey..".mode10 #bladeOffset", string.format("%.1f",self.cp.mode10.bladeOffset))
-	setXMLBool(xmlFile, newKey..".mode10 #drivingThroughtLoading", self.cp.mode10.drivingThroughtLoading)
 	
-	--shovelMode positions
-	--Shovel positions (<shovel rot="1;2;3;4" trans="1;2;3;4" />)
-	local shovelRotsAttrNodes, shovelTransAttrNodes;
-	local shovelRotsTmp, shovelTransTmp = {}, {};
-	if self.cp.shovelStatePositions and self.cp.shovelStatePositions[2] and self.cp.shovelStatePositions[3] and self.cp.shovelStatePositions[4] and self.cp.shovelStatePositions[5] then
-		if self.cp.shovelStatePositions[2].rot and self.cp.shovelStatePositions[3].rot and self.cp.shovelStatePositions[4].rot and self.cp.shovelStatePositions[5].rot then
-			local shovelStateRotSaveTable = {};
-			for a=1,4 do
-				shovelStateRotSaveTable[a] = {};
-				local rotTable = self.cp.shovelStatePositions[a+1].rot;
-				for i=1,#rotTable do
-					shovelStateRotSaveTable[a][i] = courseplay:round(rotTable[i], 4);
-				end;
-				table.insert(shovelRotsTmp, tostring(table.concat(shovelStateRotSaveTable[a], ' ')));
-			end;
-			if #shovelRotsTmp > 0 then
-				shovelRotsAttrNodes = tostring(table.concat(shovelRotsTmp, ';'));
-				courseplay:debug(nameNum(self) .. ": shovelRotsAttrNodes=" .. shovelRotsAttrNodes, 10);
-			end;
-		end;
-		if self.cp.shovelStatePositions[2].trans and self.cp.shovelStatePositions[3].trans and self.cp.shovelStatePositions[4].trans and self.cp.shovelStatePositions[5].trans then
-			local shovelStateTransSaveTable = {};
-			for a=1,4 do
-				shovelStateTransSaveTable[a] = {};
-				local transTable = self.cp.shovelStatePositions[a+1].trans;
-				for i=1,#transTable do
-					shovelStateTransSaveTable[a][i] = courseplay:round(transTable[i], 4);
-				end;
-				table.insert(shovelTransTmp, tostring(table.concat(shovelStateTransSaveTable[a], ' ')));
-			end;
-			if #shovelTransTmp > 0 then
-				shovelTransAttrNodes = tostring(table.concat(shovelTransTmp, ';'));
-				courseplay:debug(nameNum(self) .. ": shovelTransAttrNodes=" .. shovelTransAttrNodes, 10);
-			end;
-		end;
-		if shovelRotsAttrNodes or shovelTransAttrNodes then
-			setXMLBool(xmlFile, newKey..".shovel #shovelStopAndGo", self.cp.shovelStopAndGo)
-			setXMLString(xmlFile, newKey..".shovel #rot", shovelRotsAttrNodes)
-			setXMLString(xmlFile, newKey..".shovel #trans",  shovelTransAttrNodes)
-		end;
-	end;
-		
-	--overloaderPipe
-	if self.cp.pipeWorkToolIndex ~= nil then
-		setXMLString(xmlFile, newKey..".overLoaderPipe #rot", tostring(table.concat(self.cp.pipePositions.rot)))
-		setXMLString(xmlFile, newKey..".overLoaderPipe #trans", tostring(table.concat(self.cp.pipePositions.trans)))
-		setXMLInt(xmlFile, newKey..".overLoaderPipe #pipeIndex", self.cp.pipeIndex)
-		setXMLInt(xmlFile, newKey..".overLoaderPipe #pipeWorkToolIndex", self.cp.pipeWorkToolIndex)
-	end
-
 	self.cp.settings:saveToXML(xmlFile, newKey)
 
 end
@@ -1658,8 +1383,11 @@ AIVehicle.stopAIVehicle = Utils.overwrittenFunction(AIVehicle.stopAIVehicle, cou
 
 
 function courseplay.processSowingMachineArea(tool,originalFunction, superFunc, workArea, dt)
-	if tool.fertilizerEnabled ~= nil then
-		tool.spec_sprayer.workAreaParameters.sprayFillLevel = tool.fertilizerEnabled and tool.spec_sprayer.workAreaParameters.sprayFillLevel or 0
+	local rootVehicle = tool:getRootVehicle()
+	if courseplay:isAIDriverActive(rootVehicle) then
+		if rootVehicle.cp.settings.sowingMachineFertilizerEnabled:is(false) then
+			tool.spec_sprayer.workAreaParameters.sprayFillLevel = 0
+		end
 	end
 	return originalFunction(tool, superFunc, workArea, dt)
 end

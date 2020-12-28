@@ -17,7 +17,7 @@ function courseplay:onMouseEvent(posX, posY, isDown, isUp, mouseButton)
 	end;
 
 	local hudGfx = courseplay.hud.visibleArea;
-	local mouseIsInHudArea = vehicle.cp.mouseCursorActive and courseplay:mouseIsInArea(posX, posY, hudGfx.x1, hudGfx.x2, hudGfx.y1, vehicle.cp.suc.active and courseplay.hud.suc.visibleArea.y2 or hudGfx.y2);
+	local mouseIsInHudArea = vehicle.cp.mouseCursorActive and courseplay:mouseIsInArea(posX, posY, hudGfx.x1, hudGfx.x2, hudGfx.y1,  hudGfx.y2);
 	-- if not mouseIsInHudArea then return; end;
 
 	-- should we switch vehicles? Removed condition: vehicle.cp.mouseCursorActive <- is it important that it have to be CP mouseCursor ?
@@ -29,15 +29,6 @@ function courseplay:onMouseEvent(posX, posY, isDown, isUp, mouseButton)
 	--LEFT CLICK
 	if (isDown or isUp) and mouseButton == courseplay.inputBindings.mouse.primaryButtonId and vehicle.cp.mouseCursorActive and vehicle.cp.hud.show and vehicle:getIsEntered() and mouseIsInHudArea then
 		local buttonToHandle;
-
-		if vehicle.cp.suc.active then
-			for _,button in pairs(vehicle.cp.buttons.suc) do
-				if button.show and button:getHasMouse(posX, posY) then
-					buttonToHandle = button;
-					break;
-				end;
-			end;
-		end;
 
 		if buttonToHandle == nil then
 			for _,button in pairs(vehicle.cp.buttons.global) do
@@ -84,14 +75,6 @@ function courseplay:onMouseEvent(posX, posY, isDown, isUp, mouseButton)
 	--HOVER
 	elseif vehicle.cp.mouseCursorActive and not isDown and vehicle.cp.hud.show and vehicle:getIsEntered() then
 		-- local currentHoveredButton;
-		if vehicle.cp.suc.active then
-			for _,button in pairs(vehicle.cp.buttons.suc) do
-				if button.show and not button.isHidden then
-					button:setClicked(false);
-					button:setHovered(button:getHasMouse(posX, posY));
-				end;
-			end;
-		end;
 		vehicle.cp.hud.mouseWheel.render = false;
 		
 		for _,button in pairs(vehicle.cp.buttons.global) do
@@ -292,22 +275,7 @@ function courseplay:executeFunction(self, func, value, page)
 					end;
 				end;
 			end; --END if not self:getIsCourseplayDriving()
-
-		elseif page == 10 then
-			if line == 1 and not self:getIsCourseplayDriving() then
-				courseplay:toggleMode10Mode(self)
-			elseif line == 2 then
-				courseplay:toggleMode10SearchMode(self)
-			elseif line == 5 then
-				courseplay:toggleMode10automaticSpeed(self)
-			elseif line == 6 then
-				if self.cp.mode10.leveling then
-					courseplay:toggleMode10AutomaticHeight(self)
-				end
-			elseif 	line == 7 then
-				courseplay:toggleMode10drivingThroughtLoading(self)
-			end 
-		end; --END is page 0 or 1 or 3 or 10]]
+			]]--
 	end; --END isRowFunction
 end;
 
@@ -456,17 +424,13 @@ function courseplay.inputActionCallback(vehicle, actionName, keyStatus)
 
 		--Shovel:
 		if actionName == 'COURSEPLAY_SHOVEL_MOVE_TO_LOADING_POSITION' then
-				vehicle:setCpVar('shovelPositionFromKey', true, courseplay.isClient);
-				courseplay:moveShovelToPosition(vehicle, 2);
+			vehicle.cp.settings.frontloaderToolPositions:playPosition(1)
 		elseif actionName == 'COURSEPLAY_SHOVEL_MOVE_TO_TRANSPORT_POSITION' then
-				vehicle:setCpVar('shovelPositionFromKey', true, courseplay.isClient);
-				courseplay:moveShovelToPosition(vehicle, 3);
+			vehicle.cp.settings.frontloaderToolPositions:playPosition(2)
 		elseif actionName == 'COURSEPLAY_SHOVEL_MOVE_TO_PRE_UNLOADING_POSITION' then
-				vehicle:setCpVar('shovelPositionFromKey', true, courseplay.isClient);
-				courseplay:moveShovelToPosition(vehicle, 4);
+			vehicle.cp.settings.frontloaderToolPositions:playPosition(3)
 		elseif actionName == 'COURSEPLAY_SHOVEL_MOVE_TO_UNLOADING_POSITION' then
-				vehicle:setCpVar('shovelPositionFromKey', true, courseplay.isClient);
-				courseplay:moveShovelToPosition(vehicle, 5);
+			vehicle.cp.settings.frontloaderToolPositions:playPosition(4)
 		--Editor:
 		elseif actionName == 'COURSEPLAY_EDITOR_TOGGLE' then
 				courseEditor:setEnabled(not courseEditor.enabled, vehicle)

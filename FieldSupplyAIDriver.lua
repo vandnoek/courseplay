@@ -44,12 +44,14 @@ function FieldSupplyAIDriver:init(vehicle)
 end
 
 function FieldSupplyAIDriver:setHudContent()
+	AIDriver.setHudContent(self)
 	courseplay.hud:setFieldSupplyAIDriverContent(self.vehicle)
 end
 --this one is should be better derived!!
 function FieldSupplyAIDriver:start(startingPoint)
 	self.refillState = self.states.REFILL_DONE
 	AIDriver.start(self,startingPoint)
+	self.vehicle.cp.settings.stopAtEnd:set(false)
 	self.state = self.states.ON_UNLOAD_OR_REFILL_COURSE
 	self:findPipe() --for Augerwagons
 end
@@ -62,6 +64,12 @@ end
 
 function FieldSupplyAIDriver:onEndCourse()
 	AIDriver.onEndCourse(self)
+end
+
+function FieldSupplyAIDriver:isProximitySwerveEnabled()
+	return self.state == self.states.ON_UNLOAD_OR_REFILL_COURSE or
+			self.state == self.states.RETURNING_TO_FIRST_POINT or
+			self.supplyState == self.states.ON_REFILL_COURSE
 end
 
 function FieldSupplyAIDriver:drive(dt)
@@ -83,7 +91,7 @@ function FieldSupplyAIDriver:drive(dt)
 		--if i'm empty or fillLevel is below threshold then drive to get new stuff
 		if self:isFillLevelToContinueReached() then
 			self:continue()
-			self.loadingState = self.states.NOTHING
+			self.triggerHandler:resetLoadingState()
 		end
 	end
 end
@@ -176,4 +184,4 @@ end
 --- Don't pay worker double when AutoDrive is driving 
 function FieldSupplyAIDriver:shouldPayWages()
 	return self.state ~= self.states.ON_UNLOAD_OR_REFILL_WITH_AUTODRIVE
-end
+end 

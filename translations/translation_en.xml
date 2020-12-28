@@ -36,6 +36,7 @@
 		<text name="COURSEPLAY_CLEAR_COURSE" 								text="Clear current course" />
 		<text name="COURSEPLAY_DRIVE_NOW" 									text="Drive now" />
 		<text name="COURSEPLAY_DRIVE_ON_AT" 								text="Drive on at:" />
+		<text name="COURSEPLAY_MOVE_ON_AT" 									text="Drive on at less then:" />
 		<text name="UNKNOWN" 												text="Unknown" />
 		<text name="COURSEPLAY_HEADLAND_DIRECTION"							text="Headland counter-/clockwise" />
 		<text name="COURSEPLAY_HEADLAND_BEFORE_AFTER"						text="Headland before/after field course" />
@@ -75,6 +76,7 @@
 		<text name="COURSEPLAY_NEEDS_REFILLING" 							text=": work tool needs to be refilled." />
 		<text name="COURSEPLAY_UNLOADING_BALES" 							text="unloading bales." />
 		<text name="COURSEPLAY_IS_IN_TRAFFIC" 								text="is in traffic." />
+		<text name="COURSEPLAY_SLOWING_DOWN_FOR_TRAFFIC" 					text="slowing down for traffic" />
 		<text name="COURSEPLAY_TIPTRIGGER_REACHED" 							text="tip trigger reached" />
 		<text name="COURSEPLAY_LAST_VAILD_TIP_DIST" 						text="Unload Point Distance" />
 		<text name="COURSEPLAY_LOADING_AMOUNT" 								text="Loading: %d of %d" />
@@ -168,12 +170,9 @@
 		<text name="COURSEPLAY_STARTING_LOCATION" 							text="Starting location" />
 		<text name="COURSEPLAY_ENDING_LOCATION" 							text="Ending location" />
 		<text name="COURSEPLAY_STARTING_DIRECTION" 							text="Starting direction" />
-		<text name="COURSEPLAY_END_WORK_AT" 								text="End work at" />
-		<text name="COURSEPLAY_YES_NO_END_WORK_AT"							text="End the work at End or Start WP" />
-		<text name="COURSEPLAY_STOP_END"									text="End" />
-		<text name="COURSEPLAY_STOP_START"									text="Start" />
-		<text name="COURSEPLAY_STOP_END_DISMISS"								text="End and dismiss Driver" />
-		<text name="COURSEPLAY_STOP_START_DISMISS"							text="Start and dismiss Driver" />
+		<text name="COURSEPLAY_RETURN_TO_FIRST_POINT" 						text="Return to first point" />
+		<text name="COURSEPLAY_RETURN_TO_FIRST_POINT_RELEASE_DRIVER"		text="deactivated and release CP Driver" />
+		<text name="COURSEPLAY_RETURN_TO_FIRST_POINT_RETURN_TO_START_AND_RELEASE_DRIVER"	text="activated and release CP Driver" />
 		<text name="COURSEPLAY_CORNER_1" 									text="South-West" />
 		<text name="COURSEPLAY_CORNER_2" 									text="North-West" />
 		<text name="COURSEPLAY_CORNER_3" 									text="North-East" />
@@ -246,6 +245,8 @@
 		<text name="COURSEPLAY_DEACTIVATED" 								text="Deactivated" />
 		<text name="COURSEPLAY_RIDGEMARKERS" 								text="Ridge markers" />
 		<text name="COURSEPLAY_YES_NO_RIDGEMARKERS"							text="Ridge markers on/off" />
+    	<text name="COURSEPLAY_KEEP_CURRENT_STEERING" 			    		text="Keep Current Steering" />
+		<text name="COURSEPLAY_KEEP_CURRENT_STEERING_TOOLTIP "				text="Courseplay won't change the current crab steering setting of the vehicle" />
 		<text name="COURSEPLAY_UNLOADING_ON_FIELD" 							text="Unloading on field" />
 		<text name="COURSEPLAY_AUTOMATIC" 									text="Automatic" />
 		<text name="COURSEPLAY_MANUAL" 										text="Manually" />
@@ -277,6 +278,7 @@
 		<text name="COURSEPLAY_SHOVEL_MOVE_TO_PRE_UNLOADING_POSITION" 		text="Move to pre-unloading position" />
 		<text name="COURSEPLAY_SHOVEL_MOVE_TO_UNLOADING_POSITION" 			text="Move to unloading position" />
 		<text name="COURSEPLAY_SHOVEL_STOP_AND_GO" 							text="Stop &amp; go loading" />
+		<text name="COURSEPLAY_SHOVEL_TRIGGERHANDLER_IS_ACTIVE"				text="shovel trigger mode"/>
 
 		<text name="COURSEPLAY_START_AT_POINT" 								text="Start course at" />
 		<text name="COURSEPLAY_NEAREST_POINT" 								text="Nearest waypoint" />
@@ -336,7 +338,7 @@
 		<text name="COURSEPLAY_DRIVECONTROL_MODE_3" 						text="4WD Always &amp; Rear Diff on for Fieldwork" />
 		<text name="COURSEPLAY_DRIVECONTROL_MODE_4" 						text="4WD Always &amp; Both Diffs on for Fieldwork" />
 		<text name="COURSEPLAY_YES_NO_FIELDSCAN" 							text="Do you want the fields to be scanned automatically?" />
-		<text name="COURSEPLAY_YES_NO_WAGES" 								text="Do you want your workers to earn wages?" />
+		<text name="COURSEPLAY_SUPPORT_INFO" 								text="Have you found a bug or need help with courseplay, then please have a look at: https://github.com/Courseplay/courseplay" />
 		<text name="COURSEPLAY_SEEDUSAGECALCULATOR" 						text="Seed usage calculator" />
 		<text name="COURSEPLAY_SEEDUSAGECALCULATOR_FIELD" 					text="Field: %d (%s %s)" />
 		<text name="COURSEPLAY_SEEDUSAGECALCULATOR_SEEDTYPE" 				text="Seed type: %s" />
@@ -393,12 +395,13 @@
 		<text name="COURSEPLAY_MOUSE_BUTTON_NR" 					 		text="Mouse Button %d" />
 
 		<text name="COURSEPLAY_MODE10_MODE" 						    	text="Mode" />
-		<text name="COURSEPLAY_MODE10_MODE_LEVELING" 						text="Leveling and Compacting" />
+		<text name="COURSEPLAY_MODE10_MODE_LEVELING" 						text="Leveling" />
 		<text name="COURSEPLAY_MODE10_MODE_BUILDUP"							text="Filling up" />
+		<text name="COURSEPLAY_MODE10_MODE_COMPACTING"						text="Compacting" />
 		<text name="COURSEPLAY_MODE10_SEARCH_MODE" 							text="Automaticly stop for" />
-		<text name="COURSEPLAY_MODE10_SEARCH_MODE_CP" 						text="Just courseplayers" />
-		<text name="COURSEPLAY_MODE10_SEARCH_MODE_ALL" 						text="All with running engine" />
-		<text name="COURSEPLAY_MODE10_SEARCHRADIUS" 						text="Detect tractors in range of " />
+		<text name="COURSEPLAY_MODE10_SEARCH_MODE_CP" 						text="Just courseplayer/autodrive driver" />
+		<text name="COURSEPLAY_MODE10_SEARCH_MODE_ALL" 						text="All player controlled unloaders" />
+		<text name="COURSEPLAY_MODE10_SEARCHRADIUS" 						text="Detect unloaders in range of " />
 		<text name="COURSEPLAY_MODE10_MAX_BUNKERSPEED" 						text="Max speed while pushing" />
 		<text name="COURSEPLAY_MODE10_BLADE_HEIGHT" 						text="Blade height" />
 		<text name="COURSEPLAY_MODE10_NOSILO"						 		text="No bunkersilo detected at start point" />
@@ -439,7 +442,6 @@
 		<text name="COURSEPLAY_USE_AI_TURNS"				   				text="Use AI turn maneuvers" />
 		<text name="COURSEPLAY_USE_AI_TURNS_TOOLTIP"						text="Use AI turn maneuvers instead of calculated turn trajectories" />
 		<text name="COURSEPLAY_AUTO_FIELD_SCAN"				   				text="Scan fields automatically" />
-		<text name="COURSEPLAY_EARN_WAGES"					   				text="Courseplay workers earn wages" />
 		<text name="COURSEPLAY_CLICK_TO_SWITCH"					   			text="Click to switch" />
 		<text name="COURSEPLAY_YES_NO_CLICK_TO_SWITCH"					   	text="Click on a vehicle to switch to it" />
 		<text name="COURSEPLAY_PIPE_ALWAYS_UNFOLD"					   		text="Always unfold pipe" />
@@ -467,6 +469,8 @@
 		<text name="COURSEPLAY_IMPLEMENT_RAISE_TIME_TOOLTIP"				text="When to raise implements when ending a row or starting a headland turn" />
 		<text name="COURSEPLAY_IMPLEMENT_LOWER_TIME"					   	text="When to lower implements" />
 		<text name="COURSEPLAY_IMPLEMENT_LOWER_TIME_TOOLTIP"				text="When to lower implements when starting a row or ending a headland turn" />
+		<text name="COURSEPLAY_SHOULD_FOLD_IMPLEMENT"						text="Fold Implement" />
+		<text name="COURSEPLAY_SHOULD_FOLD_IMPLEMENT_TOOLTIP"				text="Turn on/off if the Implement should be folded when work is done" />
 
 		<text name="COURSEPLAY_USE_PATHFINDING_IN_TURNS"				   	text="Use pathfinding in turns" />
 		<text name="COURSEPLAY_USE_PATHFINDING_IN_TURNS_TOOLTIP"			text="Use pathfinding in turns on odd shaped fields, for example to drive on the headland to the next row" />
@@ -488,6 +492,10 @@
 		<text name="COURSEPLAY_LOADING_SEPERATE_FILLTYPES"				    text="Loading seperate FillTypes" />
 		<text name="COURSEPLAY_LOADING_SEPERATE_FILLTYPES_TRAILERS"			text="Seperate Trailers:" />
 		<text name="COURSEPLAY_MANUAL_LOADING"								text="manual Loading" />
+		
+		<text name="COURSEPLAY_WAITING_FOR_UNLOADERS"						text="waiting for unloaders" />
+		<text name="COURSEPLAY_WAITING_FOR_LEVELCOMPACTAIDRIVER"			text="waiting for Siloworker" />
+		
 		<!-- Replace marker, do not remove! -->
 </texts>
 </l10n>
