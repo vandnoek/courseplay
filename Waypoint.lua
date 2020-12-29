@@ -408,17 +408,19 @@ function Course:enrichWaypointData()
 	self.waypoints[#self.waypoints].turnsToHere = self.totalTurns
 	self.waypoints[#self.waypoints].calculatedRadius = self:calculateRadius(#self.waypoints)
 	self.waypoints[#self.waypoints].reverseOffset = self:isReverseAt(#self.waypoints)
-	-- now add distance to next turn for the combines
-	local dToNextTurn, lNextRow = 0, 0
+	-- now add some metadata for the combines
+	local dToNextTurn, lNextRow, nextRowStartIx = 0, 0, 0
 	local turnFound = false
 	for i = #self.waypoints - 1, 1, -1 do
 		if turnFound then
 			dToNextTurn = dToNextTurn + self.waypoints[i].dToNext
 			self.waypoints[i].dToNextTurn = dToNextTurn
 			self.waypoints[i].lNextRow = lNextRow
+			self.waypoints[i].nextRowStartIx = nextRowStartIx
 		end
 		if self:isTurnStartAtIx(i) then
 			lNextRow = dToNextTurn
+			nextRowStartIx = i + 1
 			dToNextTurn = 0
 			turnFound = true
 		end
@@ -861,7 +863,7 @@ end
 
 --- Get the index of the first waypoint from ix which is at least distance meters away
 ---@param backward boolean search backward if true
----@return numer, number index and exact distance
+---@return number, number index and exact distance
 function Course:getNextWaypointIxWithinDistance(ix, distance, backward)
 	local d = 0
 	local from, to, step = ix, #self.waypoints - 1, 1
@@ -1136,6 +1138,9 @@ function Course:isCloseToLastTurn(distance)
 	return false
 end
 
+--- Get the length of the up/down row where waypoint ix is located
+--- @param ix number waypoint index in the row
+--- @return number, number length of the current row and the index of the first waypoint of the row
 function Course:getRowLength(ix)
 	for i = ix, 1, -1 do
 		if self:isTurnEndAtIx(i) then
@@ -1147,6 +1152,10 @@ end
 
 function Course:getNextRowLength(ix)
 	return self.waypoints[ix].lNextRow
+end
+
+function Course:getNextRowStartIx(ix)
+	return self.waypoints[ix].nextRowStartIx
 end
 
 function Course:draw()

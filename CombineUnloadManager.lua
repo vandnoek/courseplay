@@ -54,7 +54,7 @@ function CombineUnloadManager:addNewCombines()
 		-- this isn't needed as combines will be added when an CombineAIDriver is created for them
 		-- but we want to be able to reload this file on the fly when developing/troubleshooting
 		for _, vehicle in pairs(g_currentMission.vehicles) do
-			if vehicle.cp.driver and vehicle.cp.driver.is_a and vehicle.cp.driver:is_a(CombineAIDriver) and not self.combines[vehicle] then
+			if vehicle.cp.driver and vehicle.cp.driver.isACombineAIDriver and not self.combines[vehicle] then
 				self:addCombineToList(vehicle, vehicle.cp.driver)
 			end
 		end
@@ -253,7 +253,7 @@ function CombineUnloadManager:getUnloaders(combine)
 	local unloaders = {}
 	if g_currentMission then
 		for _, vehicle in pairs(g_currentMission.vehicles) do
-			if vehicle.cp.driver and vehicle.cp.driver:is_a(CombineUnloadAIDriver) then
+			if vehicle.cp.driver and vehicle.cp.driver.isACombineUnloadAIDriver then
 				-- TODO: refactor and move assignedCombines into the CombineUnloadAIDriver
 				local assignedCombines = vehicle.cp.driver:getAssignedCombines()
 				if assignedCombines[combine] then
@@ -316,7 +316,7 @@ end
 function CombineUnloadManager:removeInactiveCombines()
 	local vehiclesToRemove = {}
 	for vehicle, _ in pairs (self.combines) do
-		if not vehicle.cp.driver or not vehicle.cp.driver:is_a(CombineAIDriver) then
+		if not vehicle.cp.driver or not vehicle.cp.driver.isACombineAIDriver then
 			table.insert(vehiclesToRemove, vehicle)
 		end
 	end
