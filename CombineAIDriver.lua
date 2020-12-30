@@ -617,6 +617,20 @@ function CombineAIDriver:cancelRendezvous()
 	self.unloadAIDriverToRendezvous = nil
 end
 
+--- Before the unloader asks for a rendezvous (which may result in a lengthy pathfinding to figure out
+--- the distance), it should check if the combine is willing to rendezvous.
+function CombineAIDriver:isWillingToRendezvous()
+	if self.state ~= self.states.ON_FIELDWORK_COURSE then
+		self:debug('not on fieldwork course, will not rendezvous')
+		return nil
+	elseif self.vehicle.cp.settings.allowUnloadOnFirstHeadland:is(false) and
+			self.fieldworkCourse:isOnHeadland(self.fieldworkCourse:getCurrentWaypointIx(), 1) then
+		self:debug('on first headland and unload not allowed on first headland, will not rendezvous')
+		return nil
+	end
+	return true
+end
+
 --- When the unloader asks us for a rendezvous, provide him with a waypoint index to meet us.
 --- This waypoint should be a good location to unload (pipe not in fruit, not in a turn, etc.)
 --- If no such waypoint found, reject the rendezvous.

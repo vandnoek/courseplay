@@ -1362,6 +1362,11 @@ end
 ------------------------------------------------------------------------------------------------------------------------
 ---@param d number distance in meters to drive to the combine, preferably the pathfinder route around the crop
 function CombineUnloadAIDriver:arrangeRendezvousWithCombine(d)
+	if not self.combineToUnload.cp.driver:isWillingToRendezvous() then
+		self:debug('Combine is not willing to rendezvous, wait a bit')
+		self:startWaitingForCombine()
+		return
+	end
 	local estimatedSecondsEnroute = d / (self:getFieldSpeed() / 3.6) + 3 -- add a few seconds to allow for starting the engine/accelerating
 	local rendezvousWaypoint, rendezvousWaypointIx =
 	self.combineToUnload.cp.driver:getUnloaderRendezvousWaypoint(estimatedSecondsEnroute, self)
@@ -1377,10 +1382,12 @@ function CombineUnloadAIDriver:arrangeRendezvousWithCombine(d)
 		else
 			self:debug('Rendezvous waypoint %d to moving combine too close, wait a bit', rendezvousWaypointIx)
 			self:startWaitingForCombine()
+			return
 		end
 	else
 		self:debug('can\'t find rendezvous waypoint to combine, waiting')
 		self:startWaitingForCombine()
+		return
 	end
 end
 
