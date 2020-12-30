@@ -48,6 +48,10 @@ CombineAIDriver.turnTypes = {
 	UP_DOWN_NORMAL = {}
 }
 
+-- Developer hack: to check the class of an object one should use the is_a() defined in CpObject.lua.
+-- However, when we reload classes on the fly during the development, the is_a() calls in other modules still
+-- have the old class definition (for example CombineUnloadManager.lua) of this class and thus, is_a() fails.
+-- Therefore, use this instead, this is safe after a reload.
 CombineAIDriver.isACombineAIDriver = true
 
 function CombineAIDriver:init(vehicle)
@@ -742,18 +746,11 @@ function CombineAIDriver:findBestWaypointToUnloadOnUpDownRows(ix)
 					newWpIx = nil
 				end
 			else
-				-- previous row already started, check next row
-				self:debug('Pipe would be in fruit at waypoint %d. Check next row, as previous one is already started', ix)
-				local ixAtNextRowStart = self.fieldworkCourse:getNextRowStartIx(ix)
-				pipeInFruit, _ = self.fieldworkCourse:isPipeInFruitAt(ixAtNextRowStart)
-				if not pipeInFruit then
-					newWpIx = math.min(ixAtNextRowStart + 2, self.fieldworkCourse:getNextRowStartIx(ixAtNextRowStart) - 1)
-					self:debug('pipe not in fruit in the next row (starting at wp %d), so rendezvous at %d',
-							ixAtNextRowStart, newWpIx)
-				else
-					self:debug('Pipe in fruit in next row too, rejecting rendezvous')
-					newWpIx = nil
-				end
+				-- previous row already started. Could check next row but that means the rendezvous would be after
+				-- the combine turns, and we'd be in the way during the turn, so rather not worry about the next row
+				-- until the combine gets there.
+				self:debug('Pipe would be in fruit at waypoint %d. Previous row is already started, no rendezvous', ix)
+				newWpIx = nil
 			end
 		else
 			self:debug('Could not determine row length, rejecting rendezvous')
@@ -910,6 +907,14 @@ function CombineAIDriver:isWaitingForUnloadAfterCourseEnded()
 	return self.state == self.states.ON_FIELDWORK_COURSE and
 		self.fieldworkState == self.states.UNLOAD_OR_REFILL_ON_FIELD and
 		self.fieldworkUnloadOrRefillState == self.states.WAITING_FOR_UNLOAD_AFTER_FIELDWORK_ENDED
+end
+
+--- Interface for Mode 2
+---@return boolean true when the combine is waiting to after it pulled back.
+function CombineAIDriver:isWaitingForUnloadAfterPulledBack()
+	return self.state == self.states.ON_FIELDWORK_COURSE and
+			self.fieldworkState == self.states.UNLOAD_OR_REFILL_ON_FIELD and
+			self.fieldworkUnloadOrRefillState == self.states.WAITING_FOR_UNLOAD_AFTER_PULLED_BACK
 end
 
 function CombineAIDriver:createTurnCourse()
