@@ -603,7 +603,8 @@ function CombineAIDriver:checkRendezvous()
 					self:cancelRendezvous()
 					unloaderWhoDidNotShowUp:onMissedRendezvous(self)
 				end
-			elseif self:isDischarging() then
+			end
+			if self:isDischarging() then
 				self:debug('Discharging, cancelling unloader rendezvous')
 				self:cancelRendezvous()
 			end
